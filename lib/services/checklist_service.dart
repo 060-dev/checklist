@@ -1,19 +1,114 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:morro_do_peo/models/checklist.dart';
 import 'package:morro_do_peo/models/checklist_question.dart';
+import 'package:morro_do_peo/models/checklist_area.dart';
+import 'package:morro_do_peo/services/morro_api_client.dart';
+import 'package:morro_do_peo/services/morro_api_config.dart';
 
 class ChecklistService {
   static final ChecklistService _instance = ChecklistService._internal();
   factory ChecklistService() => _instance;
   ChecklistService._internal();
 
+  static const String _storageKey = 'cached_catalog';
+  final MorroApiClient _api = MorroApiClient();
+  List<Checklist> _checklists = [];
+  bool _isInitialized = false;
+
+  Future<void> init() async {
+    if (_isInitialized) return;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final data = prefs.getString(_storageKey);
+      if (data != null) {
+        final Map<String, dynamic> decoded = jsonDecode(data);
+        
+        final rawAreas = decoded['areas'] as List<dynamic>? ?? [];
+        if (rawAreas.isNotEmpty) {
+          ChecklistArea.setAreas(rawAreas.map((e) => ChecklistArea.fromJson(e as Map<String, dynamic>)).toList());
+        }
+
+        final rawChecklists = decoded['checklists'] as List<dynamic>? ?? [];
+        if (rawChecklists.isNotEmpty) {
+          _checklists = rawChecklists.map((e) => Checklist.fromJson(e as Map<String, dynamic>)).toList();
+          debugPrint('[ChecklistService] Loaded ${_checklists.length} checklists from cache');
+        } else {
+          _checklists = _sampleChecklists;
+        }
+      } else {
+        _checklists = _sampleChecklists;
+      }
+    } catch (e) {
+      debugPrint('[ChecklistService] Error loading cache: $e');
+      _checklists = _sampleChecklists;
+    } finally {
+      _isInitialized = true;
+    }
+  }
+
+  Future<void> syncCatalog() async {
+    try {
+      debugPrint('[ChecklistService] Syncing catalog from /catalog...');
+      final json = await _api.getJson('/catalog', query: {
+        'farmId': MorroApiConfig.farmId,
+      });
+
+      final rawAreas = json['areas'] as List<dynamic>? ?? [];
+      final rawChecklists = json['checklists'] as List<dynamic>? ?? [];
+      final rawQuestions = json['questions'] as List<dynamic>? ?? [];
+
+      if (rawAreas.isNotEmpty) {
+        final areas = rawAreas.map((e) => ChecklistArea.fromJson(e as Map<String, dynamic>)).toList();
+        ChecklistArea.setAreas(areas);
+      }
+
+      if (rawChecklists.isNotEmpty) {
+        // Parse questions first
+        final allQuestions = rawQuestions.map((e) => ChecklistQuestion.fromJson(e as Map<String, dynamic>)).toList();
+
+        // Parse checklists and attach their questions
+        _checklists = rawChecklists.map((c) {
+          final map = c as Map<String, dynamic>;
+          final id = map['id'] as String;
+          
+          // Re-parse with questions
+          final base = Checklist.fromJson(map);
+          return Checklist(
+            id: base.id,
+            areaId: base.areaId,
+            name: base.name,
+            simpleName: base.simpleName,
+            description: base.description,
+            estimatedMinutes: base.estimatedMinutes,
+            icon: base.icon,
+            version: base.version,
+            questions: allQuestions.where((q) => rawQuestions.any((rq) => rq['id'] == q.id && rq['checklistId'] == id)).toList(),
+            createdAt: base.createdAt,
+            updatedAt: base.updatedAt,
+          );
+        }).toList();
+
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString(_storageKey, jsonEncode({
+          'areas': rawAreas,
+          'checklists': _checklists.map((e) => e.toJson()).toList(),
+        }));
+        debugPrint('[ChecklistService] Catalog synced: ${_checklists.length} checklists, ${rawAreas.length} areas');
+      }
+    } catch (e) {
+      debugPrint('[ChecklistService] Sync failed: $e');
+    }
+  }
+
   List<Checklist> getChecklistsByArea(String areaId) {
-    return _sampleChecklists.where((c) => c.areaId == areaId).toList();
+    return _checklists.where((c) => c.areaId == areaId).toList();
   }
 
   Checklist? getChecklistById(String id) {
     try {
-      return _sampleChecklists.firstWhere((c) => c.id == id);
+      return _checklists.firstWhere((c) => c.id == id);
     } catch (_) {
       return null;
     }
@@ -29,6 +124,7 @@ class ChecklistService {
       description: 'Verificar condições do solo antes do plantio',
       estimatedMinutes: 15,
       icon: Icons.landscape,
+      version: 1,
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
       questions: [
@@ -92,6 +188,7 @@ class ChecklistService {
       description: 'Checklist de plantio de sementes',
       estimatedMinutes: 20,
       icon: Icons.grass,
+      version: 1,
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
       questions: [
@@ -142,6 +239,7 @@ class ChecklistService {
       description: 'Checklist de colheita',
       estimatedMinutes: 25,
       icon: Icons.agriculture,
+      version: 1,
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
       questions: [
@@ -185,6 +283,7 @@ class ChecklistService {
       description: 'Verificação de máquinas agrícolas',
       estimatedMinutes: 30,
       icon: Icons.build,
+      version: 1,
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
       questions: [
@@ -229,6 +328,7 @@ class ChecklistService {
       description: 'Checklist de alimentação dos animais',
       estimatedMinutes: 15,
       icon: Icons.restaurant,
+      version: 1,
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
       questions: [
@@ -289,6 +389,7 @@ class ChecklistService {
       description: 'Limpeza e manutenção de bebedouros',
       estimatedMinutes: 20,
       icon: Icons.water,
+      version: 1,
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
       questions: [
@@ -340,6 +441,7 @@ class ChecklistService {
       description: 'Verificação de poços artesianos',
       estimatedMinutes: 15,
       icon: Icons.water,
+      version: 1,
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
       questions: [
@@ -382,6 +484,7 @@ class ChecklistService {
       description: 'Verificação e montagem de pastagem',
       estimatedMinutes: 20,
       icon: Icons.grass,
+      version: 1,
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
       questions: [
@@ -438,6 +541,7 @@ class ChecklistService {
       description: 'Verificação geral de equipamentos',
       estimatedMinutes: 25,
       icon: Icons.build,
+      version: 1,
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
       questions: [
@@ -482,6 +586,7 @@ class ChecklistService {
       description: 'Rotina de abertura diária',
       estimatedMinutes: 10,
       icon: Icons.wb_sunny,
+      version: 1,
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
       questions: [

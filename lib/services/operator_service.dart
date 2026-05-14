@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:morro_do_peo/models/operator.dart';
 import 'package:morro_do_peo/services/morro_api_client.dart';
 import 'package:morro_do_peo/services/morro_api_config.dart';
@@ -8,31 +10,59 @@ class OperatorService {
   factory OperatorService() => _instance;
   OperatorService._internal();
 
+  static const String _storageKey = 'cached_operators';
   final MorroApiClient _api = MorroApiClient();
+  List<Operator> _operators = [];
+  bool _isInitialized = false;
+
+  Future<void> init() async {
+    if (_isInitialized) return;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final data = prefs.getString(_storageKey);
+      if (data != null) {
+        final List<dynamic> decoded = jsonDecode(data);
+        _operators = decoded.map((e) => Operator.fromJson(e as Map<String, dynamic>)).toList();
+        debugPrint('[OperatorService] Loaded ${_operators.length} operators from cache');
+      }
+    } catch (e) {
+      debugPrint('[OperatorService] Error loading cache: $e');
+    } finally {
+      _isInitialized = true;
+    }
+  }
 
   Future<List<Operator>> listOperators({bool? active}) async {
+    if (!_isInitialized) await init();
+    if (active != null) {
+      return _operators.where((o) => o.active == active).toList();
+    }
+    return _operators;
+  }
+
+  Future<void> syncOperators() async {
     try {
+      debugPrint('[OperatorService] Syncing operators from /operators...');
       final json = await _api.getJson('/operators', query: {
         'farmId': MorroApiConfig.farmId,
-        if (active != null) 'active': active.toString(),
       });
 
       final raw = (json['operators'] ?? json['data'] ?? json['items'] ?? json['results']);
+      List<dynamic> items = [];
       if (raw is List) {
-        return raw.whereType<Map>().map((e) => Operator.fromJson(e.cast<String, dynamic>())).where((o) => o.id.isNotEmpty).toList();
+        items = raw;
+      } else if (json['data'] is List) {
+        items = json['data'];
       }
-      if (json.isNotEmpty) {
-        // Backend pode retornar diretamente uma lista como JSON; nosso client encapsula em {'data': ...}
-        // então tentamos ler daqui.
-        final d = json['data'];
-        if (d is List) {
-          return d.whereType<Map>().map((e) => Operator.fromJson(e.cast<String, dynamic>())).where((o) => o.id.isNotEmpty).toList();
-        }
+
+      if (items.isNotEmpty) {
+        _operators = items.map((e) => Operator.fromJson(e.cast<String, dynamic>())).where((o) => o.id.isNotEmpty).toList();
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString(_storageKey, jsonEncode(_operators.map((o) => o.toJson()).toList()));
+        debugPrint('[OperatorService] Operators synced: ${_operators.length} items');
       }
-      return const <Operator>[];
     } catch (e) {
-      debugPrint('Failed to load operators: $e');
-      return const <Operator>[];
+      debugPrint('[OperatorService] Sync failed: $e');
     }
   }
 }

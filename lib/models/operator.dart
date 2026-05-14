@@ -15,4 +15,11 @@ class Operator {
     name: (json['name'] as String?) ?? '',
     active: (json['active'] as bool?) ?? true,
   );
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'farmId': farmId,
+    'name': name,
+    'active': active,
+  };
 }

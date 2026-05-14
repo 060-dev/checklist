@@ -9,6 +9,7 @@ class Checklist {
   final String description;
   final int estimatedMinutes;
   final IconData icon;
+  final int version;
   final List<ChecklistQuestion> questions;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -21,25 +22,39 @@ class Checklist {
     required this.description,
     required this.estimatedMinutes,
     required this.icon,
+    required this.version,
     required this.questions,
     required this.createdAt,
     required this.updatedAt,
   });
 
-  factory Checklist.fromJson(Map<String, dynamic> json) => Checklist(
-    id: json['id'] as String,
-    areaId: json['areaId'] as String,
-    name: json['name'] as String,
-    simpleName: json['simpleName'] as String,
-    description: json['description'] as String,
-    estimatedMinutes: json['estimatedMinutes'] as int,
-    icon: IconData(json['iconCode'] as int? ?? Icons.checklist.codePoint, fontFamily: 'MaterialIcons'),
-    questions: (json['questions'] as List<dynamic>)
-        .map((q) => ChecklistQuestion.fromJson(q as Map<String, dynamic>))
-        .toList(),
-    createdAt: DateTime.parse(json['createdAt'] as String),
-    updatedAt: DateTime.parse(json['updatedAt'] as String),
-  );
+  factory Checklist.fromJson(Map<String, dynamic> json) {
+    final name = json['name'] as String? ?? 'Checklist';
+    return Checklist(
+      id: json['id'] as String,
+      areaId: json['areaId'] as String,
+      name: name,
+      simpleName: json['simpleName'] as String? ?? name,
+      description: json['description'] as String? ?? '',
+      estimatedMinutes: json['estimatedMinutes'] as int? ?? 10,
+      icon: _getIconForChecklist(json['id'] as String),
+      version: json['version'] as int? ?? 1,
+      questions: (json['questions'] as List<dynamic>?)
+              ?.map((q) => ChecklistQuestion.fromJson(q as Map<String, dynamic>))
+              .toList() ??
+          [],
+      createdAt: json['createdAt'] != null ? DateTime.parse(json['createdAt'] as String) : DateTime.now(),
+      updatedAt: json['updatedAt'] != null ? DateTime.parse(json['updatedAt'] as String) : DateTime.now(),
+    );
+  }
+
+  static IconData _getIconForChecklist(String id) {
+    if (id.contains('pasture')) return Icons.grass;
+    if (id.contains('soil')) return Icons.landscape;
+    if (id.contains('water')) return Icons.water;
+    if (id.contains('feed')) return Icons.restaurant;
+    return Icons.checklist;
+  }
 
   Map<String, dynamic> toJson() => {
     'id': id,
@@ -48,6 +63,7 @@ class Checklist {
     'simpleName': simpleName,
     'description': description,
     'estimatedMinutes': estimatedMinutes,
+    'version': version,
     'iconCode': icon.codePoint,
     'questions': questions.map((q) => q.toJson()).toList(),
     'createdAt': createdAt.toIso8601String(),

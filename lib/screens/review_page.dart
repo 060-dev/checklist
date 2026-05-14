@@ -337,7 +337,7 @@ class _ReviewPageState extends State<ReviewPage> {
         'clientSubmissionId': submission.id,
         'farmId': submission.farmId,
         'checklistId': submission.checklistId,
-        'checklistVersion': 1,
+        'checklistVersion': checklist?.version ?? 1,
         'operatorId': operatorId,
         'startedAt': submission.startedAt.toIso8601String(),
         'completedAt': now.toIso8601String(),
