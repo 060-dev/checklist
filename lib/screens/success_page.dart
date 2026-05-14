@@ -1,0 +1,194 @@
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:morro_do_peo/models/checklist_area.dart';
+import 'package:morro_do_peo/services/checklist_service.dart';
+import 'package:morro_do_peo/theme.dart';
+import 'package:morro_do_peo/components/large_action_button.dart';
+
+class SuccessPage extends StatefulWidget {
+  final String checklistId;
+  final String? operatorName;
+  final String? operatorId;
+  final String? result;
+
+  const SuccessPage({
+    super.key,
+    required this.checklistId,
+    this.operatorName,
+    this.operatorId,
+    this.result,
+  });
+
+  @override
+  State<SuccessPage> createState() => _SuccessPageState();
+}
+
+class _SuccessPageState extends State<SuccessPage>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _animationController;
+  late Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+    _scaleAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.elasticOut),
+    );
+    _animationController.forward();
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final checklistService = ChecklistService();
+    final checklist = checklistService.getChecklistById(widget.checklistId);
+    
+    final area = checklist != null
+        ? ChecklistArea.getAreas().firstWhere(
+            (a) => a.id == checklist.areaId,
+            orElse: () => ChecklistArea.getAreas().first,
+          )
+        : ChecklistArea.getAreas().first;
+
+    final op = widget.operatorName;
+    final opQuery = (op != null && op.trim().isNotEmpty) ? 'op=${Uri.encodeComponent(op)}' : null;
+    final opId = widget.operatorId;
+    final opIdQuery = (opId != null && opId.trim().isNotEmpty) ? 'opId=${Uri.encodeComponent(opId)}' : null;
+    final query = [if (opQuery != null) opQuery, if (opIdQuery != null) opIdQuery].join('&');
+    final suffix = query.isNotEmpty ? '?$query' : '';
+    final result = widget.result;
+    final isQueued = result == 'queued';
+
+    return Scaffold(
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Spacer(),
+              // Animated success icon
+              ScaleTransition(
+                scale: _scaleAnimation,
+                child: Container(
+                  width: 150,
+                  height: 150,
+                  decoration: BoxDecoration(
+                    color: AppColors.success.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.check_circle,
+                    size: 100,
+                    color: AppColors.success,
+                  ),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xl),
+              Text(
+                isQueued ? 'Checklist salvo\npara enviar depois' : 'Checklist enviado\ncom sucesso!',
+                style: theme.textTheme.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  color: isQueued ? AppColors.warning : AppColors.success,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: AppSpacing.md),
+              if (checklist != null) ...[
+                Text(
+                  checklist.simpleName,
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: AppSpacing.sm),
+              ],
+              if (op != null && op.trim().isNotEmpty) ...[
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+                  decoration: BoxDecoration(
+                    color: area.color.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(AppRadius.xl),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.person, size: 18, color: AppColors.emphasisColor(area.color)),
+                      const SizedBox(width: AppSpacing.sm),
+                      Text(
+                        'Operador: $op',
+                        style: TextStyle(
+                          fontSize: FontSizes.labelMedium,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.emphasisColor(area.color),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+              ],
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+                decoration: BoxDecoration(
+                  color: isQueued ? AppColors.warningLight : AppColors.successLight,
+                  borderRadius: BorderRadius.circular(AppRadius.xl),
+                  border: Border.all(color: (isQueued ? AppColors.warning : AppColors.success).withValues(alpha: 0.25)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(isQueued ? Icons.cloud_off : Icons.cloud_done, size: 18, color: isQueued ? AppColors.warning : AppColors.success),
+                    const SizedBox(width: AppSpacing.sm),
+                    Text(
+                      isQueued ? 'Salvo no aparelho (pendente)' : 'Salvo no servidor',
+                      style: TextStyle(
+                        fontSize: FontSizes.labelMedium,
+                        fontWeight: FontWeight.w600,
+                        color: isQueued ? AppColors.warning : AppColors.success,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Spacer(),
+              const Spacer(),
+              // Action buttons
+              LargeActionButton(
+                label: 'Fazer Outro Checklist',
+                icon: Icons.add,
+                color: area.color,
+                onPressed: () {
+                  context.go('/areas$suffix');
+                },
+              ),
+              const SizedBox(height: AppSpacing.md),
+              LargeActionButton(
+                label: 'Voltar ao Início',
+                icon: Icons.home,
+                color: theme.colorScheme.onSurfaceVariant,
+                isOutlined: true,
+                onPressed: () => context.go('/'),
+              ),
+              const SizedBox(height: AppSpacing.xl),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
