@@ -32,8 +32,14 @@ class OperatorService {
     }
   }
 
-  Future<List<Operator>> listOperators({bool? active}) async {
+  Future<List<Operator>> listOperators({bool? active, bool refresh = false}) async {
     if (!_isInitialized) await init();
+    
+    // Se a lista estiver vazia ou refresh for true, tentamos sincronizar
+    if (_operators.isEmpty || refresh) {
+      await syncOperators();
+    }
+    
     if (active != null) {
       return _operators.where((o) => o.active == active).toList();
     }

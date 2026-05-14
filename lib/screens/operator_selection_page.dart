@@ -14,9 +14,9 @@ class OperatorSelectionPage extends StatefulWidget {
 class _OperatorSelectionPageState extends State<OperatorSelectionPage> {
   late Future<List<Operator>> _future;
 
-  void _reload() {
+  void _reload({bool refresh = false}) {
     setState(() {
-      _future = OperatorService().listOperators(active: true);
+      _future = OperatorService().listOperators(active: true, refresh: refresh);
     });
   }
 
@@ -71,7 +71,7 @@ class _OperatorSelectionPageState extends State<OperatorSelectionPage> {
                       title: 'Não foi possível carregar',
                       subtitle: 'Verifique a internet e tente novamente.',
                       buttonLabel: 'Tentar novamente',
-                      onRetry: _reload,
+                      onRetry: () => _reload(refresh: true),
                     );
                   }
 
@@ -81,7 +81,7 @@ class _OperatorSelectionPageState extends State<OperatorSelectionPage> {
                       title: 'Nenhum operador encontrado',
                       subtitle: 'Peça ao gestor para cadastrar os operadores.',
                       buttonLabel: 'Atualizar lista',
-                      onRetry: _reload,
+                      onRetry: () => _reload(refresh: true),
                     );
                   }
 
