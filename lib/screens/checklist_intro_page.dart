@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
+import 'package:morro_do_peo/nav.dart';
 import 'package:morro_do_peo/models/checklist_area.dart';
 import 'package:morro_do_peo/services/checklist_service.dart';
 import 'package:morro_do_peo/theme.dart';
@@ -35,13 +35,6 @@ class ChecklistIntroPage extends StatelessWidget {
       orElse: () => ChecklistArea.getAreas().first,
     );
 
-    final op = operatorName;
-    final opQuery = (op != null && op.trim().isNotEmpty) ? 'op=${Uri.encodeComponent(op)}' : null;
-    final opId = operatorId;
-    final opIdQuery = (opId != null && opId.trim().isNotEmpty) ? 'opId=${Uri.encodeComponent(opId)}' : null;
-    final query = [if (opQuery != null) opQuery, if (opIdQuery != null) opIdQuery].join('&');
-    final suffix = query.isNotEmpty ? '?$query' : '';
-
     return Scaffold(
       appBar: AppBar(
         title: Text(area.name),
@@ -49,13 +42,7 @@ class ChecklistIntroPage extends StatelessWidget {
         foregroundColor: AppColors.onColorFor(area.color),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, size: 28),
-          onPressed: () {
-            if (context.canPop()) {
-              context.pop();
-            } else {
-              context.go('/checklists/${area.id}$suffix');
-            }
-          },
+          onPressed: () => Navigator.pop(context),
         ),
       ),
       body: SafeArea(
@@ -126,7 +113,16 @@ class ChecklistIntroPage extends StatelessWidget {
                 icon: Icons.play_arrow,
                 color: area.color,
                 onPressed: () {
-                  context.push('/question/$checklistId/0$suffix');
+                  Navigator.pushNamed(
+                    context,
+                    AppRoutes.question,
+                    arguments: {
+                      'checklistId': checklistId,
+                      'questionIndex': 0,
+                      'op': operatorName,
+                      'opId': operatorId,
+                    },
+                  );
                 },
               ),
               const SizedBox(height: AppSpacing.lg),

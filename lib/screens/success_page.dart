@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
+import 'package:morro_do_peo/nav.dart';
 import 'package:morro_do_peo/models/checklist_area.dart';
 import 'package:morro_do_peo/services/checklist_service.dart';
 import 'package:morro_do_peo/utils/connectivity.dart';
@@ -53,7 +53,7 @@ class _SuccessPageState extends State<SuccessPage>
     final theme = Theme.of(context);
     final checklistService = ChecklistService();
     final checklist = checklistService.getChecklistById(widget.checklistId);
-    
+
     final area = checklist != null
         ? ChecklistArea.getAreas().firstWhere(
             (a) => a.id == checklist.areaId,
@@ -62,11 +62,6 @@ class _SuccessPageState extends State<SuccessPage>
         : ChecklistArea.getAreas().first;
 
     final op = widget.operatorName;
-    final opQuery = (op != null && op.trim().isNotEmpty) ? 'op=${Uri.encodeComponent(op)}' : null;
-    final opId = widget.operatorId;
-    final opIdQuery = (opId != null && opId.trim().isNotEmpty) ? 'opId=${Uri.encodeComponent(opId)}' : null;
-    final query = [if (opQuery != null) opQuery, if (opIdQuery != null) opIdQuery].join('&');
-    final suffix = query.isNotEmpty ? '?$query' : '';
     final result = widget.result;
     final isQueued = result == 'queued';
     final isActuallyOffline = isQueued && !Connectivity.instance.isOnline;
@@ -100,7 +95,9 @@ class _SuccessPageState extends State<SuccessPage>
               ),
               const SizedBox(height: AppSpacing.xl),
               Text(
-                showSuccess ? 'Checklist enviado\ncom sucesso!' : 'Checklist salvo\npara enviar depois',
+                showSuccess
+                    ? 'Checklist enviado\ncom sucesso!'
+                    : 'Checklist salvo\npara enviar depois',
                 style: theme.textTheme.headlineMedium?.copyWith(
                   fontWeight: FontWeight.w800,
                   color: showSuccess ? AppColors.success : AppColors.warning,
@@ -120,7 +117,8 @@ class _SuccessPageState extends State<SuccessPage>
               ],
               if (op != null && op.trim().isNotEmpty) ...[
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.md, vertical: AppSpacing.sm),
                   decoration: BoxDecoration(
                     color: area.color.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(AppRadius.xl),
@@ -129,7 +127,8 @@ class _SuccessPageState extends State<SuccessPage>
                     mainAxisSize: MainAxisSize.min,
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.person, size: 18, color: AppColors.emphasisColor(area.color)),
+                      Icon(Icons.person,
+                          size: 18, color: AppColors.emphasisColor(area.color)),
                       const SizedBox(width: AppSpacing.sm),
                       Text(
                         'Operador: $op',
@@ -145,24 +144,36 @@ class _SuccessPageState extends State<SuccessPage>
                 const SizedBox(height: AppSpacing.md),
               ],
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.md, vertical: AppSpacing.sm),
                 decoration: BoxDecoration(
-                  color: isQueued ? AppColors.warningLight : AppColors.successLight,
+                  color: isQueued
+                      ? AppColors.warningLight
+                      : AppColors.successLight,
                   borderRadius: BorderRadius.circular(AppRadius.xl),
-                  border: Border.all(color: (isQueued ? AppColors.warning : AppColors.success).withValues(alpha: 0.25)),
+                  border: Border.all(
+                      color: (isQueued ? AppColors.warning : AppColors.success)
+                          .withValues(alpha: 0.25)),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(showSuccess ? Icons.cloud_done : Icons.cloud_off, size: 18, color: showSuccess ? AppColors.success : AppColors.warning),
+                    Icon(showSuccess ? Icons.cloud_done : Icons.cloud_off,
+                        size: 18,
+                        color: showSuccess
+                            ? AppColors.success
+                            : AppColors.warning),
                     const SizedBox(width: AppSpacing.sm),
                     Text(
-                      showSuccess ? 'Salvo no servidor' : 'Salvo no aparelho (pendente)',
+                      showSuccess
+                          ? 'Salvo no servidor'
+                          : 'Salvo no aparelho (pendente)',
                       style: TextStyle(
                         fontSize: FontSizes.labelMedium,
                         fontWeight: FontWeight.w600,
-                        color: showSuccess ? AppColors.success : AppColors.warning,
+                        color:
+                            showSuccess ? AppColors.success : AppColors.warning,
                       ),
                     ),
                   ],
@@ -176,7 +187,7 @@ class _SuccessPageState extends State<SuccessPage>
                 icon: Icons.add,
                 color: area.color,
                 onPressed: () {
-                  context.go('/areas$suffix');
+                  Navigator.popUntil(context, ModalRoute.withName(AppRoutes.areas));
                 },
               ),
               const SizedBox(height: AppSpacing.md),
@@ -185,7 +196,8 @@ class _SuccessPageState extends State<SuccessPage>
                 icon: Icons.home,
                 color: theme.colorScheme.onSurfaceVariant,
                 isOutlined: true,
-                onPressed: () => context.go('/'),
+                onPressed: () =>
+                    Navigator.popUntil(context, ModalRoute.withName(AppRoutes.home)),
               ),
               const SizedBox(height: AppSpacing.xl),
             ],

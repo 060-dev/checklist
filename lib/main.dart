@@ -33,13 +33,14 @@ class MorroDoPeaoApp extends StatelessWidget {
     // Inicializa histórico local + fila offline de envios.
     // Não depende de backend estar conectado.
     SubmissionService().init();
-    return MaterialApp.router(
+    return MaterialApp(
       title: 'Morro do Peão - Checklists',
       debugShowCheckedModeBanner: false,
       theme: lightTheme,
       darkTheme: darkTheme,
       themeMode: ThemeMode.light, // Force light theme for better visibility in field
-      routerConfig: AppRouter.router,
+      initialRoute: AppRoutes.home,
+      onGenerateRoute: AppRouter.onGenerateRoute,
     );
   }
 }

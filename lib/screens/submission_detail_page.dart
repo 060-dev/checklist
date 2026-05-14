@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:morro_do_peo/models/checklist_area.dart';
 import 'package:morro_do_peo/models/checklist_submission.dart';
 import 'package:morro_do_peo/services/checklist_service.dart';
@@ -75,13 +74,7 @@ class _SubmissionDetailPageState extends State<SubmissionDetailPage> {
         foregroundColor: AppColors.onColorFor(area.color),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, size: 28),
-          onPressed: () {
-            if (context.canPop()) {
-              context.pop();
-            } else {
-              context.go('/manager');
-            }
-          },
+          onPressed: () => Navigator.pop(context),
         ),
       ),
       body: SingleChildScrollView(

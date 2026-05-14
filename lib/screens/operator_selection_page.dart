@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
+import 'package:morro_do_peo/nav.dart';
 import 'package:morro_do_peo/models/operator.dart';
 import 'package:morro_do_peo/services/operator_service.dart';
 import 'package:morro_do_peo/theme.dart';
@@ -35,7 +35,7 @@ class _OperatorSelectionPageState extends State<OperatorSelectionPage> {
         title: const Text('Quem vai preencher?'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, size: 28),
-          onPressed: () => context.pop(),
+          onPressed: () => Navigator.pop(context),
         ),
       ),
       body: SafeArea(
@@ -94,9 +94,11 @@ class _OperatorSelectionPageState extends State<OperatorSelectionPage> {
                       return _OperatorTile(
                         name: op.name,
                         onTap: () {
-                          final opName = Uri.encodeComponent(op.name);
-                          final opId = Uri.encodeComponent(op.id);
-                          context.push('/areas?op=$opName&opId=$opId');
+                          Navigator.pushNamed(
+                            context,
+                            AppRoutes.areas,
+                            arguments: {'op': op.name, 'opId': op.id},
+                          );
                         },
                       );
                     },

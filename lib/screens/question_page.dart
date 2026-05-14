@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
-import 'package:go_router/go_router.dart';
+import 'package:morro_do_peo/nav.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:morro_do_peo/models/checklist_area.dart';
 import 'package:morro_do_peo/models/checklist_question.dart';
@@ -589,38 +589,18 @@ class _QuestionPageState extends State<QuestionPage> {
       ),
       child: Row(
         children: [
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: () {
-                  if (context.canPop()) {
-                    context.pop();
-                  } else {
-                    // Fallback if somehow stack is lost
-                    final op = widget.operatorName;
-                    final opId = widget.operatorId;
-                    final opQuery = (op != null && op.trim().isNotEmpty) ? 'op=${Uri.encodeComponent(op)}' : null;
-                    final opIdQuery = (opId != null && opId.trim().isNotEmpty) ? 'opId=${Uri.encodeComponent(opId)}' : null;
-                    final query = [if (opQuery != null) opQuery, if (opIdQuery != null) opIdQuery].join('&');
-                    final suffix = query.isNotEmpty ? '?$query' : '';
-                    context.go('/checklist-intro/${widget.checklistId}$suffix');
-                  }
-                },
-                icon: const Icon(Icons.arrow_back, size: 24),
-                label: const Text(
-                  '',
-                  style: TextStyle(
-                    fontSize: FontSizes.labelLarge,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                style: OutlinedButton.styleFrom(
-                  minimumSize: const Size(0, AppButtonSizes.mediumHeight),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppRadius.lg),
-                  ),
+          Expanded(
+            child: OutlinedButton(
+              onPressed: () => Navigator.pop(context),
+              style: OutlinedButton.styleFrom(
+                minimumSize: const Size(0, AppButtonSizes.mediumHeight),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.lg),
                 ),
               ),
+              child: const Icon(Icons.arrow_back, size: 24),
             ),
+          ),
           const SizedBox(width: AppSpacing.md),
           Expanded(
             flex: 2,
@@ -678,24 +658,27 @@ class _QuestionPageState extends State<QuestionPage> {
 
   void _goNext(BuildContext context, bool isLast) {
     unawaited(_persistCurrentAnswer());
-    final op = widget.operatorName;
-    final opId = widget.operatorId;
-    final opQuery = (op != null && op.trim().isNotEmpty)
-        ? 'op=${Uri.encodeComponent(op)}'
-        : null;
-    final opIdQuery = (opId != null && opId.trim().isNotEmpty)
-        ? 'opId=${Uri.encodeComponent(opId)}'
-        : null;
-    final query = [
-      if (opQuery != null) opQuery,
-      if (opIdQuery != null) opIdQuery
-    ].join('&');
-    final suffix = query.isNotEmpty ? '?$query' : '';
     if (isLast) {
-      context.push('/review/${widget.checklistId}$suffix');
+      Navigator.pushNamed(
+        context,
+        AppRoutes.review,
+        arguments: {
+          'checklistId': widget.checklistId,
+          'op': widget.operatorName,
+          'opId': widget.operatorId,
+        },
+      );
     } else {
-      context.push(
-          '/question/${widget.checklistId}/${widget.questionIndex + 1}$suffix');
+      Navigator.pushNamed(
+        context,
+        AppRoutes.question,
+        arguments: {
+          'checklistId': widget.checklistId,
+          'questionIndex': widget.questionIndex + 1,
+          'op': widget.operatorName,
+          'opId': widget.operatorId,
+        },
+      );
     }
   }
 
@@ -829,7 +812,7 @@ class _QuestionPageState extends State<QuestionPage> {
               },
               onRecorded: (path) {
                 setState(() => _hasAudio = true);
-                context.pop();
+                Navigator.pop(context);
               },
             ),
             const SizedBox(height: AppSpacing.xl),
@@ -847,21 +830,7 @@ class _QuestionPageState extends State<QuestionPage> {
         final theme = Theme.of(context);
 
         void exitChecklist() {
-          context.pop();
-          final op = widget.operatorName;
-          final opId = widget.operatorId;
-          final opQuery = (op != null && op.trim().isNotEmpty)
-              ? 'op=${Uri.encodeComponent(op)}'
-              : null;
-          final opIdQuery = (opId != null && opId.trim().isNotEmpty)
-              ? 'opId=${Uri.encodeComponent(opId)}'
-              : null;
-          final query = [
-            if (opQuery != null) opQuery,
-            if (opIdQuery != null) opIdQuery
-          ].join('&');
-          final suffix = query.isNotEmpty ? '?$query' : '';
-          context.go('/areas$suffix');
+          Navigator.popUntil(context, ModalRoute.withName(AppRoutes.areas));
         }
 
         return Dialog(
@@ -915,7 +884,7 @@ class _QuestionPageState extends State<QuestionPage> {
                       label: 'Continuar preenchendo',
                       icon: Icons.arrow_back_rounded,
                       color: theme.colorScheme.primary,
-                      onPressed: () => context.pop(),
+                      onPressed: () => Navigator.pop(context),
                     ),
                     const SizedBox(height: AppSpacing.md),
                     LargeActionButton(

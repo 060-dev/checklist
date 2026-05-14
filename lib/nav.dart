@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:morro_do_peo/screens/role_selection_page.dart';
 import 'package:morro_do_peo/screens/operator_selection_page.dart';
 import 'package:morro_do_peo/screens/area_selection_page.dart';
@@ -12,145 +11,126 @@ import 'package:morro_do_peo/screens/manager_dashboard_page.dart';
 import 'package:morro_do_peo/screens/submission_detail_page.dart';
 
 class AppRouter {
-  static final GoRouter router = GoRouter(
-    initialLocation: AppRoutes.home,
-    routes: [
-      // Role Selection (Home)
-      GoRoute(
-        path: AppRoutes.home,
-        name: 'home',
-        pageBuilder: (context, state) => const NoTransitionPage(
-          child: RoleSelectionPage(),
-        ),
-      ),
-      GoRoute(
-        path: AppRoutes.operator,
-        name: 'operator',
-        pageBuilder: (context, state) => CustomTransitionPage(
-          child: const OperatorSelectionPage(),
-          transitionsBuilder: _slideTransition,
-        ),
-      ),
-      // Operator Flow
-      GoRoute(
-        path: AppRoutes.areas,
-        name: 'areas',
-        pageBuilder: (context, state) => CustomTransitionPage(
-          child: AreaSelectionPage(operatorName: state.uri.queryParameters['op'], operatorId: state.uri.queryParameters['opId']),
-          transitionsBuilder: _slideTransition,
-        ),
-      ),
-      GoRoute(
-        path: '${AppRoutes.checklists}/:areaId',
-        name: 'checklists',
-        pageBuilder: (context, state) => CustomTransitionPage(
-          child: ChecklistSelectionPage(
-            areaId: state.pathParameters['areaId'] ?? '',
-            operatorName: state.uri.queryParameters['op'],
-            operatorId: state.uri.queryParameters['opId'],
-          ),
-          transitionsBuilder: _slideTransition,
-        ),
-      ),
-      GoRoute(
-        path: '${AppRoutes.checklistIntro}/:checklistId',
-        name: 'checklist-intro',
-        pageBuilder: (context, state) => CustomTransitionPage(
-          child: ChecklistIntroPage(
-            checklistId: state.pathParameters['checklistId'] ?? '',
-            operatorName: state.uri.queryParameters['op'],
-            operatorId: state.uri.queryParameters['opId'],
-          ),
-          transitionsBuilder: _slideTransition,
-        ),
-      ),
-      GoRoute(
-        path: '${AppRoutes.question}/:checklistId/:questionIndex',
-        name: 'question',
-        pageBuilder: (context, state) => CustomTransitionPage(
-          child: QuestionPage(
-            checklistId: state.pathParameters['checklistId'] ?? '',
-            questionIndex: int.tryParse(state.pathParameters['questionIndex'] ?? '0') ?? 0,
-            operatorName: state.uri.queryParameters['op'],
-            operatorId: state.uri.queryParameters['opId'],
-          ),
-          transitionsBuilder: _slideTransition,
-        ),
-      ),
-      GoRoute(
-        path: '${AppRoutes.review}/:checklistId',
-        name: 'review',
-        pageBuilder: (context, state) => CustomTransitionPage(
-          child: ReviewPage(
-            checklistId: state.pathParameters['checklistId'] ?? '',
-            operatorName: state.uri.queryParameters['op'],
-            operatorId: state.uri.queryParameters['opId'],
-          ),
-          transitionsBuilder: _slideTransition,
-        ),
-      ),
-      GoRoute(
-        path: '${AppRoutes.success}/:checklistId',
-        name: 'success',
-        pageBuilder: (context, state) => CustomTransitionPage(
-          child: SuccessPage(
-            checklistId: state.pathParameters['checklistId'] ?? '',
-            operatorName: state.uri.queryParameters['op'],
-            operatorId: state.uri.queryParameters['opId'],
-            result: state.uri.queryParameters['result'],
-          ),
-          transitionsBuilder: _fadeTransition,
-        ),
-      ),
-      // Manager Flow
-      GoRoute(
-        path: AppRoutes.manager,
-        name: 'manager',
-        pageBuilder: (context, state) => CustomTransitionPage(
-          child: const ManagerDashboardPage(),
-          transitionsBuilder: _slideTransition,
-        ),
-      ),
-      GoRoute(
-        path: '${AppRoutes.submission}/:submissionId',
-        name: 'submission-detail',
-        pageBuilder: (context, state) => CustomTransitionPage(
-          child: SubmissionDetailPage(
-            submissionId: state.pathParameters['submissionId'] ?? '',
-          ),
-          transitionsBuilder: _slideTransition,
-        ),
-      ),
-    ],
-  );
+  static Route<dynamic> onGenerateRoute(RouteSettings settings) {
+    final args = settings.arguments as Map<String, dynamic>? ?? {};
 
-  static Widget _slideTransition(
-    BuildContext context,
-    Animation<double> animation,
-    Animation<double> secondaryAnimation,
-    Widget child,
-  ) {
-    return SlideTransition(
-      position: Tween<Offset>(
-        begin: const Offset(1.0, 0.0),
-        end: Offset.zero,
-      ).animate(CurvedAnimation(
-        parent: animation,
-        curve: Curves.easeOutCubic,
-      )),
-      child: child,
+    switch (settings.name) {
+      case AppRoutes.home:
+        return MaterialPageRoute(
+          settings: settings,
+          builder: (_) => const RoleSelectionPage(),
+        );
+
+      case AppRoutes.operator:
+        return _slideRoute(settings, const OperatorSelectionPage());
+
+      case AppRoutes.areas:
+        return _slideRoute(
+          settings,
+          AreaSelectionPage(
+            operatorName: args['op'],
+            operatorId: args['opId'],
+          ),
+        );
+
+      case AppRoutes.checklists:
+        return _slideRoute(
+          settings,
+          ChecklistSelectionPage(
+            areaId: args['areaId'] ?? '',
+            operatorName: args['op'],
+            operatorId: args['opId'],
+          ),
+        );
+
+      case AppRoutes.checklistIntro:
+        return _slideRoute(
+          settings,
+          ChecklistIntroPage(
+            checklistId: args['checklistId'] ?? '',
+            operatorName: args['op'],
+            operatorId: args['opId'],
+          ),
+        );
+
+      case AppRoutes.question:
+        return _slideRoute(
+          settings,
+          QuestionPage(
+            checklistId: args['checklistId'] ?? '',
+            questionIndex: args['questionIndex'] ?? 0,
+            operatorName: args['op'],
+            operatorId: args['opId'],
+          ),
+        );
+
+      case AppRoutes.review:
+        return _slideRoute(
+          settings,
+          ReviewPage(
+            checklistId: args['checklistId'] ?? '',
+            operatorName: args['op'],
+            operatorId: args['opId'],
+          ),
+        );
+
+      case AppRoutes.success:
+        return _fadeRoute(
+          settings,
+          SuccessPage(
+            checklistId: args['checklistId'] ?? '',
+            operatorName: args['op'],
+            operatorId: args['opId'],
+            result: args['result'],
+          ),
+        );
+
+      case AppRoutes.manager:
+        return _slideRoute(settings, const ManagerDashboardPage());
+
+      case AppRoutes.submission:
+        return _slideRoute(
+          settings,
+          SubmissionDetailPage(
+            submissionId: args['submissionId'] ?? '',
+          ),
+        );
+
+      default:
+        return MaterialPageRoute(
+          builder: (_) => Scaffold(
+            body: Center(child: Text('Rota não encontrada: ${settings.name}')),
+          ),
+        );
+    }
+  }
+
+  static Route<dynamic> _slideRoute(RouteSettings settings, Widget child) {
+    return PageRouteBuilder(
+      settings: settings,
+      pageBuilder: (context, animation, secondaryAnimation) => child,
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        return SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(1.0, 0.0),
+            end: Offset.zero,
+          ).animate(CurvedAnimation(
+            parent: animation,
+            curve: Curves.easeOutCubic,
+          )),
+          child: child,
+        );
+      },
     );
   }
 
-  static Widget _fadeTransition(
-    BuildContext context,
-    Animation<double> animation,
-    Animation<double> secondaryAnimation,
-    Widget child,
-  ) {
-    return FadeTransition(
-      opacity: animation,
-      child: child,
+  static Route<dynamic> _fadeRoute(RouteSettings settings, Widget child) {
+    return PageRouteBuilder(
+      settings: settings,
+      pageBuilder: (context, animation, secondaryAnimation) => child,
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        return FadeTransition(opacity: animation, child: child);
+      },
     );
   }
 }

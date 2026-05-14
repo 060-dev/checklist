@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
+import 'package:morro_do_peo/nav.dart';
 import 'package:morro_do_peo/theme.dart';
 
 class RoleSelectionPage extends StatelessWidget {
@@ -55,10 +55,20 @@ class RoleSelectionPage extends StatelessWidget {
                 title: 'Operador',
                 subtitle: 'Preencher checklists',
                 color: AppColors.primaryGreen,
-                onPressed: () => context.push('/operator'),
+                onPressed: () =>
+                    Navigator.pushNamed(context, AppRoutes.operator),
               ),
-              const SizedBox(height: AppSpacing.xxl),
-              const SizedBox(height: AppSpacing.lg),
+              /*
+              const SizedBox(height: AppSpacing.xl),
+              _RoleButton(
+                icon: Icons.admin_panel_settings,
+                title: 'Gestor',
+                subtitle: 'Visualizar relatórios',
+                color: AppColors.secondaryOrange,
+                onPressed: () =>
+                    Navigator.pushNamed(context, AppRoutes.manager),
+              ),
+              */
             ],
           ),
         ),

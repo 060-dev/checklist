@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
+import 'package:morro_do_peo/nav.dart';
 import 'package:morro_do_peo/models/checklist_area.dart';
 import 'package:morro_do_peo/models/checklist_submission.dart';
 import 'package:morro_do_peo/services/submission_service.dart';
@@ -46,13 +46,7 @@ class _ManagerDashboardPageState extends State<ManagerDashboardPage> {
           title: const Text('Painel do Gestor'),
           leading: IconButton(
             icon: const Icon(Icons.arrow_back, size: 28),
-            onPressed: () {
-              if (context.canPop()) {
-                context.pop();
-              } else {
-                context.go('/');
-              }
-            },
+            onPressed: () => Navigator.pop(context),
           ),
         ),
         body: const Center(child: CircularProgressIndicator()),
@@ -76,13 +70,7 @@ class _ManagerDashboardPageState extends State<ManagerDashboardPage> {
         backgroundColor: AppColors.secondaryOrange,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, size: 28),
-          onPressed: () {
-            if (context.canPop()) {
-              context.pop();
-            } else {
-              context.go('/');
-            }
-          },
+          onPressed: () => Navigator.pop(context),
         ),
         actions: [
           Padding(
@@ -249,7 +237,13 @@ class _ManagerDashboardPageState extends State<ManagerDashboardPage> {
                       problemsFound: submission.problemsFound,
                       photosCount: submission.photosCount,
                       isSynced: submission.status == SubmissionStatus.synced,
-                      onTap: () => context.push('/submission/${submission.id}'),
+                      onTap: () {
+                        Navigator.pushNamed(
+                          context,
+                          AppRoutes.submission,
+                          arguments: {'submissionId': submission.id},
+                        );
+                      },
                     );
                   },
                 ),

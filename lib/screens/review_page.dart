@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
+import 'package:morro_do_peo/nav.dart';
 import 'package:morro_do_peo/models/checklist_area.dart';
 import 'package:morro_do_peo/models/checklist_submission.dart';
 import 'package:morro_do_peo/services/checklist_service.dart';
@@ -62,9 +62,7 @@ class _ReviewPageState extends State<ReviewPage> {
         foregroundColor: AppColors.onColorFor(area.color),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, size: 28),
-          onPressed: () {
-            context.pop();
-          },
+          onPressed: () => Navigator.pop(context),
         ),
       ),
       body: SafeArea(
@@ -181,7 +179,7 @@ class _ReviewPageState extends State<ReviewPage> {
                     color: theme.colorScheme.onSurfaceVariant,
                     isOutlined: true,
                     onPressed: () {
-                      context.pop();
+                      Navigator.pop(context);
                     },
                   ),
                 ],
@@ -373,40 +371,33 @@ class _ReviewPageState extends State<ReviewPage> {
           checklistId: widget.checklistId, operatorName: operatorName);
 
       if (!mounted) return;
-      final opQuery = (operatorName.trim().isNotEmpty)
-          ? 'op=${Uri.encodeComponent(operatorName)}'
-          : null;
-      final opId = widget.operatorId;
-      final opIdQuery = (opId != null && opId.trim().isNotEmpty)
-          ? 'opId=${Uri.encodeComponent(opId)}'
-          : null;
       final result =
           _submissions.pendingQueueCount.value > 0 ? 'queued' : 'sent';
-      final suffix = [
-        if (opQuery != null) opQuery,
-        if (opIdQuery != null) opIdQuery,
-        'result=$result'
-      ].join('&');
       if (!context.mounted) return;
-      context.go('/success/${widget.checklistId}?$suffix');
+      Navigator.pushNamed(
+        context,
+        AppRoutes.success,
+        arguments: {
+          'checklistId': widget.checklistId,
+          'op': widget.operatorName,
+          'opId': widget.operatorId,
+          'result': result,
+        },
+      );
     } catch (e) {
       debugPrint('Failed to send checklist: $e');
       if (!mounted) return;
-      final op = widget.operatorName;
-      final opQuery = (op != null && op.trim().isNotEmpty)
-          ? 'op=${Uri.encodeComponent(op)}'
-          : null;
-      final opId = widget.operatorId;
-      final opIdQuery = (opId != null && opId.trim().isNotEmpty)
-          ? 'opId=${Uri.encodeComponent(opId)}'
-          : null;
-      final suffix = [
-        if (opQuery != null) opQuery,
-        if (opIdQuery != null) opIdQuery,
-        'result=queued',
-      ].join('&');
       if (!context.mounted) return;
-      context.go('/success/${widget.checklistId}?$suffix');
+      Navigator.pushNamed(
+        context,
+        AppRoutes.success,
+        arguments: {
+          'checklistId': widget.checklistId,
+          'op': widget.operatorName,
+          'opId': widget.operatorId,
+          'result': 'queued',
+        },
+      );
     } finally {
       if (mounted) setState(() => _isSending = false);
     }
