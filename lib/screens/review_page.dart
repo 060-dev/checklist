@@ -89,6 +89,8 @@ class _ReviewPageState extends State<ReviewPage> {
 
           final photosCount =
               answers.where((a) => a is Map && a['photoBase64'] != null).length;
+          final audioCount =
+              answers.where((a) => a is Map && a['audioRef'] != null).length;
 
           return SafeArea(
             child: Column(
@@ -134,13 +136,6 @@ class _ReviewPageState extends State<ReviewPage> {
 
                         // Summary Cards
                         _buildSummaryCard(
-                          icon: Icons.quiz,
-                          title: 'Perguntas Respondidas',
-                          value: '$answeredQuestions de $totalQuestions',
-                          color: AppColors.accentBlue,
-                        ),
-                        const SizedBox(height: AppSpacing.md),
-                        _buildSummaryCard(
                           icon: Icons.warning_amber,
                           title: 'Problemas Encontrados',
                           value: problemsFound.toString(),
@@ -150,10 +145,24 @@ class _ReviewPageState extends State<ReviewPage> {
                         ),
                         const SizedBox(height: AppSpacing.md),
                         _buildSummaryCard(
+                          icon: Icons.quiz,
+                          title: 'Perguntas Respondidas',
+                          value: '$answeredQuestions de $totalQuestions',
+                          color: AppColors.accentBlue,
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                        _buildSummaryCard(
                           icon: Icons.camera_alt,
                           title: 'Fotos Tiradas',
                           value: photosCount.toString(),
-                          color: AppColors.primaryGreen,
+                          color: AppColors.accentBlue,
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                        _buildSummaryCard(
+                          icon: Icons.mic,
+                          title: 'Áudios Gravados',
+                          value: audioCount.toString(),
+                          color: AppColors.accentBlue,
                         ),
                         const SizedBox(height: AppSpacing.xl),
 
