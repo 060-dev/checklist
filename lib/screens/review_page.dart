@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:morro_do_peo/nav.dart';
+import 'package:morro_do_peo/models/checklist_question.dart';
 import 'package:morro_do_peo/models/checklist_area.dart';
 import 'package:morro_do_peo/models/checklist_submission.dart';
 import 'package:morro_do_peo/services/checklist_service.dart';
@@ -48,13 +49,6 @@ class _ReviewPageState extends State<ReviewPage> {
       orElse: () => ChecklistArea.getAreas().first,
     );
 
-    // Simulated data for the prototype
-    final totalQuestions = checklist.questions.length;
-    final answeredQuestions = totalQuestions;
-    final problemsFound = 1; // Simulated
-    final photosCount = 2; // Simulated
-
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Revisar'),
@@ -65,128 +59,164 @@ class _ReviewPageState extends State<ReviewPage> {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(AppSpacing.lg),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // Success icon
-                    Container(
-                      width: 100,
-                      height: 100,
-                      decoration: BoxDecoration(
-                        color: AppColors.success.withValues(alpha: 0.1),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.check_circle,
-                        size: 56,
-                        color: AppColors.success,
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.lg),
-                    Text(
-                      'Checklist Completo!',
-                      style: theme.textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.success,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                    Text(
-                      checklist.simpleName,
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: AppSpacing.xl),
-                    // Summary cards
-                    _buildSummaryCard(
-                      icon: Icons.quiz,
-                      title: 'Perguntas Respondidas',
-                      value: '$answeredQuestions de $totalQuestions',
-                      color: AppColors.primaryGreen,
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    _buildSummaryCard(
-                      icon: Icons.warning_amber,
-                      title: 'Problemas Encontrados',
-                      value: problemsFound.toString(),
-                      color: problemsFound > 0
-                          ? AppColors.warning
-                          : AppColors.success,
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    _buildSummaryCard(
-                      icon: Icons.camera_alt,
-                      title: 'Fotos Tiradas',
-                      value: photosCount.toString(),
-                      color: AppColors.accentBlue,
-                    ),
-                    const SizedBox(height: AppSpacing.xl),
-                    // Offline indicator
-                    if (!Connectivity.instance.isOnline)
-                      Container(
-                        padding: const EdgeInsets.all(AppSpacing.md),
-                        decoration: BoxDecoration(
-                          color: AppColors.infoLight,
-                          borderRadius: BorderRadius.circular(AppRadius.md),
-                          border: Border.all(
-                              color: AppColors.info.withValues(alpha: 0.3)),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.wifi_off, color: AppColors.info),
-                            const SizedBox(width: AppSpacing.md),
-                            Expanded(
-                              child: Text(
-                                'Você está offline. Os dados serão enviados quando houver internet.',
-                                style: TextStyle(
-                                  color: AppColors.info,
-                                  fontSize: FontSizes.bodyMedium,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            ),
-            // Action buttons
-            Padding(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              child: Column(
-                children: [
-                  LargeActionButton(
-                    label: _isSending ? 'Enviando...' : 'Enviar Checklist',
-                    icon: _isSending ? Icons.hourglass_top : Icons.send,
-                    color: area.color,
-                    onPressed:
-                        _isSending ? () {} : () => _sendChecklist(context),
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  LargeActionButton(
-                    label: 'Revisar Respostas',
-                    icon: Icons.edit,
-                    color: theme.colorScheme.onSurfaceVariant,
-                    isOutlined: true,
-                    onPressed: () {
-                      Navigator.pop(context);
-                    },
-                  ),
-                ],
-              ),
-            ),
-          ],
+      body: FutureBuilder<Map<String, dynamic>>(
+        future: _drafts.loadDraft(
+          checklistId: widget.checklistId,
+          operatorName: widget.operatorName ?? 'Operador',
         ),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          final draft = snapshot.data ?? {};
+          final answers = (draft['answers'] as List?) ?? [];
+
+          final answeredQuestions = answers.length;
+          final totalQuestions = checklist.questions.length;
+
+          // Calcula problemas: para Yes/No, considera 'false' como problema
+          final problemsFound = answers.where((a) {
+            if (a is! Map) return false;
+            final val = a['value'];
+            final qid = a['questionId'];
+            final q = checklist.questions.firstWhere((q) => q.id == qid,
+                orElse: () => checklist.questions.first);
+
+            if (q.answerType == AnswerType.yesNo && val == false) return true;
+            return false;
+          }).length;
+
+          final photosCount =
+              answers.where((a) => a is Map && a['photoBase64'] != null).length;
+
+          return SafeArea(
+            child: Column(
+              children: [
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(AppSpacing.lg),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // Success icon
+                        Container(
+                          width: 100,
+                          height: 100,
+                          decoration: BoxDecoration(
+                            color: AppColors.success.withValues(alpha: 0.1),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.check_circle,
+                            size: 56,
+                            color: AppColors.success,
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.lg),
+                        Text(
+                          'Checklist Completo!',
+                          style: theme.textTheme.headlineMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.success,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                        Text(
+                          'Tudo pronto para enviar',
+                          style: theme.textTheme.bodyLarge?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: AppSpacing.xl),
+
+                        // Summary Cards
+                        _buildSummaryCard(
+                          icon: Icons.quiz,
+                          title: 'Perguntas Respondidas',
+                          value: '$answeredQuestions de $totalQuestions',
+                          color: AppColors.accentBlue,
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                        _buildSummaryCard(
+                          icon: Icons.warning_amber,
+                          title: 'Problemas Encontrados',
+                          value: problemsFound.toString(),
+                          color: problemsFound > 0
+                              ? AppColors.error
+                              : AppColors.success,
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                        _buildSummaryCard(
+                          icon: Icons.camera_alt,
+                          title: 'Fotos Tiradas',
+                          value: photosCount.toString(),
+                          color: AppColors.primaryGreen,
+                        ),
+                        const SizedBox(height: AppSpacing.xl),
+
+                        // Offline indicator
+                        if (!Connectivity.instance.isOnline)
+                          Container(
+                            padding: const EdgeInsets.all(AppSpacing.md),
+                            decoration: BoxDecoration(
+                              color: AppColors.infoLight,
+                              borderRadius: BorderRadius.circular(AppRadius.md),
+                              border: Border.all(
+                                  color: AppColors.info.withValues(alpha: 0.3)),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.wifi_off,
+                                    color: AppColors.info),
+                                const SizedBox(width: AppSpacing.md),
+                                Expanded(
+                                  child: Text(
+                                    'Você está offline. Os dados serão enviados quando houver internet.',
+                                    style: TextStyle(
+                                      color: AppColors.info,
+                                      fontSize: FontSizes.bodyMedium,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+                // Action buttons
+                Padding(
+                  padding: const EdgeInsets.all(AppSpacing.lg),
+                  child: Column(
+                    children: [
+                      LargeActionButton(
+                        label: _isSending ? 'Enviando...' : 'Enviar Checklist',
+                        icon: _isSending ? Icons.hourglass_top : Icons.send,
+                        color: area.color,
+                        onPressed:
+                            _isSending ? () {} : () => _sendChecklist(context),
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      LargeActionButton(
+                        label: 'Revisar Respostas',
+                        icon: Icons.edit,
+                        color: theme.colorScheme.onSurfaceVariant,
+                        isOutlined: true,
+                        onPressed: () {
+                          Navigator.pop(context);
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
