@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:morro_do_peo/models/checklist_area.dart';
 import 'package:morro_do_peo/services/checklist_service.dart';
+import 'package:morro_do_peo/utils/connectivity.dart';
 import 'package:morro_do_peo/theme.dart';
 import 'package:morro_do_peo/components/large_action_button.dart';
 
@@ -68,6 +69,8 @@ class _SuccessPageState extends State<SuccessPage>
     final suffix = query.isNotEmpty ? '?$query' : '';
     final result = widget.result;
     final isQueued = result == 'queued';
+    final isActuallyOffline = isQueued && !Connectivity.instance.isOnline;
+    final showSuccess = !isActuallyOffline;
 
     return Scaffold(
       body: SafeArea(
@@ -88,19 +91,19 @@ class _SuccessPageState extends State<SuccessPage>
                     color: AppColors.success.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.check_circle,
                     size: 100,
-                    color: AppColors.success,
+                    color: showSuccess ? AppColors.success : AppColors.warning,
                   ),
                 ),
               ),
               const SizedBox(height: AppSpacing.xl),
               Text(
-                isQueued ? 'Checklist salvo\npara enviar depois' : 'Checklist enviado\ncom sucesso!',
+                showSuccess ? 'Checklist enviado\ncom sucesso!' : 'Checklist salvo\npara enviar depois',
                 style: theme.textTheme.headlineMedium?.copyWith(
                   fontWeight: FontWeight.w800,
-                  color: isQueued ? AppColors.warning : AppColors.success,
+                  color: showSuccess ? AppColors.success : AppColors.warning,
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -152,14 +155,14 @@ class _SuccessPageState extends State<SuccessPage>
                   mainAxisSize: MainAxisSize.min,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(isQueued ? Icons.cloud_off : Icons.cloud_done, size: 18, color: isQueued ? AppColors.warning : AppColors.success),
+                    Icon(showSuccess ? Icons.cloud_done : Icons.cloud_off, size: 18, color: showSuccess ? AppColors.success : AppColors.warning),
                     const SizedBox(width: AppSpacing.sm),
                     Text(
-                      isQueued ? 'Salvo no aparelho (pendente)' : 'Salvo no servidor',
+                      showSuccess ? 'Salvo no servidor' : 'Salvo no aparelho (pendente)',
                       style: TextStyle(
                         fontSize: FontSizes.labelMedium,
                         fontWeight: FontWeight.w600,
-                        color: isQueued ? AppColors.warning : AppColors.success,
+                        color: showSuccess ? AppColors.success : AppColors.warning,
                       ),
                     ),
                   ],

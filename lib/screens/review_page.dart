@@ -6,6 +6,7 @@ import 'package:morro_do_peo/services/checklist_service.dart';
 import 'package:morro_do_peo/services/draft_submission_service.dart';
 import 'package:morro_do_peo/services/submission_service.dart';
 import 'package:morro_do_peo/theme.dart';
+import 'package:morro_do_peo/utils/connectivity.dart';
 import 'package:morro_do_peo/components/large_action_button.dart';
 
 class ReviewPage extends StatefulWidget {
@@ -54,10 +55,17 @@ class _ReviewPageState extends State<ReviewPage> {
     final photosCount = 2; // Simulated
 
     final op = widget.operatorName;
-    final opQuery = (op != null && op.trim().isNotEmpty) ? 'op=${Uri.encodeComponent(op)}' : null;
+    final opQuery = (op != null && op.trim().isNotEmpty)
+        ? 'op=${Uri.encodeComponent(op)}'
+        : null;
     final opId = widget.operatorId;
-    final opIdQuery = (opId != null && opId.trim().isNotEmpty) ? 'opId=${Uri.encodeComponent(opId)}' : null;
-    final query = [if (opQuery != null) opQuery, if (opIdQuery != null) opIdQuery].join('&');
+    final opIdQuery = (opId != null && opId.trim().isNotEmpty)
+        ? 'opId=${Uri.encodeComponent(opId)}'
+        : null;
+    final query = [
+      if (opQuery != null) opQuery,
+      if (opIdQuery != null) opIdQuery
+    ].join('&');
     final suffix = query.isNotEmpty ? '?$query' : '';
 
     return Scaffold(
@@ -68,7 +76,8 @@ class _ReviewPageState extends State<ReviewPage> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, size: 28),
           onPressed: () {
-            context.go('/question/${widget.checklistId}/${totalQuestions - 1}$suffix');
+            context.go(
+                '/question/${widget.checklistId}/${totalQuestions - 1}$suffix');
           },
         ),
       ),
@@ -125,7 +134,9 @@ class _ReviewPageState extends State<ReviewPage> {
                       icon: Icons.warning_amber,
                       title: 'Problemas Encontrados',
                       value: problemsFound.toString(),
-                      color: problemsFound > 0 ? AppColors.warning : AppColors.success,
+                      color: problemsFound > 0
+                          ? AppColors.warning
+                          : AppColors.success,
                     ),
                     const SizedBox(height: AppSpacing.md),
                     _buildSummaryCard(
@@ -136,29 +147,31 @@ class _ReviewPageState extends State<ReviewPage> {
                     ),
                     const SizedBox(height: AppSpacing.xl),
                     // Offline indicator
-                    Container(
-                      padding: const EdgeInsets.all(AppSpacing.md),
-                      decoration: BoxDecoration(
-                        color: AppColors.infoLight,
-                        borderRadius: BorderRadius.circular(AppRadius.md),
-                        border: Border.all(color: AppColors.info.withValues(alpha: 0.3)),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.wifi, color: AppColors.info),
-                          const SizedBox(width: AppSpacing.md),
-                          Expanded(
-                            child: Text(
-                              'Dados serão enviados quando houver internet',
-                              style: TextStyle(
-                                color: AppColors.info,
-                                fontSize: FontSizes.bodyMedium,
+                    if (!Connectivity.instance.isOnline)
+                      Container(
+                        padding: const EdgeInsets.all(AppSpacing.md),
+                        decoration: BoxDecoration(
+                          color: AppColors.infoLight,
+                          borderRadius: BorderRadius.circular(AppRadius.md),
+                          border: Border.all(
+                              color: AppColors.info.withValues(alpha: 0.3)),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.wifi_off, color: AppColors.info),
+                            const SizedBox(width: AppSpacing.md),
+                            Expanded(
+                              child: Text(
+                                'Você está offline. Os dados serão enviados quando houver internet.',
+                                style: TextStyle(
+                                  color: AppColors.info,
+                                  fontSize: FontSizes.bodyMedium,
+                                ),
                               ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
                   ],
                 ),
               ),
@@ -172,7 +185,8 @@ class _ReviewPageState extends State<ReviewPage> {
                     label: _isSending ? 'Enviando...' : 'Enviar Checklist',
                     icon: _isSending ? Icons.hourglass_top : Icons.send,
                     color: area.color,
-                    onPressed: _isSending ? () {} : () => _sendChecklist(context),
+                    onPressed:
+                        _isSending ? () {} : () => _sendChecklist(context),
                   ),
                   const SizedBox(height: AppSpacing.md),
                   LargeActionButton(
@@ -249,13 +263,19 @@ class _ReviewPageState extends State<ReviewPage> {
       final op = widget.operatorName?.trim();
       final operatorName = (op != null && op.isNotEmpty) ? op : 'Operador';
 
-      final draft = await _drafts.loadDraft(checklistId: widget.checklistId, operatorName: operatorName);
-      final answers = (draft['answers'] as List?)?.whereType<Map>().map((e) => e.cast<String, dynamic>()).toList() ?? <Map<String, dynamic>>[];
+      final draft = await _drafts.loadDraft(
+          checklistId: widget.checklistId, operatorName: operatorName);
+      final answers = (draft['answers'] as List?)
+              ?.whereType<Map>()
+              .map((e) => e.cast<String, dynamic>())
+              .toList() ??
+          <Map<String, dynamic>>[];
 
       // Cria uma submissão local (histórico) e enfileira para envio.
       final checklist = ChecklistService().getChecklistById(widget.checklistId);
       final area = checklist != null
-          ? ChecklistArea.getAreas().firstWhere((a) => a.id == checklist.areaId, orElse: () => ChecklistArea.getAreas().first)
+          ? ChecklistArea.getAreas().firstWhere((a) => a.id == checklist.areaId,
+              orElse: () => ChecklistArea.getAreas().first)
           : ChecklistArea.getAreas().first;
 
       final submission = await _submissions.createSubmission(
@@ -275,9 +295,13 @@ class _ReviewPageState extends State<ReviewPage> {
           questionId: (a['questionId'] as String?) ?? 'unknown',
           textAnswer: a['value'] is String ? a['value'] as String : null,
           boolAnswer: a['value'] is bool ? a['value'] as bool : null,
-          numberAnswer: a['value'] is int ? a['value'] as int : (a['value'] is num ? (a['value'] as num).toInt() : null),
+          numberAnswer: a['value'] is int
+              ? a['value'] as int
+              : (a['value'] is num ? (a['value'] as num).toInt() : null),
           selectedChoice: a['value'] is String ? a['value'] as String : null,
-          photoPath: a['photoBase64'] != null ? 'base64:${(a['photoBase64'] as String).length}' : null,
+          photoPath: a['photoBase64'] != null
+              ? 'base64:${(a['photoBase64'] as String).length}'
+              : null,
           audioPath: a['audioRef'] as String?,
           hasProblem: false,
           problemDescription: a['notes'] as String?,
@@ -289,13 +313,17 @@ class _ReviewPageState extends State<ReviewPage> {
           answers: mappedAnswers,
           answeredQuestions: mappedAnswers.length,
           photosCount: mappedAnswers.where((e) => e.photoPath != null).length,
-          audioNotesCount: mappedAnswers.where((e) => e.audioPath != null).length,
+          audioNotesCount:
+              mappedAnswers.where((e) => e.audioPath != null).length,
         ),
       );
 
       // Monta payload para o backend (SubmissionCreate) + anexos.
       final now = DateTime.now();
-      final operatorId = (widget.operatorId != null && widget.operatorId!.trim().isNotEmpty) ? widget.operatorId!.trim() : operatorName;
+      final operatorId =
+          (widget.operatorId != null && widget.operatorId!.trim().isNotEmpty)
+              ? widget.operatorId!.trim()
+              : operatorName;
       final attachmentItems = <Map<String, dynamic>>[];
       final attachmentMetas = <Map<String, dynamic>>[];
 
@@ -352,25 +380,40 @@ class _ReviewPageState extends State<ReviewPage> {
       await _submissions.completeSubmission(
         submission.id,
         backendPayload: backendPayload,
-        backendAttachments: attachmentItems.isNotEmpty ? {'items': attachmentItems} : null,
+        backendAttachments:
+            attachmentItems.isNotEmpty ? {'items': attachmentItems} : null,
       );
-      await _drafts.clearDraft(checklistId: widget.checklistId, operatorName: operatorName);
+      await _drafts.clearDraft(
+          checklistId: widget.checklistId, operatorName: operatorName);
 
       if (!mounted) return;
-      final opQuery = (operatorName.trim().isNotEmpty) ? 'op=${Uri.encodeComponent(operatorName)}' : null;
+      final opQuery = (operatorName.trim().isNotEmpty)
+          ? 'op=${Uri.encodeComponent(operatorName)}'
+          : null;
       final opId = widget.operatorId;
-      final opIdQuery = (opId != null && opId.trim().isNotEmpty) ? 'opId=${Uri.encodeComponent(opId)}' : null;
-      final result = _submissions.pendingQueueCount.value > 0 ? 'queued' : 'sent';
-      final suffix = [if (opQuery != null) opQuery, if (opIdQuery != null) opIdQuery, 'result=$result'].join('&');
+      final opIdQuery = (opId != null && opId.trim().isNotEmpty)
+          ? 'opId=${Uri.encodeComponent(opId)}'
+          : null;
+      final result =
+          _submissions.pendingQueueCount.value > 0 ? 'queued' : 'sent';
+      final suffix = [
+        if (opQuery != null) opQuery,
+        if (opIdQuery != null) opIdQuery,
+        'result=$result'
+      ].join('&');
       if (!context.mounted) return;
       context.go('/success/${widget.checklistId}?$suffix');
     } catch (e) {
       debugPrint('Failed to send checklist: $e');
       if (!mounted) return;
       final op = widget.operatorName;
-      final opQuery = (op != null && op.trim().isNotEmpty) ? 'op=${Uri.encodeComponent(op)}' : null;
+      final opQuery = (op != null && op.trim().isNotEmpty)
+          ? 'op=${Uri.encodeComponent(op)}'
+          : null;
       final opId = widget.operatorId;
-      final opIdQuery = (opId != null && opId.trim().isNotEmpty) ? 'opId=${Uri.encodeComponent(opId)}' : null;
+      final opIdQuery = (opId != null && opId.trim().isNotEmpty)
+          ? 'opId=${Uri.encodeComponent(opId)}'
+          : null;
       final suffix = [
         if (opQuery != null) opQuery,
         if (opIdQuery != null) opIdQuery,

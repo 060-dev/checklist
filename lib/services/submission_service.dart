@@ -21,7 +21,8 @@ class SubmissionService {
 
   final OfflineQueueService _queue = OfflineQueueService();
   final MorroApiClient _api = MorroApiClient();
-
+  
+  final ValueNotifier<List<ChecklistSubmission>> submissionsNotifier = ValueNotifier([]);
   ValueListenable<int> get pendingQueueCount => _queue.pendingCountNotifier;
 
   Future<void> init() async {
@@ -45,6 +46,7 @@ class SubmissionService {
         _submissions = _generateSampleSubmissions();
         await _save();
       }
+      submissionsNotifier.value = List.from(_submissions);
     } catch (e) {
       debugPrint('Error initializing submissions: $e');
       _submissions = _generateSampleSubmissions();
@@ -206,6 +208,7 @@ class SubmissionService {
     );
     _submissions.insert(0, submission);
     await _save();
+    submissionsNotifier.value = List.from(_submissions);
     return submission;
   }
 
@@ -214,6 +217,7 @@ class SubmissionService {
     if (index >= 0) {
       _submissions[index] = submission.copyWith(updatedAt: DateTime.now());
       await _save();
+      submissionsNotifier.value = List.from(_submissions);
       return _submissions[index];
     }
     return submission;
@@ -259,8 +263,10 @@ class SubmissionService {
           _submissions[idx] = _submissions[idx].copyWith(status: SubmissionStatus.pendingSync, updatedAt: DateTime.now());
         }
         await _save();
+        submissionsNotifier.value = List.from(_submissions);
       });
 
+      submissionsNotifier.value = List.from(_submissions);
       return completed;
     }
     throw Exception('Submission not found');

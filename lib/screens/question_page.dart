@@ -611,7 +611,7 @@ class _QuestionPageState extends State<QuestionPage> {
                 },
                 icon: const Icon(Icons.arrow_back, size: 24),
                 label: const Text(
-                  'Voltar',
+                  '',
                   style: TextStyle(
                     fontSize: FontSizes.labelLarge,
                     fontWeight: FontWeight.w600,

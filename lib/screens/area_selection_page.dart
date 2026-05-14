@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:morro_do_peo/models/checklist_area.dart';
+import 'package:morro_do_peo/services/submission_service.dart';
 import 'package:morro_do_peo/theme.dart';
 import 'package:morro_do_peo/components/large_action_button.dart';
 
@@ -13,12 +14,20 @@ class AreaSelectionPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final submissionService = SubmissionService();
     final areas = ChecklistArea.getAreas();
     final op = operatorName;
-    final opQuery = (op != null && op.trim().isNotEmpty) ? 'op=${Uri.encodeComponent(op)}' : null;
+    final opQuery = (op != null && op.trim().isNotEmpty)
+        ? 'op=${Uri.encodeComponent(op)}'
+        : null;
     final opId = operatorId;
-    final opIdQuery = (opId != null && opId.trim().isNotEmpty) ? 'opId=${Uri.encodeComponent(opId)}' : null;
-    final query = [if (opQuery != null) opQuery, if (opIdQuery != null) opIdQuery].join('&');
+    final opIdQuery = (opId != null && opId.trim().isNotEmpty)
+        ? 'opId=${Uri.encodeComponent(opId)}'
+        : null;
+    final query = [
+      if (opQuery != null) opQuery,
+      if (opIdQuery != null) opIdQuery
+    ].join('&');
     final suffix = query.isNotEmpty ? '?$query' : '';
 
     return Scaffold(
@@ -28,6 +37,49 @@ class AreaSelectionPage extends StatelessWidget {
           icon: const Icon(Icons.arrow_back, size: 28),
           onPressed: () => context.go('/'),
         ),
+        actions: [
+          ValueListenableBuilder<int>(
+            valueListenable: submissionService.pendingQueueCount,
+            builder: (context, count, _) {
+              if (count == 0) return const SizedBox.shrink();
+              return Padding(
+                padding: const EdgeInsets.only(right: AppSpacing.md),
+                child: Center(
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppColors.warning.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: AppColors.warning.withValues(alpha: 0.5),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.sync,
+                          size: 14,
+                          color: AppColors.warning,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '$count',
+                          style: const TextStyle(
+                            color: AppColors.warning,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
       ),
       body: SafeArea(
         child: Padding(
@@ -41,7 +93,8 @@ class AreaSelectionPage extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: AppColors.primaryGreen.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(AppRadius.lg),
-                    border: Border.all(color: AppColors.primaryGreen.withValues(alpha: 0.2)),
+                    border: Border.all(
+                        color: AppColors.primaryGreen.withValues(alpha: 0.2)),
                   ),
                   child: Row(
                     children: [

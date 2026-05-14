@@ -109,7 +109,7 @@ class OfflineQueueService {
       await _save();
       pendingCountNotifier.value = _queue.where((e) => e.status != PendingQueueStatus.sent).length;
     } catch (e) {
-      debugPrint('Queue send failed: $e');
+      debugPrint('[QUEUE] Send failed: $e');
       final updated = _queue[idx];
       final retryCount = updated.retryCount + 1;
       _queue[idx] = updated.copyWith(
@@ -155,7 +155,7 @@ class OfflineQueueService {
               .whereType<PendingQueueItem>(),
         );
     } catch (e) {
-      debugPrint('Failed to load queue: $e');
+      debugPrint('[QUEUE] Failed to load queue from storage: $e');
     }
   }
 
@@ -165,7 +165,7 @@ class OfflineQueueService {
       final raw = jsonEncode(_queue.map((e) => e.toJson()).toList());
       await prefs.setString(_storageKey, raw);
     } catch (e) {
-      debugPrint('Failed to save queue: $e');
+      debugPrint('[QUEUE] Failed to save queue to storage: $e');
     }
   }
 

@@ -42,7 +42,7 @@ class OperatorService {
 
   Future<void> syncOperators() async {
     try {
-      debugPrint('[OperatorService] Syncing operators from /operators...');
+      debugPrint('[SYNC] Starting operators sync...');
       final json = await _api.getJson('/operators', query: {
         'farmId': MorroApiConfig.farmId,
       });
@@ -59,10 +59,10 @@ class OperatorService {
         _operators = items.map((e) => Operator.fromJson(e.cast<String, dynamic>())).where((o) => o.id.isNotEmpty).toList();
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString(_storageKey, jsonEncode(_operators.map((o) => o.toJson()).toList()));
-        debugPrint('[OperatorService] Operators synced: ${_operators.length} items');
+        debugPrint('[SYNC] Operators updated: ${_operators.length} items');
       }
     } catch (e) {
-      debugPrint('[OperatorService] Sync failed: $e');
+      debugPrint('[SYNC] Operators sync failed: $e');
     }
   }
 }

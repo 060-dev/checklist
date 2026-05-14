@@ -50,7 +50,7 @@ class ChecklistService {
 
   Future<void> syncCatalog() async {
     try {
-      debugPrint('[ChecklistService] Syncing catalog from /catalog...');
+      debugPrint('[SYNC] Starting catalog sync...');
       final json = await _api.getJson('/catalog', query: {
         'farmId': MorroApiConfig.farmId,
       });
@@ -95,10 +95,10 @@ class ChecklistService {
           'areas': rawAreas,
           'checklists': _checklists.map((e) => e.toJson()).toList(),
         }));
-        debugPrint('[ChecklistService] Catalog synced: ${_checklists.length} checklists, ${rawAreas.length} areas');
+        debugPrint('[SYNC] Catalog updated: ${_checklists.length} checklists, ${rawAreas.length} areas');
       }
     } catch (e) {
-      debugPrint('[ChecklistService] Sync failed: $e');
+      debugPrint('[SYNC] Catalog sync failed: $e');
     }
   }
 

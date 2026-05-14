@@ -77,8 +77,10 @@ class MorroApiClient {
 
   Future<Map<String, dynamic>> getJson(String path, {Map<String, String?> query = const {}}) async {
     final uri = _uri(path, query);
+    debugPrint('[API] GET $path');
     try {
       final resp = await _client.get(uri, headers: await _headers()).timeout(const Duration(seconds: 20));
+      debugPrint('[API] ${resp.statusCode} GET $path');
       return _decodeJsonResponse(resp);
     } on TimeoutException {
       throw const MorroApiException(message: 'timeout');
@@ -92,6 +94,7 @@ class MorroApiClient {
     Map<String, String>? headers,
   }) async {
     final uri = _uri(path, query);
+    debugPrint('[API] POST $path');
     try {
       final resp = await _client
           .post(
@@ -103,6 +106,7 @@ class MorroApiClient {
             body: jsonEncode(body),
           )
           .timeout(const Duration(seconds: 30));
+      debugPrint('[API] ${resp.statusCode} POST $path');
       return _decodeJsonResponse(resp);
     } on TimeoutException {
       throw const MorroApiException(message: 'timeout');
