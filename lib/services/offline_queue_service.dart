@@ -8,7 +8,8 @@ import 'package:uuid/uuid.dart';
 import 'package:morro_do_peo/models/pending_queue_item.dart';
 import 'package:morro_do_peo/utils/connectivity.dart';
 
-typedef SendAttempt = Future<void> Function(Map<String, dynamic> payload, Map<String, dynamic>? attachments);
+typedef SendAttempt = Future<void> Function(
+    Map<String, dynamic> payload, Map<String, dynamic>? attachments);
 
 class OfflineQueueService {
   static final OfflineQueueService _instance = OfflineQueueService._internal();
@@ -30,10 +31,12 @@ class OfflineQueueService {
     if (_initialized) return;
     await _load();
     _initialized = true;
-    pendingCountNotifier.value = _queue.where((e) => e.status != PendingQueueStatus.sent).length;
+    pendingCountNotifier.value =
+        _queue.where((e) => e.status != PendingQueueStatus.sent).length;
 
     _timer?.cancel();
-    _timer = Timer.periodic(const Duration(seconds: 15), (_) => flush(sendAttempt: sendAttempt));
+    _timer = Timer.periodic(
+        const Duration(seconds: 15), (_) => flush(sendAttempt: sendAttempt));
 
     _onlineSub?.cancel();
     _onlineSub = Connectivity.instance.onOnlineChanged.listen((online) {
@@ -67,7 +70,8 @@ class OfflineQueueService {
     );
     _queue.insert(0, item);
     await _save();
-    pendingCountNotifier.value = _queue.where((e) => e.status != PendingQueueStatus.sent).length;
+    pendingCountNotifier.value =
+        _queue.where((e) => e.status != PendingQueueStatus.sent).length;
     return item;
   }
 
@@ -76,50 +80,63 @@ class OfflineQueueService {
     if (_sendingNow) return;
     if (!Connectivity.instance.isOnline) return;
 
-    final now = DateTime.now();
-    final next = _queue.firstWhere(
-      (e) => e.status != PendingQueueStatus.sent && (e.nextRetryAt == null || !e.nextRetryAt!.isAfter(now)),
-      orElse: () => PendingQueueItem(
-        id: '__none__',
-        createdAt: DateTime.fromMillisecondsSinceEpoch(0),
-        updatedAt: DateTime.fromMillisecondsSinceEpoch(0),
-        status: PendingQueueStatus.sent,
-        retryCount: 0,
-        payload: const <String, dynamic>{},
-      ),
-    );
-    if (next.id == '__none__') return;
-
-    final idx = _queue.indexWhere((e) => e.id == next.id);
-    if (idx < 0) return;
-
     _sendingNow = true;
     try {
-      _queue[idx] = _queue[idx].copyWith(
-        status: PendingQueueStatus.sending,
-        lastAttemptAt: now,
-        updatedAt: now,
-      );
-      await _save();
-      pendingCountNotifier.value = _queue.where((e) => e.status != PendingQueueStatus.sent).length;
+      while (Connectivity.instance.isOnline) {
+        final now = DateTime.now();
+        final next = _queue.firstWhere(
+          (e) =>
+              e.status != PendingQueueStatus.sent &&
+              (e.nextRetryAt == null || !e.nextRetryAt!.isAfter(now)),
+          orElse: () => PendingQueueItem(
+            id: '__none__',
+            createdAt: DateTime.fromMillisecondsSinceEpoch(0),
+            updatedAt: DateTime.fromMillisecondsSinceEpoch(0),
+            status: PendingQueueStatus.sent,
+            retryCount: 0,
+            payload: const <String, dynamic>{},
+          ),
+        );
 
-      await sendAttempt(_queue[idx].payload, _queue[idx].attachments);
+        if (next.id == '__none__') break;
 
-      _queue[idx] = _queue[idx].copyWith(status: PendingQueueStatus.sent, updatedAt: DateTime.now());
-      await _save();
-      pendingCountNotifier.value = _queue.where((e) => e.status != PendingQueueStatus.sent).length;
-    } catch (e) {
-      debugPrint('[QUEUE] Send failed: $e');
-      final updated = _queue[idx];
-      final retryCount = updated.retryCount + 1;
-      _queue[idx] = updated.copyWith(
-        status: PendingQueueStatus.failed,
-        retryCount: retryCount,
-        nextRetryAt: DateTime.now().add(_backoff(retryCount)),
-        updatedAt: DateTime.now(),
-      );
-      await _save();
-      pendingCountNotifier.value = _queue.where((e) => e.status != PendingQueueStatus.sent).length;
+        final idx = _queue.indexWhere((e) => e.id == next.id);
+        if (idx < 0) break;
+
+        try {
+          _queue[idx] = _queue[idx].copyWith(
+            status: PendingQueueStatus.sending,
+            lastAttemptAt: now,
+            updatedAt: now,
+          );
+          await _save();
+          pendingCountNotifier.value =
+              _queue.where((e) => e.status != PendingQueueStatus.sent).length;
+
+          await sendAttempt(_queue[idx].payload, _queue[idx].attachments);
+
+          _queue[idx] = _queue[idx].copyWith(
+              status: PendingQueueStatus.sent, updatedAt: DateTime.now());
+          await _save();
+          pendingCountNotifier.value =
+              _queue.where((e) => e.status != PendingQueueStatus.sent).length;
+        } catch (e) {
+          debugPrint('[QUEUE] Send failed for item ${next.id}: $e');
+          final updated = _queue[idx];
+          final retryCount = updated.retryCount + 1;
+          _queue[idx] = updated.copyWith(
+            status: PendingQueueStatus.failed,
+            retryCount: retryCount,
+            nextRetryAt: DateTime.now().add(_backoff(retryCount)),
+            updatedAt: DateTime.now(),
+          );
+          await _save();
+          pendingCountNotifier.value =
+              _queue.where((e) => e.status != PendingQueueStatus.sent).length;
+          // Se falhou um, paramos o loop para respeitar o backoff ou esperar nova conexão
+          break;
+        }
+      }
     } finally {
       _sendingNow = false;
     }
@@ -143,16 +160,13 @@ class OfflineQueueService {
       _queue
         ..clear()
         ..addAll(
-          decoded
-              .whereType<Map>()
-              .map((e) {
-                try {
-                  return PendingQueueItem.fromJson(e.cast<String, dynamic>());
-                } catch (_) {
-                  return null;
-                }
-              })
-              .whereType<PendingQueueItem>(),
+          decoded.whereType<Map>().map((e) {
+            try {
+              return PendingQueueItem.fromJson(e.cast<String, dynamic>());
+            } catch (_) {
+              return null;
+            }
+          }).whereType<PendingQueueItem>(),
         );
     } catch (e) {
       debugPrint('[QUEUE] Failed to load queue from storage: $e');
