@@ -55,7 +55,7 @@ class RoleSelectionPage extends StatelessWidget {
                 title: 'Operador',
                 subtitle: 'Preencher checklists',
                 color: AppColors.primaryGreen,
-                onPressed: () => context.go('/operator'),
+                onPressed: () => context.push('/operator'),
               ),
               const SizedBox(height: AppSpacing.xxl),
               const SizedBox(height: AppSpacing.lg),

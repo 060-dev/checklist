@@ -75,7 +75,13 @@ class _SubmissionDetailPageState extends State<SubmissionDetailPage> {
         foregroundColor: AppColors.onColorFor(area.color),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, size: 28),
-          onPressed: () => context.go('/manager'),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/manager');
+            }
+          },
         ),
       ),
       body: SingleChildScrollView(

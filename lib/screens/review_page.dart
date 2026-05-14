@@ -54,19 +54,6 @@ class _ReviewPageState extends State<ReviewPage> {
     final problemsFound = 1; // Simulated
     final photosCount = 2; // Simulated
 
-    final op = widget.operatorName;
-    final opQuery = (op != null && op.trim().isNotEmpty)
-        ? 'op=${Uri.encodeComponent(op)}'
-        : null;
-    final opId = widget.operatorId;
-    final opIdQuery = (opId != null && opId.trim().isNotEmpty)
-        ? 'opId=${Uri.encodeComponent(opId)}'
-        : null;
-    final query = [
-      if (opQuery != null) opQuery,
-      if (opIdQuery != null) opIdQuery
-    ].join('&');
-    final suffix = query.isNotEmpty ? '?$query' : '';
 
     return Scaffold(
       appBar: AppBar(
@@ -76,8 +63,7 @@ class _ReviewPageState extends State<ReviewPage> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, size: 28),
           onPressed: () {
-            context.go(
-                '/question/${widget.checklistId}/${totalQuestions - 1}$suffix');
+            context.pop();
           },
         ),
       ),
@@ -195,7 +181,7 @@ class _ReviewPageState extends State<ReviewPage> {
                     color: theme.colorScheme.onSurfaceVariant,
                     isOutlined: true,
                     onPressed: () {
-                      context.go('/question/${widget.checklistId}/0$suffix');
+                      context.pop();
                     },
                   ),
                 ],

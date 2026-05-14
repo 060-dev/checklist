@@ -35,7 +35,7 @@ class _OperatorSelectionPageState extends State<OperatorSelectionPage> {
         title: const Text('Quem vai preencher?'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, size: 28),
-          onPressed: () => context.go('/'),
+          onPressed: () => context.pop(),
         ),
       ),
       body: SafeArea(
@@ -46,61 +46,63 @@ class _OperatorSelectionPageState extends State<OperatorSelectionPage> {
             children: [
               Text(
                 'Toque no seu nome',
-                style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w800),
+                style: theme.textTheme.headlineMedium
+                    ?.copyWith(fontWeight: FontWeight.w800),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: AppSpacing.sm),
               Text(
                 'Isso ajuda a identificar quem fez o checklist',
-                style: theme.textTheme.bodyLarge?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                style: theme.textTheme.bodyLarge
+                    ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: AppSpacing.xl),
               Expanded(
-                child: FutureBuilder<List<Operator>>(
-                  future: _future,
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const _OperatorLoadingState();
-                    }
+                  child: FutureBuilder<List<Operator>>(
+                future: _future,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const _OperatorLoadingState();
+                  }
 
-                    if (snapshot.hasError) {
-                      return _OperatorEmptyState(
-                        title: 'Não foi possível carregar',
-                        subtitle: 'Verifique a internet e tente novamente.',
-                        buttonLabel: 'Tentar novamente',
-                        onRetry: _reload,
-                      );
-                    }
-
-                    final list = snapshot.data ?? const <Operator>[];
-                    if (list.isEmpty) {
-                      return _OperatorEmptyState(
-                        title: 'Nenhum operador encontrado',
-                        subtitle: 'Peça ao gestor para cadastrar os operadores.',
-                        buttonLabel: 'Atualizar lista',
-                        onRetry: _reload,
-                      );
-                    }
-
-                    return ListView.separated(
-                      itemCount: list.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.md),
-                      itemBuilder: (context, index) {
-                        final op = list[index];
-                        return _OperatorTile(
-                          name: op.name,
-                          onTap: () {
-                            final opName = Uri.encodeComponent(op.name);
-                            final opId = Uri.encodeComponent(op.id);
-                            context.go('/areas?op=$opName&opId=$opId');
-                          },
-                        );
-                      },
+                  if (snapshot.hasError) {
+                    return _OperatorEmptyState(
+                      title: 'Não foi possível carregar',
+                      subtitle: 'Verifique a internet e tente novamente.',
+                      buttonLabel: 'Tentar novamente',
+                      onRetry: _reload,
                     );
-                  },
-                )
-              ),
+                  }
+
+                  final list = snapshot.data ?? const <Operator>[];
+                  if (list.isEmpty) {
+                    return _OperatorEmptyState(
+                      title: 'Nenhum operador encontrado',
+                      subtitle: 'Peça ao gestor para cadastrar os operadores.',
+                      buttonLabel: 'Atualizar lista',
+                      onRetry: _reload,
+                    );
+                  }
+
+                  return ListView.separated(
+                    itemCount: list.length,
+                    separatorBuilder: (_, __) =>
+                        const SizedBox(height: AppSpacing.md),
+                    itemBuilder: (context, index) {
+                      final op = list[index];
+                      return _OperatorTile(
+                        name: op.name,
+                        onTap: () {
+                          final opName = Uri.encodeComponent(op.name);
+                          final opId = Uri.encodeComponent(op.id);
+                          context.push('/areas?op=$opName&opId=$opId');
+                        },
+                      );
+                    },
+                  );
+                },
+              )),
             ],
           ),
         ),
@@ -130,7 +132,9 @@ class _OperatorTile extends StatelessWidget {
           decoration: BoxDecoration(
             color: AppColors.primaryGreen.withValues(alpha: 0.08),
             borderRadius: BorderRadius.circular(AppRadius.xl),
-            border: Border.all(color: AppColors.primaryGreen.withValues(alpha: 0.25), width: 2),
+            border: Border.all(
+                color: AppColors.primaryGreen.withValues(alpha: 0.25),
+                width: 2),
           ),
           child: Row(
             children: [
@@ -147,10 +151,13 @@ class _OperatorTile extends StatelessWidget {
               Expanded(
                 child: Text(
                   name,
-                  style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800, color: AppColors.primaryGreen),
+                  style: theme.textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.primaryGreen),
                 ),
               ),
-              const Icon(Icons.arrow_forward_ios, color: AppColors.primaryGreen, size: 22),
+              const Icon(Icons.arrow_forward_ios,
+                  color: AppColors.primaryGreen, size: 22),
             ],
           ),
         ),
@@ -181,13 +188,15 @@ class _OperatorLoadingState extends StatelessWidget {
           const SizedBox(height: AppSpacing.lg),
           Text(
             'Carregando operadores…',
-            style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+            style: theme.textTheme.titleMedium
+                ?.copyWith(fontWeight: FontWeight.w800),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
             'Aguarde um instante',
-            style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+            style: theme.textTheme.bodyMedium
+                ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
             textAlign: TextAlign.center,
           ),
         ],
@@ -202,7 +211,11 @@ class _OperatorEmptyState extends StatelessWidget {
   final String buttonLabel;
   final VoidCallback onRetry;
 
-  const _OperatorEmptyState({required this.title, required this.subtitle, required this.buttonLabel, required this.onRetry});
+  const _OperatorEmptyState(
+      {required this.title,
+      required this.subtitle,
+      required this.buttonLabel,
+      required this.onRetry});
 
   @override
   Widget build(BuildContext context) {
@@ -221,16 +234,22 @@ class _OperatorEmptyState extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: AppColors.primaryGreen.withValues(alpha: 0.10),
                   borderRadius: BorderRadius.circular(AppRadius.xl),
-                  border: Border.all(color: AppColors.primaryGreen.withValues(alpha: 0.18)),
+                  border: Border.all(
+                      color: AppColors.primaryGreen.withValues(alpha: 0.18)),
                 ),
-                child: const Icon(Icons.group, color: AppColors.primaryGreen, size: 34),
+                child: const Icon(Icons.group,
+                    color: AppColors.primaryGreen, size: 34),
               ),
               const SizedBox(height: AppSpacing.lg),
-              Text(title, style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900), textAlign: TextAlign.center),
+              Text(title,
+                  style: theme.textTheme.titleLarge
+                      ?.copyWith(fontWeight: FontWeight.w900),
+                  textAlign: TextAlign.center),
               const SizedBox(height: AppSpacing.xs),
               Text(
                 subtitle,
-                style: theme.textTheme.bodyLarge?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                style: theme.textTheme.bodyLarge
+                    ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: AppSpacing.xl),
@@ -239,9 +258,13 @@ class _OperatorEmptyState extends StatelessWidget {
                 height: 56,
                 child: FilledButton.icon(
                   onPressed: onRetry,
-                  style: FilledButton.styleFrom(backgroundColor: AppColors.primaryGreen),
-                  icon: const Icon(Icons.refresh, color: Colors.white, size: 22),
-                  label: Text(buttonLabel, style: theme.textTheme.titleMedium?.copyWith(color: Colors.white, fontWeight: FontWeight.w900)),
+                  style: FilledButton.styleFrom(
+                      backgroundColor: AppColors.primaryGreen),
+                  icon:
+                      const Icon(Icons.refresh, color: Colors.white, size: 22),
+                  label: Text(buttonLabel,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                          color: Colors.white, fontWeight: FontWeight.w900)),
                 ),
               ),
             ],

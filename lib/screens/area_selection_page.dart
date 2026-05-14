@@ -35,7 +35,13 @@ class AreaSelectionPage extends StatelessWidget {
         title: const Text('Morro do Peão'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, size: 28),
-          onPressed: () => context.go('/'),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/');
+            }
+          },
         ),
         actions: [
           ValueListenableBuilder<int>(
@@ -110,7 +116,7 @@ class AreaSelectionPage extends StatelessWidget {
                         ),
                       ),
                       TextButton(
-                        onPressed: () => context.go('/operator'),
+                        onPressed: () => context.push('/operator'),
                         child: const Text('Trocar'),
                       ),
                     ],
@@ -150,7 +156,7 @@ class AreaSelectionPage extends StatelessWidget {
                       icon: area.icon,
                       color: area.color,
                       onPressed: () {
-                        context.go('/checklists/${area.id}$suffix');
+                        context.push('/checklists/${area.id}$suffix');
                       },
                     );
                   },

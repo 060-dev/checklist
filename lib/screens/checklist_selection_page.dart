@@ -42,7 +42,11 @@ class ChecklistSelectionPage extends StatelessWidget {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, size: 28),
           onPressed: () {
-            context.go('/areas$suffix');
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/areas$suffix');
+            }
           },
         ),
       ),
@@ -104,7 +108,7 @@ class ChecklistSelectionPage extends StatelessWidget {
                       description: checklist.description,
                       estimatedMinutes: checklist.estimatedMinutes,
                       onPressed: () {
-                        context.go('/checklist-intro/${checklist.id}$suffix');
+                        context.push('/checklist-intro/${checklist.id}$suffix');
                       },
                     );
                   },

@@ -589,25 +589,21 @@ class _QuestionPageState extends State<QuestionPage> {
       ),
       child: Row(
         children: [
-          if (widget.questionIndex > 0)
             Expanded(
               child: OutlinedButton.icon(
                 onPressed: () {
-                  final op = widget.operatorName;
-                  final opId = widget.operatorId;
-                  final opQuery = (op != null && op.trim().isNotEmpty)
-                      ? 'op=${Uri.encodeComponent(op)}'
-                      : null;
-                  final opIdQuery = (opId != null && opId.trim().isNotEmpty)
-                      ? 'opId=${Uri.encodeComponent(opId)}'
-                      : null;
-                  final query = [
-                    if (opQuery != null) opQuery,
-                    if (opIdQuery != null) opIdQuery
-                  ].join('&');
-                  final suffix = query.isNotEmpty ? '?$query' : '';
-                  context.go(
-                      '/question/${widget.checklistId}/${widget.questionIndex - 1}$suffix');
+                  if (context.canPop()) {
+                    context.pop();
+                  } else {
+                    // Fallback if somehow stack is lost
+                    final op = widget.operatorName;
+                    final opId = widget.operatorId;
+                    final opQuery = (op != null && op.trim().isNotEmpty) ? 'op=${Uri.encodeComponent(op)}' : null;
+                    final opIdQuery = (opId != null && opId.trim().isNotEmpty) ? 'opId=${Uri.encodeComponent(opId)}' : null;
+                    final query = [if (opQuery != null) opQuery, if (opIdQuery != null) opIdQuery].join('&');
+                    final suffix = query.isNotEmpty ? '?$query' : '';
+                    context.go('/checklist-intro/${widget.checklistId}$suffix');
+                  }
                 },
                 icon: const Icon(Icons.arrow_back, size: 24),
                 label: const Text(
@@ -625,7 +621,7 @@ class _QuestionPageState extends State<QuestionPage> {
                 ),
               ),
             ),
-          if (widget.questionIndex > 0) const SizedBox(width: AppSpacing.md),
+          const SizedBox(width: AppSpacing.md),
           Expanded(
             flex: 2,
             child: ElevatedButton.icon(
@@ -696,9 +692,9 @@ class _QuestionPageState extends State<QuestionPage> {
     ].join('&');
     final suffix = query.isNotEmpty ? '?$query' : '';
     if (isLast) {
-      context.go('/review/${widget.checklistId}$suffix');
+      context.push('/review/${widget.checklistId}$suffix');
     } else {
-      context.go(
+      context.push(
           '/question/${widget.checklistId}/${widget.questionIndex + 1}$suffix');
     }
   }

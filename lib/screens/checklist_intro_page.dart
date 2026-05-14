@@ -50,7 +50,11 @@ class ChecklistIntroPage extends StatelessWidget {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, size: 28),
           onPressed: () {
-            context.go('/checklists/${area.id}$suffix');
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/checklists/${area.id}$suffix');
+            }
           },
         ),
       ),
@@ -122,7 +126,7 @@ class ChecklistIntroPage extends StatelessWidget {
                 icon: Icons.play_arrow,
                 color: area.color,
                 onPressed: () {
-                  context.go('/question/$checklistId/0$suffix');
+                  context.push('/question/$checklistId/0$suffix');
                 },
               ),
               const SizedBox(height: AppSpacing.lg),
