@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:morro_do_peo/theme.dart';
 import 'package:morro_do_peo/nav.dart';
 import 'package:morro_do_peo/services/submission_service.dart';
+import 'package:morro_do_peo/utils/connectivity.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await Connectivity().init();
   runApp(const MorroDoPeaoApp());
 }
 
