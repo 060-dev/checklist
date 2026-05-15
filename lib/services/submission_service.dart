@@ -43,13 +43,12 @@ class SubmissionService {
             .whereType<ChecklistSubmission>()
             .toList();
       } else {
-        _submissions = _generateSampleSubmissions();
-        await _save();
+        _submissions = [];
       }
       submissionsNotifier.value = List.from(_submissions);
     } catch (e) {
       debugPrint('Error initializing submissions: $e');
-      _submissions = _generateSampleSubmissions();
+      _submissions = [];
     } finally {
       _isInitialized = true;
     }
@@ -273,143 +272,4 @@ class SubmissionService {
   }
 
   int getTotalPhotos() => _submissions.fold(0, (sum, s) => sum + s.photosCount);
-
-  List<ChecklistSubmission> _generateSampleSubmissions() {
-    final now = DateTime.now();
-    final yesterday = now.subtract(const Duration(days: 1));
-    final twoDaysAgo = now.subtract(const Duration(days: 2));
-
-    return [
-      ChecklistSubmission(
-        id: 'sub-1',
-        checklistId: 'live-feed',
-        checklistName: 'Alimentação do Gado',
-        areaId: 'livestock',
-        areaName: 'Pecuária',
-        userId: 'user-1',
-        userName: 'João Silva',
-        farmId: 'farm-1',
-        farmName: 'Morro do Peão',
-        startedAt: now.subtract(const Duration(hours: 2)),
-        completedAt: now.subtract(const Duration(hours: 1, minutes: 45)),
-        status: SubmissionStatus.synced,
-        answers: [
-          const QuestionAnswer(questionId: 'live-feed-1', boolAnswer: true),
-          const QuestionAnswer(questionId: 'live-feed-2', boolAnswer: true),
-          const QuestionAnswer(questionId: 'live-feed-3', boolAnswer: true),
-          const QuestionAnswer(questionId: 'live-feed-4', numberAnswer: 5),
-          const QuestionAnswer(questionId: 'live-feed-5', boolAnswer: false),
-        ],
-        totalQuestions: 5,
-        answeredQuestions: 5,
-        problemsFound: 0,
-        photosCount: 1,
-        audioNotesCount: 0,
-        createdAt: now,
-        updatedAt: now,
-      ),
-      ChecklistSubmission(
-        id: 'sub-2',
-        checklistId: 'agri-soil',
-        checklistName: 'Preparo do Solo',
-        areaId: 'agriculture',
-        areaName: 'Agricultura',
-        userId: 'user-2',
-        userName: 'Maria Santos',
-        farmId: 'farm-1',
-        farmName: 'Morro do Peão',
-        startedAt: now.subtract(const Duration(hours: 4)),
-        completedAt: now.subtract(const Duration(hours: 3, minutes: 30)),
-        status: SubmissionStatus.synced,
-        answers: [
-          const QuestionAnswer(questionId: 'agri-soil-1', boolAnswer: true),
-          const QuestionAnswer(questionId: 'agri-soil-2', boolAnswer: true, hasProblem: true, problemDescription: 'Pedras grandes encontradas'),
-          const QuestionAnswer(questionId: 'agri-soil-3', boolAnswer: true),
-          const QuestionAnswer(questionId: 'agri-soil-4', selectedChoice: 'Bom'),
-        ],
-        totalQuestions: 5,
-        answeredQuestions: 5,
-        problemsFound: 1,
-        photosCount: 2,
-        audioNotesCount: 0,
-        createdAt: now,
-        updatedAt: now,
-      ),
-      ChecklistSubmission(
-        id: 'sub-3',
-        checklistId: 'live-water',
-        checklistName: 'Lavagem de Bebedouro',
-        areaId: 'livestock',
-        areaName: 'Pecuária',
-        userId: 'user-1',
-        userName: 'João Silva',
-        farmId: 'farm-1',
-        farmName: 'Morro do Peão',
-        startedAt: yesterday,
-        completedAt: yesterday.add(const Duration(minutes: 25)),
-        status: SubmissionStatus.synced,
-        answers: [
-          const QuestionAnswer(questionId: 'live-water-1', boolAnswer: true),
-          const QuestionAnswer(questionId: 'live-water-2', boolAnswer: true),
-          const QuestionAnswer(questionId: 'live-water-3', boolAnswer: true),
-          const QuestionAnswer(questionId: 'live-water-4', boolAnswer: false, hasProblem: true, problemDescription: 'Boia com defeito'),
-        ],
-        totalQuestions: 4,
-        answeredQuestions: 4,
-        problemsFound: 1,
-        photosCount: 1,
-        audioNotesCount: 1,
-        createdAt: yesterday,
-        updatedAt: yesterday,
-      ),
-      ChecklistSubmission(
-        id: 'sub-4',
-        checklistId: 'daily-open',
-        checklistName: 'Abertura do Dia',
-        areaId: 'daily',
-        areaName: 'Rotina Diária',
-        userId: 'user-3',
-        userName: 'Pedro Costa',
-        farmId: 'farm-1',
-        farmName: 'Morro do Peão',
-        startedAt: twoDaysAgo,
-        completedAt: twoDaysAgo.add(const Duration(minutes: 10)),
-        status: SubmissionStatus.synced,
-        answers: [
-          const QuestionAnswer(questionId: 'daily-open-1', boolAnswer: true),
-          const QuestionAnswer(questionId: 'daily-open-2', selectedChoice: 'Sol'),
-        ],
-        totalQuestions: 3,
-        answeredQuestions: 3,
-        problemsFound: 0,
-        photosCount: 0,
-        audioNotesCount: 1,
-        createdAt: twoDaysAgo,
-        updatedAt: twoDaysAgo,
-      ),
-      ChecklistSubmission(
-        id: 'sub-5',
-        checklistId: 'agri-harvest',
-        checklistName: 'Colheita',
-        areaId: 'agriculture',
-        areaName: 'Agricultura',
-        userId: 'user-2',
-        userName: 'Maria Santos',
-        farmId: 'farm-1',
-        farmName: 'Morro do Peão',
-        startedAt: now.subtract(const Duration(minutes: 30)),
-        status: SubmissionStatus.pendingSync,
-        answers: [
-          const QuestionAnswer(questionId: 'agri-harvest-1', boolAnswer: false, hasProblem: true, problemDescription: 'Colheitadeira com problema'),
-        ],
-        totalQuestions: 3,
-        answeredQuestions: 1,
-        problemsFound: 1,
-        photosCount: 1,
-        audioNotesCount: 0,
-        createdAt: now,
-        updatedAt: now,
-      ),
-    ];
-  }
 }

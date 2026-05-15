@@ -14,6 +14,7 @@ class OperatorService {
   final MorroApiClient _api = MorroApiClient();
   List<Operator> _operators = [];
   bool _isInitialized = false;
+  Future<void>? _syncFuture;
 
   Future<void> init() async {
     if (_isInitialized) return;
@@ -37,7 +38,8 @@ class OperatorService {
     
     // Se a lista estiver vazia ou refresh for true, tentamos sincronizar
     if (_operators.isEmpty || refresh) {
-      await syncOperators();
+      _syncFuture ??= syncOperators().then((_) => _syncFuture = null);
+      await _syncFuture;
     }
     
     if (active != null) {
@@ -47,6 +49,13 @@ class OperatorService {
   }
 
   Future<void> syncOperators() async {
+    if (_syncFuture != null) return _syncFuture;
+    
+    _syncFuture = _performSyncOperators().then((_) => _syncFuture = null);
+    return _syncFuture;
+  }
+
+  Future<void> _performSyncOperators() async {
     try {
       debugPrint('[SYNC] Starting operators sync...');
       final json = await _api.getJson('/operators', query: {
