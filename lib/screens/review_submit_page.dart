@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import 'package:morro_do_peo/components/responsive_body.dart';
 import 'package:morro_do_peo/data/checklists_repository.dart';
 import 'package:morro_do_peo/models/checklist_models.dart';
+import 'package:morro_do_peo/services/offline_queue_service.dart';
 import 'package:morro_do_peo/state/app_session.dart';
 import 'package:morro_do_peo/theme.dart';
 
@@ -115,12 +116,18 @@ class ReviewSubmitPage extends StatelessWidget {
               SizedBox(
                 height: 72,
                 child: FilledButton.icon(
-                  onPressed: () {
+                  onPressed: () async {
+                    final router = GoRouter.of(context);
                     session.finishNow();
                     try {
                       final payload = session.buildFinalJson();
                       debugPrint('CHECKLIST_JSON: ${jsonEncode(payload)}');
                       if (kDebugMode) debugPrint(session.buildFinalJsonPretty());
+                      await OfflineQueueService.instance.enqueue(
+                        payload: payload,
+                        checklistId: checklist?.id,
+                        operatorId: session.selectedOperator?.id,
+                      );
                     } catch (e) {
                       debugPrint('Failed to build final JSON: $e');
                     }
@@ -163,7 +170,7 @@ class ReviewSubmitPage extends StatelessWidget {
                         );
                       }
                     }
-                    context.go('/success');
+                    router.go('/success');
                   },
                   style: FilledButton.styleFrom(
                     backgroundColor: theme.colorScheme.primary,

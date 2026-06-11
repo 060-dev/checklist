@@ -2,10 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:morro_do_peo/theme.dart';
 import 'package:morro_do_peo/nav.dart';
 import 'package:morro_do_peo/state/app_session.dart';
+import 'package:morro_do_peo/utils/connectivity.dart';
+import 'package:morro_do_peo/services/offline_queue_service.dart';
 import 'package:provider/provider.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await Connectivity.instance.init();
+  await OfflineQueueService.instance.init(sendAttempt: (_, __) async {});
   runApp(const MorroDoPeaoApp());
 }
 
