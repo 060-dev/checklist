@@ -1,149 +1,176 @@
 import 'package:flutter/material.dart';
-import 'package:morro_do_peo/screens/role_selection_page.dart';
+import 'package:go_router/go_router.dart';
+import 'package:morro_do_peo/screens/home_page.dart';
 import 'package:morro_do_peo/screens/operator_selection_page.dart';
-import 'package:morro_do_peo/screens/area_selection_page.dart';
+import 'package:morro_do_peo/screens/operational_area_selection_page.dart';
 import 'package:morro_do_peo/screens/checklist_selection_page.dart';
-import 'package:morro_do_peo/screens/checklist_intro_page.dart';
-import 'package:morro_do_peo/screens/question_page.dart';
-import 'package:morro_do_peo/screens/review_page.dart';
+import 'package:morro_do_peo/screens/pecuaria_checklist_type_page.dart';
+import 'package:morro_do_peo/screens/pen_selection_page.dart';
+import 'package:morro_do_peo/screens/pen_checklist_selection_page.dart';
+import 'package:morro_do_peo/screens/pecuaria_general_checklist_selection_page.dart';
+import 'package:morro_do_peo/screens/checklist_question_page.dart';
+import 'package:morro_do_peo/screens/observation_prompt_page.dart';
+import 'package:morro_do_peo/screens/observation_record_page.dart';
+import 'package:morro_do_peo/screens/review_submit_page.dart';
 import 'package:morro_do_peo/screens/success_page.dart';
-import 'package:morro_do_peo/screens/manager_dashboard_page.dart';
-import 'package:morro_do_peo/screens/submission_detail_page.dart';
+import 'package:morro_do_peo/state/app_session.dart';
 
 class AppRouter {
-  static Route<dynamic> onGenerateRoute(RouteSettings settings) {
-    final args = settings.arguments as Map<String, dynamic>? ?? {};
+  static GoRouter create(AppSession session) => GoRouter(
+        initialLocation: AppRoutes.home,
+        refreshListenable: session,
+        redirect: (context, state) {
+          final loc = state.matchedLocation;
+          final isFlow = loc.startsWith('/areas') ||
+              loc.startsWith('/checklists') ||
+              loc.startsWith('/pecuaria') ||
+              loc.startsWith('/observation') ||
+              loc.startsWith('/review') ||
+              loc.startsWith('/success');
 
-    switch (settings.name) {
-      case AppRoutes.home:
-        return MaterialPageRoute(
-          settings: settings,
-          builder: (_) => const RoleSelectionPage(),
-        );
-
-      case AppRoutes.operator:
-        return _slideRoute(settings, const OperatorSelectionPage());
-
-      case AppRoutes.areas:
-        return _slideRoute(
-          settings,
-          AreaSelectionPage(
-            operatorName: args['op'],
-            operatorId: args['opId'],
+          if (isFlow && session.selectedOperator == null) return AppRoutes.collaborators;
+          return null;
+        },
+        routes: [
+          GoRoute(
+            path: AppRoutes.home,
+            name: 'home',
+            pageBuilder: (context, state) => const NoTransitionPage(child: HomePage()),
           ),
-        );
-
-      case AppRoutes.checklists:
-        return _slideRoute(
-          settings,
-          ChecklistSelectionPage(
-            areaId: args['areaId'] ?? '',
-            operatorName: args['op'],
-            operatorId: args['opId'],
+          GoRoute(
+            path: AppRoutes.collaborators,
+            name: 'collaborators',
+            pageBuilder: (context, state) => CustomTransitionPage(
+              child: const OperatorSelectionPage(),
+              transitionsBuilder: _slideTransition,
+            ),
           ),
-        );
-
-      case AppRoutes.checklistIntro:
-        return _slideRoute(
-          settings,
-          ChecklistIntroPage(
-            checklistId: args['checklistId'] ?? '',
-            operatorName: args['op'],
-            operatorId: args['opId'],
+          GoRoute(
+            path: AppRoutes.areas,
+            name: 'areas',
+            pageBuilder: (context, state) => CustomTransitionPage(
+              child: const OperationalAreaSelectionPage(),
+              transitionsBuilder: _slideTransition,
+            ),
           ),
-        );
-
-      case AppRoutes.question:
-        return _slideRoute(
-          settings,
-          QuestionPage(
-            checklistId: args['checklistId'] ?? '',
-            questionIndex: args['questionIndex'] ?? 0,
-            operatorName: args['op'],
-            operatorId: args['opId'],
+          GoRoute(
+            path: AppRoutes.checklists,
+            name: 'checklists',
+            pageBuilder: (context, state) => CustomTransitionPage(
+              child: const ChecklistSelectionPage(),
+              transitionsBuilder: _slideTransition,
+            ),
           ),
-        );
-
-      case AppRoutes.review:
-        return _slideRoute(
-          settings,
-          ReviewPage(
-            checklistId: args['checklistId'] ?? '',
-            operatorName: args['op'],
-            operatorId: args['opId'],
+          GoRoute(
+            path: AppRoutes.pecuaria,
+            name: 'pecuaria',
+            pageBuilder: (context, state) => CustomTransitionPage(
+              child: const PecuariaChecklistTypePage(),
+              transitionsBuilder: _slideTransition,
+            ),
           ),
-        );
-
-      case AppRoutes.success:
-        return _fadeRoute(
-          settings,
-          SuccessPage(
-            checklistId: args['checklistId'] ?? '',
-            operatorName: args['op'],
-            operatorId: args['opId'],
-            result: args['result'],
+          GoRoute(
+            path: AppRoutes.pecuariaGeneral,
+            name: 'pecuariaGeneral',
+            pageBuilder: (context, state) => CustomTransitionPage(
+              child: const PecuariaGeneralChecklistSelectionPage(),
+              transitionsBuilder: _slideTransition,
+            ),
           ),
-        );
-
-      case AppRoutes.manager:
-        return _slideRoute(settings, const ManagerDashboardPage());
-
-      case AppRoutes.submission:
-        return _slideRoute(
-          settings,
-          SubmissionDetailPage(
-            submissionId: args['submissionId'] ?? '',
+          GoRoute(
+            path: AppRoutes.pens,
+            name: 'pens',
+            pageBuilder: (context, state) => CustomTransitionPage(
+              child: const PenSelectionPage(),
+              transitionsBuilder: _slideTransition,
+            ),
           ),
-        );
-
-      default:
-        return MaterialPageRoute(
-          builder: (_) => Scaffold(
-            body: Center(child: Text('Rota não encontrada: ${settings.name}')),
+          GoRoute(
+            path: AppRoutes.penChecklists,
+            name: 'penChecklists',
+            pageBuilder: (context, state) => CustomTransitionPage(
+              child: const PenChecklistSelectionPage(),
+              transitionsBuilder: _slideTransition,
+            ),
           ),
-        );
-    }
-  }
+          GoRoute(
+            path: AppRoutes.questions,
+            name: 'questions',
+            pageBuilder: (context, state) {
+              final id = state.pathParameters['id'] ?? '';
+              return CustomTransitionPage(
+                child: ChecklistQuestionPage(checklistId: id),
+                transitionsBuilder: _slideTransition,
+              );
+            },
+          ),
+          GoRoute(
+            path: AppRoutes.observation,
+            name: 'observation',
+            pageBuilder: (context, state) => CustomTransitionPage(
+              child: const ObservationPromptPage(),
+              transitionsBuilder: _slideTransition,
+            ),
+          ),
+          GoRoute(
+            path: AppRoutes.observationRecord,
+            name: 'observationRecord',
+            pageBuilder: (context, state) => CustomTransitionPage(
+              child: const ObservationRecordPage(),
+              transitionsBuilder: _slideTransition,
+            ),
+          ),
+          GoRoute(
+            path: AppRoutes.review,
+            name: 'review',
+            pageBuilder: (context, state) => CustomTransitionPage(
+              child: const ReviewSubmitPage(),
+              transitionsBuilder: _slideTransition,
+            ),
+          ),
+          GoRoute(
+            path: AppRoutes.success,
+            name: 'success',
+            pageBuilder: (context, state) => CustomTransitionPage(
+              child: const SuccessPage(),
+              transitionsBuilder: _slideTransition,
+            ),
+          ),
+        ],
+      );
 
-  static Route<dynamic> _slideRoute(RouteSettings settings, Widget child) {
-    return PageRouteBuilder(
-      settings: settings,
-      pageBuilder: (context, animation, secondaryAnimation) => child,
-      transitionsBuilder: (context, animation, secondaryAnimation, child) {
-        return SlideTransition(
-          position: Tween<Offset>(
-            begin: const Offset(1.0, 0.0),
-            end: Offset.zero,
-          ).animate(CurvedAnimation(
-            parent: animation,
-            curve: Curves.easeOutCubic,
-          )),
-          child: child,
-        );
-      },
+  static Widget _slideTransition(
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) {
+    return SlideTransition(
+      position: Tween<Offset>(
+        begin: const Offset(1.0, 0.0),
+        end: Offset.zero,
+      ).animate(CurvedAnimation(
+        parent: animation,
+        curve: Curves.easeOutCubic,
+      )),
+      child: child,
     );
   }
 
-  static Route<dynamic> _fadeRoute(RouteSettings settings, Widget child) {
-    return PageRouteBuilder(
-      settings: settings,
-      pageBuilder: (context, animation, secondaryAnimation) => child,
-      transitionsBuilder: (context, animation, secondaryAnimation, child) {
-        return FadeTransition(opacity: animation, child: child);
-      },
-    );
-  }
 }
 
 class AppRoutes {
   static const String home = '/';
-  static const String operator = '/operator';
+  static const String collaborators = '/collaborators';
   static const String areas = '/areas';
   static const String checklists = '/checklists';
-  static const String checklistIntro = '/checklist-intro';
-  static const String question = '/question';
+  static const String pecuaria = '/pecuaria';
+  static const String pecuariaGeneral = '/pecuaria/gerais';
+  static const String pens = '/pecuaria/currais';
+  static const String penChecklists = '/pecuaria/currais/checklists';
+  static const String questions = '/checklists/:id/questions';
+  static const String observation = '/observation';
+  static const String observationRecord = '/observation/record';
   static const String review = '/review';
   static const String success = '/success';
-  static const String manager = '/manager';
-  static const String submission = '/submission';
 }

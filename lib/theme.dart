@@ -50,25 +50,29 @@ extension TextStyleExtensions on TextStyle {
   TextStyle withSize(double size) => copyWith(fontSize: size);
 }
 
-// Farm-themed vibrant color palette
+// Morro do Peão brand palette (based on the logo)
 class AppColors {
-  // Primary: Earthy green for agriculture
-  static const Color primaryGreen = Color(0xFF2E7D32);
-  static const Color primaryGreenLight = Color(0xFF60AD5E);
-  static const Color primaryGreenDark = Color(0xFF005005);
+  static const Color brandRed = Color(0xFF8B0000);
+  static const Color brandRedDeep = Color(0xFF5C0000);
+  static const Color brandCream = Color(0xFFFFF7F2);
+  static const Color brandPaper = Color(0xFFFFFFFF);
+  static const Color brandInk = Color(0xFF1B1B1B);
+  static const Color brandMuted = Color(0xFF5F5F5F);
+  static const Color brandBorder = Color(0xFFE9DED8);
+  static const Color brandRoseTint = Color(0xFFFFE9E9);
 
-  // Secondary: Warm brown/orange for livestock
-  static const Color secondaryOrange = Color(0xFFE65100);
-  static const Color secondaryOrangeLight = Color(0xFFFF833A);
-  static const Color secondaryOrangeDark = Color(0xFFAC1900);
-
-  // Accent colors
-  // Rotina (yellow theme) - tuned for stronger contrast on light surfaces
-  // Suggested range: #E5A900 / #D99A00 / #C98500
+  // Backward-compatible aliases (old prototype screens/components still compile).
+  // These can be removed when the legacy screens are deleted.
+  static const Color primaryGreen = brandRed;
+  static const Color primaryGreenLight = Color(0xFFB31212);
+  static const Color primaryGreenDark = brandRedDeep;
+  static const Color secondaryOrange = brandRedDeep;
+  static const Color secondaryOrangeLight = Color(0xFFB31212);
+  static const Color secondaryOrangeDark = brandRedDeep;
+  static const Color accentBlue = Color(0xFF1C3D5A);
   static const Color accentYellow = Color(0xFFD99A00);
   static const Color accentYellowDeep = Color(0xFFC98500);
   static const Color accentYellowTint = Color(0xFFFFF3CC);
-  static const Color accentBlue = Color(0xFF1976D2);
 
   // Semantic colors
   static const Color success = Color(0xFF4CAF50);
@@ -82,13 +86,13 @@ class AppColors {
 
   // Neutral colors
   static const Color white = Color(0xFFFFFFFF);
-  static const Color background = Color(0xFFF5F7F0);
-  static const Color surface = Color(0xFFFFFFFF);
-  static const Color surfaceVariant = Color(0xFFF0F4E8);
-  static const Color textPrimary = Color(0xFF1B1B1B);
-  static const Color textSecondary = Color(0xFF5F5F5F);
+  static const Color background = brandCream;
+  static const Color surface = brandPaper;
+  static const Color surfaceVariant = brandRoseTint;
+  static const Color textPrimary = brandInk;
+  static const Color textSecondary = brandMuted;
   static const Color textLight = Color(0xFF9E9E9E);
-  static const Color divider = Color(0xFFE0E0E0);
+  static const Color divider = brandBorder;
 
   // Dark mode colors
   static const Color darkBackground = Color(0xFF121212);
@@ -146,15 +150,15 @@ class FontSizes {
 ThemeData get lightTheme => ThemeData(
   useMaterial3: true,
   colorScheme: ColorScheme.light(
-    primary: AppColors.primaryGreen,
+    primary: AppColors.brandRed,
     onPrimary: AppColors.white,
-    primaryContainer: AppColors.primaryGreenLight,
-    onPrimaryContainer: AppColors.primaryGreenDark,
-    secondary: AppColors.secondaryOrange,
+    primaryContainer: AppColors.brandRoseTint,
+    onPrimaryContainer: AppColors.brandRedDeep,
+    secondary: AppColors.brandRedDeep,
     onSecondary: AppColors.white,
-    secondaryContainer: AppColors.secondaryOrangeLight,
-    onSecondaryContainer: AppColors.secondaryOrangeDark,
-    tertiary: AppColors.accentBlue,
+    secondaryContainer: AppColors.brandRoseTint,
+    onSecondaryContainer: AppColors.brandRedDeep,
+    tertiary: AppColors.brandInk,
     onTertiary: AppColors.white,
     error: AppColors.error,
     onError: AppColors.white,
@@ -168,15 +172,15 @@ ThemeData get lightTheme => ThemeData(
   brightness: Brightness.light,
   scaffoldBackgroundColor: AppColors.background,
   appBarTheme: AppBarTheme(
-    backgroundColor: AppColors.primaryGreen,
-    foregroundColor: AppColors.white,
+    backgroundColor: AppColors.background,
+    foregroundColor: AppColors.textPrimary,
     elevation: 0,
     scrolledUnderElevation: 0,
     centerTitle: true,
-    titleTextStyle: GoogleFonts.nunito(
+    titleTextStyle: GoogleFonts.montserrat(
       fontSize: FontSizes.titleLarge,
-      fontWeight: FontWeight.w700,
-      color: AppColors.white,
+      fontWeight: FontWeight.w800,
+      color: AppColors.textPrimary,
     ),
   ),
   cardTheme: CardThemeData(
@@ -190,14 +194,14 @@ ThemeData get lightTheme => ThemeData(
   elevatedButtonTheme: ElevatedButtonThemeData(
     style: ElevatedButton.styleFrom(
       minimumSize: const Size(double.infinity, AppButtonSizes.largeHeight),
-      backgroundColor: AppColors.primaryGreen,
+      backgroundColor: AppColors.brandRed,
       foregroundColor: AppColors.white,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppRadius.lg),
       ),
-      textStyle: GoogleFonts.nunito(
+      textStyle: GoogleFonts.montserrat(
         fontSize: FontSizes.titleMedium,
-        fontWeight: FontWeight.w700,
+        fontWeight: FontWeight.w800,
       ),
     ),
   ),
@@ -207,16 +211,16 @@ ThemeData get lightTheme => ThemeData(
 ThemeData get darkTheme => ThemeData(
   useMaterial3: true,
   colorScheme: ColorScheme.dark(
-    primary: AppColors.primaryGreenLight,
-    onPrimary: AppColors.primaryGreenDark,
-    primaryContainer: AppColors.primaryGreen,
-    onPrimaryContainer: AppColors.white,
-    secondary: AppColors.secondaryOrangeLight,
-    onSecondary: AppColors.secondaryOrangeDark,
-    secondaryContainer: AppColors.secondaryOrange,
-    onSecondaryContainer: AppColors.white,
-    tertiary: AppColors.accentBlue,
-    onTertiary: AppColors.white,
+    primary: AppColors.brandRed,
+    onPrimary: AppColors.white,
+    primaryContainer: AppColors.darkSurfaceVariant,
+    onPrimaryContainer: AppColors.darkTextPrimary,
+    secondary: AppColors.brandRedDeep,
+    onSecondary: AppColors.white,
+    secondaryContainer: AppColors.darkSurfaceVariant,
+    onSecondaryContainer: AppColors.darkTextPrimary,
+    tertiary: AppColors.darkTextPrimary,
+    onTertiary: AppColors.darkBackground,
     error: AppColors.error,
     onError: AppColors.white,
     errorContainer: AppColors.errorLight,
@@ -229,15 +233,15 @@ ThemeData get darkTheme => ThemeData(
   brightness: Brightness.dark,
   scaffoldBackgroundColor: AppColors.darkBackground,
   appBarTheme: AppBarTheme(
-    backgroundColor: AppColors.primaryGreen,
-    foregroundColor: AppColors.white,
+    backgroundColor: AppColors.darkBackground,
+    foregroundColor: AppColors.darkTextPrimary,
     elevation: 0,
     scrolledUnderElevation: 0,
     centerTitle: true,
-    titleTextStyle: GoogleFonts.nunito(
+    titleTextStyle: GoogleFonts.montserrat(
       fontSize: FontSizes.titleLarge,
-      fontWeight: FontWeight.w700,
-      color: AppColors.white,
+      fontWeight: FontWeight.w800,
+      color: AppColors.darkTextPrimary,
     ),
   ),
   cardTheme: CardThemeData(
@@ -251,14 +255,14 @@ ThemeData get darkTheme => ThemeData(
   elevatedButtonTheme: ElevatedButtonThemeData(
     style: ElevatedButton.styleFrom(
       minimumSize: const Size(double.infinity, AppButtonSizes.largeHeight),
-      backgroundColor: AppColors.primaryGreenLight,
-      foregroundColor: AppColors.darkBackground,
+      backgroundColor: AppColors.brandRed,
+      foregroundColor: AppColors.white,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppRadius.lg),
       ),
-      textStyle: GoogleFonts.nunito(
+      textStyle: GoogleFonts.montserrat(
         fontSize: FontSizes.titleMedium,
-        fontWeight: FontWeight.w700,
+        fontWeight: FontWeight.w800,
       ),
     ),
   ),
@@ -266,67 +270,67 @@ ThemeData get darkTheme => ThemeData(
 );
 
 TextTheme _buildTextTheme() => TextTheme(
-  displayLarge: GoogleFonts.nunito(
+  displayLarge: GoogleFonts.montserrat(
     fontSize: FontSizes.displayLarge,
     fontWeight: FontWeight.w800,
     letterSpacing: -0.5,
   ),
-  displayMedium: GoogleFonts.nunito(
+  displayMedium: GoogleFonts.montserrat(
     fontSize: FontSizes.displayMedium,
     fontWeight: FontWeight.w700,
   ),
-  displaySmall: GoogleFonts.nunito(
+  displaySmall: GoogleFonts.montserrat(
     fontSize: FontSizes.displaySmall,
     fontWeight: FontWeight.w700,
   ),
-  headlineLarge: GoogleFonts.nunito(
+  headlineLarge: GoogleFonts.montserrat(
     fontSize: FontSizes.headlineLarge,
     fontWeight: FontWeight.w700,
     letterSpacing: -0.25,
   ),
-  headlineMedium: GoogleFonts.nunito(
+  headlineMedium: GoogleFonts.montserrat(
     fontSize: FontSizes.headlineMedium,
     fontWeight: FontWeight.w700,
   ),
-  headlineSmall: GoogleFonts.nunito(
+  headlineSmall: GoogleFonts.montserrat(
     fontSize: FontSizes.headlineSmall,
     fontWeight: FontWeight.w700,
   ),
-  titleLarge: GoogleFonts.nunito(
+  titleLarge: GoogleFonts.montserrat(
     fontSize: FontSizes.titleLarge,
     fontWeight: FontWeight.w600,
   ),
-  titleMedium: GoogleFonts.nunito(
+  titleMedium: GoogleFonts.montserrat(
     fontSize: FontSizes.titleMedium,
     fontWeight: FontWeight.w600,
   ),
-  titleSmall: GoogleFonts.nunito(
+  titleSmall: GoogleFonts.montserrat(
     fontSize: FontSizes.titleSmall,
     fontWeight: FontWeight.w600,
   ),
-  labelLarge: GoogleFonts.nunito(
+  labelLarge: GoogleFonts.montserrat(
     fontSize: FontSizes.labelLarge,
     fontWeight: FontWeight.w600,
   ),
-  labelMedium: GoogleFonts.nunito(
+  labelMedium: GoogleFonts.montserrat(
     fontSize: FontSizes.labelMedium,
     fontWeight: FontWeight.w500,
   ),
-  labelSmall: GoogleFonts.nunito(
+  labelSmall: GoogleFonts.montserrat(
     fontSize: FontSizes.labelSmall,
     fontWeight: FontWeight.w500,
   ),
-  bodyLarge: GoogleFonts.nunito(
+  bodyLarge: GoogleFonts.inter(
     fontSize: FontSizes.bodyLarge,
     fontWeight: FontWeight.w400,
     height: 1.5,
   ),
-  bodyMedium: GoogleFonts.nunito(
+  bodyMedium: GoogleFonts.inter(
     fontSize: FontSizes.bodyMedium,
     fontWeight: FontWeight.w400,
     height: 1.5,
   ),
-  bodySmall: GoogleFonts.nunito(
+  bodySmall: GoogleFonts.inter(
     fontSize: FontSizes.bodySmall,
     fontWeight: FontWeight.w400,
     height: 1.4,

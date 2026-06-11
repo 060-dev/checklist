@@ -1,27 +1,11 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:morro_do_peo/theme.dart';
 import 'package:morro_do_peo/nav.dart';
-import 'package:morro_do_peo/services/submission_service.dart';
-import 'package:morro_do_peo/services/checklist_service.dart';
-import 'package:morro_do_peo/services/operator_service.dart';
-import 'package:morro_do_peo/utils/connectivity.dart';
+import 'package:morro_do_peo/state/app_session.dart';
+import 'package:provider/provider.dart';
 
-void main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  await Connectivity().init();
-  
-  // Inicializa serviços e carrega cache local.
-  await ChecklistService().init();
-  await OperatorService().init();
-  await SubmissionService().init();
-
-  // Tenta sincronizar catálogo e operadores em background se houver internet.
-  if (Connectivity.instance.isOnline) {
-    unawaited(ChecklistService().syncCatalog());
-    unawaited(OperatorService().syncOperators());
-  }
-
   runApp(const MorroDoPeaoApp());
 }
 
@@ -30,17 +14,18 @@ class MorroDoPeaoApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Inicializa histórico local + fila offline de envios.
-    // Não depende de backend estar conectado.
-    SubmissionService().init();
-    return MaterialApp(
-      title: 'Morro do Peão - Checklists',
-      debugShowCheckedModeBanner: false,
-      theme: lightTheme,
-      darkTheme: darkTheme,
-      themeMode: ThemeMode.light, // Force light theme for better visibility in field
-      initialRoute: AppRoutes.home,
-      onGenerateRoute: AppRouter.onGenerateRoute,
+    return ChangeNotifierProvider(
+      create: (_) => AppSession(),
+      child: Builder(
+        builder: (context) => MaterialApp.router(
+          title: 'Morro do Peão - Checklists',
+          debugShowCheckedModeBanner: false,
+          theme: lightTheme,
+          darkTheme: darkTheme,
+          themeMode: ThemeMode.light, // Force light theme for better visibility in field
+          routerConfig: AppRouter.create(context.read<AppSession>()),
+        ),
+      ),
     );
   }
 }
