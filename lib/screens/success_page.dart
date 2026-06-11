@@ -21,6 +21,10 @@ class SuccessPage extends StatelessWidget {
     final returnLabel = session.successReturnLabel;
     final returnLocation = session.successReturnLocation;
 
+    final isQueued = session.successIsQueued;
+    final iconColor = isQueued ? AppColors.warning : AppColors.success;
+    final iconBg = isQueued ? AppColors.warningLight : AppColors.successLight;
+
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
@@ -38,10 +42,10 @@ class SuccessPage extends StatelessWidget {
                   width: 96,
                   height: 96,
                   decoration: BoxDecoration(
-                    color: AppColors.successLight,
+                    color: iconBg,
                     borderRadius: BorderRadius.circular(36),
                   ),
-                  child: const Icon(Icons.check_circle, color: AppColors.success, size: 56),
+                  child: Icon(Icons.check_circle, color: iconColor, size: 56),
                 ),
               ),
               const SizedBox(height: AppSpacing.lg),
@@ -55,6 +59,25 @@ class SuccessPage extends StatelessWidget {
                 message,
                 style: theme.textTheme.bodyLarge?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                 textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    isQueued ? Icons.cloud_off : Icons.cloud_done,
+                    size: 18,
+                    color: iconColor,
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Text(
+                    isQueued ? 'Salvo no aparelho (pendente)' : 'Salvo no servidor',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: iconColor,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
               ),
               const Spacer(),
               SizedBox(

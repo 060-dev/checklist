@@ -139,7 +139,7 @@ class ReviewSubmitPage extends StatelessWidget {
                         session.updatePenChecklistStatusToday(penId: pen.id, checklistId: checklist.id, status: status);
                       }
                       session.prepareSuccess(
-                        title: session.hasAnyAlert() ? 'Checklist enviado com alerta' : 'Checklist enviado',
+                        title: session.hasAnyAlert() ? 'Checklist salvo com alerta' : 'Checklist salvo',
                         message: checklist == null
                             ? (session.hasAnyAlert() ? '${pen.name} registrado com alerta.' : '${pen.name} registrado com sucesso.')
                             : (session.hasAnyAlert()
@@ -147,6 +147,7 @@ class ReviewSubmitPage extends StatelessWidget {
                                 : '${checklist.title} de ${pen.name} registrado com sucesso.'),
                         returnLocation: '/pecuaria/currais/checklists',
                         returnLabel: 'Voltar para checklists do curral',
+                        isQueued: true,
                       );
                     } else {
                       final isPecuariaGeneral = (area?.id == OperationalAreasRepository.pecuariaId) && checklist != null && !checklist.appliesPerPen;
@@ -154,19 +155,21 @@ class ReviewSubmitPage extends StatelessWidget {
                         final status = session.hasAnyAlert() ? ChecklistDayStatus.comAlerta : ChecklistDayStatus.preenchido;
                         session.updateGeneralChecklistStatusToday(checklistId: checklist.id, status: status);
                         session.prepareSuccess(
-                          title: session.hasAnyAlert() ? 'Checklist enviado com alerta' : 'Checklist enviado',
+                          title: session.hasAnyAlert() ? 'Checklist salvo com alerta' : 'Checklist salvo',
                           message: session.hasAnyAlert()
                               ? '${checklist.title} registrada. Existe uma condição que precisa de atenção.'
                               : '${checklist.title} registrada com sucesso.',
                           returnLocation: '/pecuaria/gerais',
                           returnLabel: 'Voltar para checklists gerais',
+                          isQueued: true,
                         );
                       } else {
                         session.prepareSuccess(
-                          title: 'Checklist enviado',
+                          title: 'Checklist salvo',
                           message: 'Seu checklist foi registrado.',
                           returnLocation: '/checklists',
                           returnLabel: 'Voltar para checklists',
+                          isQueued: true,
                         );
                       }
                     }

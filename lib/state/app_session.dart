@@ -132,6 +132,7 @@ class AppSession extends ChangeNotifier {
   String? _successMessageOverride;
   String _successReturnLocation = '/areas';
   String _successReturnLabel = 'Voltar';
+  bool _successIsQueued = false;
 
   Operator? get selectedOperator => _selectedOperator;
   OperationalAreaDefinition? get selectedArea => _selectedArea;
@@ -149,6 +150,7 @@ class AppSession extends ChangeNotifier {
   String? get successMessageOverride => _successMessageOverride;
   String get successReturnLocation => _successReturnLocation;
   String get successReturnLabel => _successReturnLabel;
+  bool get successIsQueued => _successIsQueued;
 
   String? answerFor(String questionId) =>
       _responsesByQuestionId[questionId]?.answer;
@@ -318,11 +320,13 @@ class AppSession extends ChangeNotifier {
       {String? title,
       String? message,
       required String returnLocation,
-      required String returnLabel}) {
+      required String returnLabel,
+      bool isQueued = false}) {
     _successTitleOverride = title;
     _successMessageOverride = message;
     _successReturnLocation = returnLocation;
     _successReturnLabel = returnLabel;
+    _successIsQueued = isQueued;
     notifyListeners();
   }
 
@@ -343,6 +347,7 @@ class AppSession extends ChangeNotifier {
     _successMessageOverride = null;
     _successReturnLocation = '/';
     _successReturnLabel = 'Voltar';
+    _successIsQueued = false;
     notifyListeners();
   }
 
@@ -355,6 +360,7 @@ class AppSession extends ChangeNotifier {
     _shownInterstitialIds.clear();
     _successTitleOverride = null;
     _successMessageOverride = null;
+    _successIsQueued = false;
     notifyListeners();
   }
 

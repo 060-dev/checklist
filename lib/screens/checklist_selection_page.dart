@@ -3,8 +3,10 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import 'package:morro_do_peo/components/responsive_body.dart';
+import 'package:morro_do_peo/components/sync_indicator.dart';
 import 'package:morro_do_peo/data/checklists_repository.dart';
 import 'package:morro_do_peo/models/checklist_models.dart';
+import 'package:morro_do_peo/services/offline_queue_service.dart';
 import 'package:morro_do_peo/state/app_session.dart';
 import 'package:morro_do_peo/theme.dart';
 
@@ -37,41 +39,51 @@ class ChecklistSelectionPage extends StatelessWidget {
         title: Text(area?.title ?? 'Checklists'),
       ),
       body: SafeArea(
-        child: ResponsiveBody(
-          maxWidth: 620,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                op == null ? 'Olá' : 'Olá, ${op.name}',
-                style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w900),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              Text(
-                'Escolha o checklist de hoje',
-                style: theme.textTheme.bodyLarge?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: AppSpacing.xl),
-              Expanded(
-                child: ListView.separated(
-                  itemCount: list.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.md),
-                  itemBuilder: (context, index) {
-                    final checklist = list[index];
-                    return ChecklistCard(
-                      checklist: checklist,
-                      onTap: () {
-                        context.read<AppSession>().startChecklist(checklist);
-                        context.push('/checklists/${checklist.id}/questions');
-                      },
-                    );
-                  },
+        child: Column(
+          children: [
+            ValueListenableBuilder<int>(
+              valueListenable: OfflineQueueService.instance.pendingCountNotifier,
+              builder: (_, count, __) => OfflineIndicator(pendingCount: count),
+            ),
+            Expanded(
+              child: ResponsiveBody(
+                maxWidth: 620,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      op == null ? 'Olá' : 'Olá, ${op.name}',
+                      style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w900),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Text(
+                      'Escolha o checklist de hoje',
+                      style: theme.textTheme.bodyLarge?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: AppSpacing.xl),
+                    Expanded(
+                      child: ListView.separated(
+                        itemCount: list.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.md),
+                        itemBuilder: (context, index) {
+                          final checklist = list[index];
+                          return ChecklistCard(
+                            checklist: checklist,
+                            onTap: () {
+                              context.read<AppSession>().startChecklist(checklist);
+                              context.push('/checklists/${checklist.id}/questions');
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
