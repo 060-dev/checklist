@@ -172,15 +172,11 @@ class ChecklistPhotoRequestDefinition {
   final String label;
   final String instruction;
   final String requiredWhenAnswer; // ex.: 'sim'
-  /// Optional local filename to be used when photo capture is mocked.
-  /// If null, the UI will use a generic fallback name.
-  final String? mockLocalFile;
 
   const ChecklistPhotoRequestDefinition({
     required this.label,
     required this.instruction,
     required this.requiredWhenAnswer,
-    this.mockLocalFile,
   });
 }
 

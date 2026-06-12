@@ -275,7 +275,6 @@ class ChecklistsRepository {
             requiredWhenAnswer: 'sim',
             label: 'Tirar foto do equipamento limpo',
             instruction: 'Tire uma foto do equipamento limpo após a aplicação.',
-            mockLocalFile: 'foto_equipamento_limpo_mock.jpg',
           ),
         ),
         ChecklistQuestion(
@@ -307,7 +306,6 @@ class ChecklistsRepository {
             requiredWhenAnswer: 'sim',
             label: 'Tirar foto das sementes recebidas',
             instruction: 'Tire uma foto das sementes recebidas.',
-            mockLocalFile: 'foto_sementes_recebidas_mock.jpg',
           ),
         ),
         ChecklistQuestion(
@@ -339,7 +337,6 @@ class ChecklistsRepository {
             requiredWhenAnswer: 'sim',
             label: 'Tirar foto da tratadora regulada',
             instruction: 'Tire uma foto da tratadora regulada corretamente.',
-            mockLocalFile: 'foto_tratadora_regulada_mock.jpg',
           ),
         ),
         ChecklistQuestion(
@@ -635,7 +632,6 @@ class ChecklistsRepository {
             requiredWhenAnswer: 'sim',
             label: 'Tirar foto do equipamento limpo',
             instruction: 'Tire uma foto do equipamento limpo após o uso.',
-            mockLocalFile: 'foto_equipamento_limpo_apos_uso_mock.jpg',
           ),
         ),
         ChecklistQuestion(
@@ -745,7 +741,6 @@ class ChecklistsRepository {
             requiredWhenAnswer: 'sim',
             label: 'Tirar foto da limpeza pós-colheita',
             instruction: 'Tire uma foto mostrando a limpeza pós-colheita realizada.',
-            mockLocalFile: 'foto_limpeza_pos_colheita_mock.jpg',
           ),
         ),
         ChecklistQuestion(
@@ -1232,7 +1227,6 @@ class ChecklistsRepository {
             requiredWhenAnswer: 'sim',
             label: 'Tirar foto do bebedouro limpo',
             instruction: 'Tire uma foto mostrando o bebedouro limpo após a retirada de baba e lodo.',
-            mockLocalFile: 'foto_bebedouro_abertura_diaria_mock.jpg',
           ),
         ),
         ChecklistQuestion(
@@ -1411,8 +1405,7 @@ class ChecklistsRepository {
             requiredWhenAnswer: 'sim',
             label: 'Tirar foto do painel',
             instruction: 'Tire uma foto mostrando o painel indicando normalidade.',
-            mockLocalFile: 'foto_painel_poco_artesiano_mock.jpg',
-          ),
+                      ),
         ),
         ChecklistQuestion(
           id: 'comunicou_diretoria_se_falha',
@@ -1483,8 +1476,7 @@ class ChecklistsRepository {
             requiredWhenAnswer: 'sim',
             label: 'Tirar foto do ultradenso fechado',
             instruction: 'Tire uma foto mostrando o ultradenso fechado corretamente.',
-            mockLocalFile: 'foto_ultradenso_fechado_pastagem_mock.jpg',
-          ),
+                      ),
         ),
         ChecklistQuestion(
           id: 'registrou_horario_planilha',
@@ -1636,8 +1628,7 @@ class ChecklistsRepository {
             requiredWhenAnswer: 'sim',
             label: 'Tirar foto do bebedouro',
             instruction: 'Tire uma foto mostrando a água potável no bebedouro.',
-            mockLocalFile: 'foto_agua_potavel_bebedouro_gado_cria_mock.jpg',
-          ),
+                      ),
         ),
         ChecklistQuestion(
           id: 'verificou_sal_disponivel',
@@ -1653,8 +1644,7 @@ class ChecklistsRepository {
             requiredWhenAnswer: 'sim',
             label: 'Tirar foto do sal disponível',
             instruction: 'Tire uma foto mostrando o sal disponível.',
-            mockLocalFile: 'foto_sal_disponivel_gado_cria_mock.jpg',
-          ),
+                      ),
         ),
         ChecklistQuestion(
           id: 'conferiu_cercas',

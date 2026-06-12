@@ -20,14 +20,13 @@ class RecordedAudio {
 }
 
 @immutable
-class PhotoMock {
-  final bool captured;
+class ChecklistPhoto {
   final String localFile;
 
-  const PhotoMock({required this.captured, required this.localFile});
+  const ChecklistPhoto({required this.localFile});
 
   Map<String, dynamic> toJson() => {
-        'capturada': captured,
+        'capturada': true,
         'arquivoLocal': localFile,
       };
 }
@@ -58,7 +57,7 @@ class ChecklistResponse {
   final ChecklistLevelOption? level;
   final bool generatedAlert;
   final Map<String, AdditionalFieldValue> additionalFields;
-  final PhotoMock? photo;
+  final ChecklistPhoto? photo;
 
   const ChecklistResponse(
       {required this.answer,
@@ -72,7 +71,7 @@ class ChecklistResponse {
     ChecklistLevelOption? level,
     bool? generatedAlert,
     Map<String, AdditionalFieldValue>? additionalFields,
-    PhotoMock? photo,
+    ChecklistPhoto? photo,
   }) =>
       ChecklistResponse(
         answer: answer ?? this.answer,
@@ -226,7 +225,7 @@ class AppSession extends ChangeNotifier {
     notifyListeners();
   }
 
-  void setPhotoMock({required String questionId, required PhotoMock photo}) {
+  void setPhoto({required String questionId, required ChecklistPhoto photo}) {
     final current = _responsesByQuestionId[questionId];
     if (current == null) return;
     _responsesByQuestionId[questionId] = current.copyWith(photo: photo);

@@ -89,11 +89,12 @@ class PenCard extends StatelessWidget {
   final PenChecklistStatus status;
   final VoidCallback onTap;
 
-  const PenCard(
-      {super.key,
-      required this.pen,
-      required this.status,
-      required this.onTap});
+  const PenCard({
+    super.key,
+    required this.pen,
+    required this.status,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -114,20 +115,16 @@ class PenCard extends StatelessWidget {
         onTap: onTap,
         child: LayoutBuilder(
           builder: (context, constraints) {
-            // Em alguns devices (ou com fonte maior), os cards ficam mais baixos.
-            // Ajustamos espaçamentos e tipografia para não estourar.
-            final isCompact = constraints.maxHeight < 150;
-            final padding = isCompact ? AppSpacing.md : AppSpacing.lg;
-            final iconBox = isCompact ? 42.0 : 46.0;
-            final iconSize = isCompact ? 24.0 : 26.0;
-            final titleStyle = (isCompact
-                    ? theme.textTheme.titleMedium
-                    : theme.textTheme.titleLarge)
-                ?.copyWith(fontWeight: FontWeight.w900);
-            final badgeTextStyle = (isCompact
-                    ? theme.textTheme.labelMedium
-                    : theme.textTheme.labelLarge)
-                ?.copyWith(fontWeight: FontWeight.w900, color: tone);
+            const padding = AppSpacing.md;
+            const iconBox = 28.0;
+            const iconSize = 20.0;
+            final titleStyle = (theme.textTheme.titleLarge)?.copyWith(
+              fontWeight: FontWeight.w900,
+            );
+            final badgeTextStyle = (theme.textTheme.labelSmall)?.copyWith(
+              fontWeight: FontWeight.w900,
+              color: tone,
+            );
 
             return AnimatedContainer(
               duration: const Duration(milliseconds: 160),
@@ -136,7 +133,9 @@ class PenCard extends StatelessWidget {
                 color: theme.colorScheme.surface,
                 borderRadius: BorderRadius.circular(AppRadius.xl),
                 border: Border.all(
-                    color: primary.withValues(alpha: 0.16), width: 2),
+                  color: primary.withValues(alpha: 0.16),
+                  width: 2,
+                ),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -151,26 +150,39 @@ class PenCard extends StatelessWidget {
                           color: primary.withValues(alpha: 0.10),
                           borderRadius: BorderRadius.circular(AppRadius.lg),
                           border: Border.all(
-                              color: primary.withValues(alpha: 0.18)),
+                            color: primary.withValues(
+                              alpha: 0.18,
+                            ),
+                          ),
                         ),
-                        child: Icon(Icons.holiday_village_rounded,
-                            color: primary, size: iconSize),
+                        child: Icon(
+                          Icons.holiday_village_rounded,
+                          color: primary,
+                          size: iconSize,
+                        ),
                       ),
                       const Spacer(),
-                      Icon(Icons.arrow_forward_ios,
-                          color: primary.withValues(alpha: 0.8), size: 18),
+                      Icon(
+                        Icons.arrow_forward_ios,
+                        color: primary.withValues(alpha: 0.8),
+                        size: 18,
+                      ),
                     ],
                   ),
                   const SizedBox(height: AppSpacing.sm),
-                  Text(pen.name,
-                      style: titleStyle,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis),
+                  Text(
+                    pen.name,
+                    style: titleStyle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                   Align(
                     alignment: Alignment.centerLeft,
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.md, vertical: AppSpacing.xs),
+                        horizontal: AppSpacing.md,
+                        vertical: AppSpacing.xs,
+                      ),
                       decoration: BoxDecoration(
                         color: tone.withValues(alpha: 0.14),
                         borderRadius: BorderRadius.circular(999),
@@ -180,17 +192,22 @@ class PenCard extends StatelessWidget {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Container(
-                              width: 10,
-                              height: 10,
-                              decoration: BoxDecoration(
-                                  color: tone,
-                                  borderRadius: BorderRadius.circular(99))),
+                            width: 10,
+                            height: 10,
+                            decoration: BoxDecoration(
+                              color: tone,
+                              borderRadius: BorderRadius.circular(99),
+                            ),
+                          ),
                           const SizedBox(width: AppSpacing.sm),
                           Flexible(
-                              child: Text(label,
-                                  style: badgeTextStyle,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis)),
+                            child: Text(
+                              label,
+                              style: badgeTextStyle,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
                         ],
                       ),
                     ),

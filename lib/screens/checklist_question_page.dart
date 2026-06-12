@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:go_router/go_router.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
@@ -203,25 +205,19 @@ class _ChecklistQuestionPageState extends State<ChecklistQuestionPage> {
     if (def == null) return;
     if (answer != def.requiredWhenAnswer) return;
 
-    final penId = context.read<AppSession>().selectedPen?.id;
-    final mockFile = def.mockLocalFile ??
-        _defaultMockPhotoFile(questionId: q.id, penId: penId);
-
-    final photo = await showModalBottomSheet<PhotoMock>(
-      context: context,
-      isDismissible: false,
-      enableDrag: false,
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.xl)),
-      ),
-      builder: (context) =>
-          PhotoCaptureSheet(definition: def, mockLocalFileOverride: mockFile),
-    );
+    final xFile =
+        await ImagePicker().pickImage(source: ImageSource.camera);
     if (!mounted) return;
-    if (photo != null) {
-      context.read<AppSession>().setPhotoMock(questionId: q.id, photo: photo);
-    }
+    if (xFile == null) return;
+
+    final dir = await getApplicationDocumentsDirectory();
+    final destPath = '${dir.path}/${const Uuid().v4()}.jpg';
+    await File(xFile.path).copy(destPath);
+    if (!mounted) return;
+    context.read<AppSession>().setPhoto(
+          questionId: q.id,
+          photo: ChecklistPhoto(localFile: destPath),
+        );
   }
 
   Future<void> _maybeCollectLevel(
@@ -246,25 +242,6 @@ class _ChecklistQuestionPageState extends State<ChecklistQuestionPage> {
     if (picked != null) {
       context.read<AppSession>().setLevel(questionId: q.id, level: picked);
     }
-  }
-
-  String _defaultMockPhotoFile(
-      {required String questionId, required String? penId}) {
-    final pen = (penId ?? 'curral_00').toLowerCase();
-    if (questionId == 'teria_coragem_provar_agua') {
-      return 'foto_agua_bebedouro_${pen}_mock.jpg';
-    }
-    if (questionId == 'lavou_bebedouro_completamente') {
-      return 'foto_bebedouro_lavado_${pen}_mock.jpg';
-    }
-    if (questionId.contains('leitura_cocho')) {
-      return 'foto_cocho_${pen}_mock.jpg';
-    }
-    if (questionId.contains('avaliacao_fezes')) {
-      return 'foto_fezes_${pen}_mock.jpg';
-    }
-    if (questionId.contains('rumen')) return 'foto_rumen_${pen}_mock.jpg';
-    return 'foto_${questionId}_${pen}_mock.jpg';
   }
 
   @override
@@ -1603,86 +1580,6 @@ class _QuantidadePorCurralSheetState extends State<QuantidadePorCurralSheet> {
               ),
             ),
           ],
-        ],
-      ),
-    );
-  }
-}
-
-class PhotoCaptureSheet extends StatelessWidget {
-  final ChecklistPhotoRequestDefinition definition;
-  final String? mockLocalFileOverride;
-
-  const PhotoCaptureSheet(
-      {super.key, required this.definition, this.mockLocalFileOverride});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final bottom = MediaQuery.paddingOf(context).bottom;
-
-    return Padding(
-      padding: EdgeInsets.fromLTRB(
-          AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, bottom + AppSpacing.lg),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.primary.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(AppRadius.lg),
-                ),
-                child: Icon(Icons.photo_camera_rounded,
-                    color: theme.colorScheme.primary, size: 26),
-              ),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                  child: Text('Tirar foto',
-                      style: theme.textTheme.titleLarge
-                          ?.copyWith(fontWeight: FontWeight.w900))),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            definition.instruction,
-            style: theme.textTheme.bodyLarge?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant, height: 1.35),
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          SizedBox(
-            height: 72,
-            child: FilledButton.icon(
-              onPressed: () {
-                // Simulação de câmera/foto.
-                context.pop(
-                  PhotoMock(
-                    captured: true,
-                    localFile: mockLocalFileOverride ??
-                        definition.mockLocalFile ??
-                        'foto_mock.jpg',
-                  ),
-                );
-              },
-              style: FilledButton.styleFrom(
-                backgroundColor: theme.colorScheme.primary,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppRadius.xl)),
-              ),
-              icon: Icon(Icons.photo_camera,
-                  color: theme.colorScheme.onPrimary, size: 28),
-              label: Text(
-                'Abrir câmera',
-                style: theme.textTheme.titleMedium?.copyWith(
-                    color: theme.colorScheme.onPrimary,
-                    fontWeight: FontWeight.w900),
-              ),
-            ),
-          ),
         ],
       ),
     );

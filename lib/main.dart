@@ -13,23 +13,28 @@ void main() async {
   runApp(const MorroDoPeaoApp());
 }
 
-class MorroDoPeaoApp extends StatelessWidget {
+class MorroDoPeaoApp extends StatefulWidget {
   const MorroDoPeaoApp({super.key});
 
   @override
+  State<MorroDoPeaoApp> createState() => _MorroDoPeaoAppState();
+}
+
+class _MorroDoPeaoAppState extends State<MorroDoPeaoApp> {
+  late final AppSession _session = AppSession();
+  late final RouterConfig<Object> _router = AppRouter.create(_session);
+
+  @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => AppSession(),
-      child: Builder(
-        builder: (context) => MaterialApp.router(
-          title: 'Morro do Peão - Checklists',
-          debugShowCheckedModeBanner: false,
-          theme: lightTheme,
-          darkTheme: darkTheme,
-          themeMode: ThemeMode
-              .light, // Force light theme for better visibility in field
-          routerConfig: AppRouter.create(context.read<AppSession>()),
-        ),
+    return ChangeNotifierProvider.value(
+      value: _session,
+      child: MaterialApp.router(
+        title: 'Morro do Peão - Checklists',
+        debugShowCheckedModeBanner: false,
+        theme: lightTheme,
+        darkTheme: darkTheme,
+        themeMode: ThemeMode.light,
+        routerConfig: _router,
       ),
     );
   }
