@@ -6,21 +6,16 @@ import 'package:morro_do_peo/models/checklist_models.dart';
 import 'package:morro_do_peo/models/operator.dart';
 
 @immutable
-class AudioMock {
+class RecordedAudio {
   final String localFile;
   final int durationSeconds;
-  final String? transcriptionMock;
 
-  const AudioMock(
-      {required this.localFile,
-      required this.durationSeconds,
-      this.transcriptionMock});
+  const RecordedAudio({required this.localFile, required this.durationSeconds});
 
   Map<String, dynamic> toJson() => {
         'tipo': 'audio',
         'arquivoLocal': localFile,
         'duracaoSegundos': durationSeconds,
-        if (transcriptionMock != null) 'transcricaoMock': transcriptionMock,
       };
 }
 
@@ -41,14 +36,14 @@ class PhotoMock {
 class AdditionalFieldValue {
   final String type; // 'texto' | 'audio'
   final String? text;
-  final AudioMock? audio;
+  final RecordedAudio? audio;
 
   const AdditionalFieldValue._({required this.type, this.text, this.audio});
 
   const AdditionalFieldValue.text(String value)
       : this._(type: 'texto', text: value, audio: null);
 
-  const AdditionalFieldValue.audio(AudioMock value)
+  const AdditionalFieldValue.audio(RecordedAudio value)
       : this._(type: 'audio', text: null, audio: value);
 
   Map<String, dynamic> toJson() {
@@ -89,18 +84,13 @@ class ChecklistResponse {
 }
 
 @immutable
-class ObservationAudioMock {
-  final bool recorded;
+class ObservationAudio {
   final String localFile;
   final int durationSeconds;
 
-  const ObservationAudioMock(
-      {required this.recorded,
-      required this.localFile,
-      required this.durationSeconds});
+  const ObservationAudio({required this.localFile, required this.durationSeconds});
 
   Map<String, dynamic> toJson() => {
-        'gravado': recorded,
         'arquivoLocal': localFile,
         'duracaoSegundos': durationSeconds,
       };
@@ -117,7 +107,7 @@ class AppSession extends ChangeNotifier {
   DateTime? _finishedAt;
 
   final Map<String, ChecklistResponse> _responsesByQuestionId = {};
-  ObservationAudioMock? _observation;
+  ObservationAudio? _observation;
 
   /// Status por curral (penId) e por checklist (checklistId) para o dia atual.
   final Map<String, Map<String, PenChecklistStatus>>
@@ -144,7 +134,7 @@ class AppSession extends ChangeNotifier {
 
   Map<String, ChecklistResponse> get responsesByQuestionId =>
       Map.unmodifiable(_responsesByQuestionId);
-  ObservationAudioMock? get observation => _observation;
+  ObservationAudio? get observation => _observation;
 
   String? get successTitleOverride => _successTitleOverride;
   String? get successMessageOverride => _successMessageOverride;
@@ -243,7 +233,7 @@ class AppSession extends ChangeNotifier {
     notifyListeners();
   }
 
-  void setObservationMock(ObservationAudioMock? obs) {
+  void setObservation(ObservationAudio? obs) {
     _observation = obs;
     notifyListeners();
   }
@@ -362,48 +352,6 @@ class AppSession extends ChangeNotifier {
     _successMessageOverride = null;
     _successIsQueued = false;
     notifyListeners();
-  }
-
-  String buildObservationMockFilename() {
-    final penId = _selectedPen?.id;
-    final checklistId = _selectedChecklist?.id;
-
-    if (checklistId == ChecklistsRepository.alimentacaoPecuariaId) {
-      return 'audio_alimentacao_mock.mp3';
-    }
-
-    if (checklistId == ChecklistsRepository.aberturaDiariaPecuariaId) {
-      return 'audio_abertura_diaria_mock.mp3';
-    }
-
-    if (checklistId == ChecklistsRepository.ultraDensoPecuariaId) {
-      return 'audio_ultra_denso_mock.mp3';
-    }
-
-    if (checklistId == ChecklistsRepository.pocosArtesianosPecuariaId) {
-      return 'audio_pocos_artesianos_mock.mp3';
-    }
-
-    if (checklistId == ChecklistsRepository.montagemNovaPastagemPecuariaId) {
-      return 'audio_montagem_nova_pastagem_mock.mp3';
-    }
-
-    if (checklistId == ChecklistsRepository.analiseGadoPecuariaId) {
-      return 'audio_analise_gado_mock.mp3';
-    }
-
-    if (penId == null) return 'audio_observacao_mock.mp3';
-    if (checklistId == ChecklistsRepository.manutencaoPreventivaCurralId) {
-      final digits = penId.replaceAll(RegExp(r'[^0-9]'), '');
-      final suffix = digits.isEmpty ? penId : digits.padLeft(2, '0');
-      return 'audio_manutencao_curral_${suffix}_mock.mp3';
-    }
-    if (checklistId == ChecklistsRepository.lavagemBebedouroCurralId) {
-      final digits = penId.replaceAll(RegExp(r'[^0-9]'), '');
-      final suffix = digits.isEmpty ? penId : digits.padLeft(2, '0');
-      return 'audio_lavagem_bebedouro_curral_${suffix}_mock.mp3';
-    }
-    return 'audio_observacao_${penId}_mock.mp3';
   }
 
   int countAnswer(String value) =>

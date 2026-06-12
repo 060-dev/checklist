@@ -1,8 +1,12 @@
 import 'dart:async';
 
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:record/record.dart';
+import 'package:uuid/uuid.dart';
 
 import 'package:morro_do_peo/components/responsive_body.dart';
 import 'package:morro_do_peo/state/app_session.dart';
@@ -16,52 +20,97 @@ class ObservationRecordPage extends StatefulWidget {
 }
 
 class _ObservationRecordPageState extends State<ObservationRecordPage> {
+  final AudioRecorder _recorder = AudioRecorder();
+  final AudioPlayer _player = AudioPlayer();
+  StreamSubscription<PlayerState>? _playerSub;
+
   bool _recording = false;
   bool _recorded = false;
+  bool _playing = false;
   int _seconds = 0;
   Timer? _timer;
+  String? _filePath;
+
+  @override
+  void initState() {
+    super.initState();
+    _playerSub = _player.onPlayerStateChanged.listen((state) {
+      if (!mounted) return;
+      setState(() => _playing = state == PlayerState.playing);
+    });
+  }
 
   @override
   void dispose() {
     _timer?.cancel();
+    _playerSub?.cancel();
+    _recorder.dispose();
+    _player.dispose();
     super.dispose();
   }
 
-  void _start() {
+  Future<void> _start() async {
+    final hasPermission = await _recorder.hasPermission();
+    if (!hasPermission || !mounted) return;
+
+    final dir = await getApplicationDocumentsDirectory();
+    final path = '${dir.path}/${const Uuid().v4()}.m4a';
+
     _timer?.cancel();
     setState(() {
       _recording = true;
       _recorded = false;
       _seconds = 0;
+      _filePath = null;
     });
+
+    await _recorder.start(
+      const RecordConfig(encoder: AudioEncoder.aacLc),
+      path: path,
+    );
+
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (!mounted) return;
       setState(() => _seconds++);
     });
   }
 
-  void _stop() {
+  Future<void> _stop() async {
     _timer?.cancel();
+    final path = await _recorder.stop();
+    if (!mounted) return;
     setState(() {
       _recording = false;
       _recorded = true;
+      _filePath = path;
     });
-
-    final localFile = context.read<AppSession>().buildObservationMockFilename();
-
-    context.read<AppSession>().setObservationMock(
-          ObservationAudioMock(recorded: true, localFile: localFile, durationSeconds: _seconds.clamp(3, 60)),
-        );
+    if (path != null) {
+      context.read<AppSession>().setObservation(
+            ObservationAudio(localFile: path, durationSeconds: _seconds.clamp(1, 3600)),
+          );
+    }
   }
 
-  void _reset() {
+  Future<void> _reset() async {
     _timer?.cancel();
-    context.read<AppSession>().setObservationMock(null);
+    await _player.stop();
+    if (_recording) await _recorder.stop();
+    if (!mounted) return;
+    context.read<AppSession>().setObservation(null);
     setState(() {
       _recording = false;
       _recorded = false;
       _seconds = 0;
+      _filePath = null;
     });
+  }
+
+  Future<void> _togglePlayback() async {
+    if (_playing) {
+      await _player.stop();
+    } else if (_filePath != null) {
+      await _player.play(DeviceFileSource(_filePath!));
+    }
   }
 
   @override
@@ -94,7 +143,7 @@ class _ObservationRecordPageState extends State<ObservationRecordPage> {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: AppSpacing.xl),
-              _RecordingIndicator(recording: _recording, seconds: _seconds),
+              _RecordingIndicator(recording: _recording, recorded: _recorded, seconds: _seconds),
               const Spacer(),
               if (!_recorded) ...[
                 SizedBox(
@@ -116,18 +165,17 @@ class _ObservationRecordPageState extends State<ObservationRecordPage> {
                 SizedBox(
                   height: 64,
                   child: OutlinedButton.icon(
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Simulação: áudio reproduzido (mock).'), behavior: SnackBarBehavior.floating),
-                      );
-                    },
+                    onPressed: _togglePlayback,
                     style: OutlinedButton.styleFrom(
                       foregroundColor: theme.colorScheme.primary,
                       side: BorderSide(color: theme.colorScheme.primary.withValues(alpha: 0.28), width: 2),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.xl)),
                     ),
-                    icon: Icon(Icons.play_arrow, color: theme.colorScheme.primary, size: 28),
-                    label: Text('Ouvir áudio', style: theme.textTheme.titleMedium?.copyWith(color: theme.colorScheme.primary, fontWeight: FontWeight.w900)),
+                    icon: Icon(_playing ? Icons.stop : Icons.play_arrow, color: theme.colorScheme.primary, size: 28),
+                    label: Text(
+                      _playing ? 'Parar áudio' : 'Ouvir áudio',
+                      style: theme.textTheme.titleMedium?.copyWith(color: theme.colorScheme.primary, fontWeight: FontWeight.w900),
+                    ),
                   ),
                 ),
                 const SizedBox(height: AppSpacing.md),
@@ -168,17 +216,39 @@ class _ObservationRecordPageState extends State<ObservationRecordPage> {
 
 class _RecordingIndicator extends StatelessWidget {
   final bool recording;
+  final bool recorded;
   final int seconds;
 
-  const _RecordingIndicator({required this.recording, required this.seconds});
+  const _RecordingIndicator({required this.recording, required this.recorded, required this.seconds});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final bg = recording ? AppColors.errorLight : theme.colorScheme.surface;
-    final border = recording ? AppColors.error.withValues(alpha: 0.35) : theme.colorScheme.primary.withValues(alpha: 0.16);
-    final iconColor = recording ? AppColors.error : theme.colorScheme.primary;
-    final label = recording ? 'Gravando...' : 'Pronto para gravar';
+    final Color bg;
+    final Color border;
+    final Color iconColor;
+    final IconData icon;
+    final String label;
+
+    if (recording) {
+      bg = AppColors.errorLight;
+      border = AppColors.error.withValues(alpha: 0.35);
+      iconColor = AppColors.error;
+      icon = Icons.mic;
+      label = 'Gravando... ${seconds}s';
+    } else if (recorded) {
+      bg = AppColors.successLight;
+      border = AppColors.success.withValues(alpha: 0.35);
+      iconColor = AppColors.success;
+      icon = Icons.check_circle;
+      label = 'Gravado (${seconds}s)';
+    } else {
+      bg = theme.colorScheme.surface;
+      border = theme.colorScheme.primary.withValues(alpha: 0.16);
+      iconColor = theme.colorScheme.primary;
+      icon = Icons.mic_none;
+      label = 'Pronto para gravar';
+    }
 
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
@@ -196,7 +266,7 @@ class _RecordingIndicator extends StatelessWidget {
               color: iconColor.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(AppRadius.xl),
             ),
-            child: Icon(recording ? Icons.mic : Icons.mic_none, color: iconColor, size: 30),
+            child: Icon(icon, color: iconColor, size: 30),
           ),
           const SizedBox(width: AppSpacing.md),
           Expanded(
@@ -204,8 +274,10 @@ class _RecordingIndicator extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(label, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900)),
-                const SizedBox(height: AppSpacing.xs),
-                Text('${seconds}s', style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+                if (!recording && !recorded)
+                  const SizedBox(height: AppSpacing.xs),
+                if (!recording && !recorded)
+                  Text('Toque em "Iniciar gravação"', style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
               ],
             ),
           ),

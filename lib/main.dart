@@ -26,7 +26,8 @@ class MorroDoPeaoApp extends StatelessWidget {
           debugShowCheckedModeBanner: false,
           theme: lightTheme,
           darkTheme: darkTheme,
-          themeMode: ThemeMode.light, // Force light theme for better visibility in field
+          themeMode: ThemeMode
+              .light, // Force light theme for better visibility in field
           routerConfig: AppRouter.create(context.read<AppSession>()),
         ),
       ),

@@ -1,9 +1,13 @@
 import 'dart:async';
 
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:record/record.dart';
+import 'package:uuid/uuid.dart';
 
 import 'package:morro_do_peo/components/responsive_body.dart';
 import 'package:morro_do_peo/data/checklists_repository.dart';
@@ -747,40 +751,68 @@ class VoltagemObservadaSheet extends StatefulWidget {
 
 class _VoltagemObservadaSheetState extends State<VoltagemObservadaSheet> {
   final TextEditingController _controller = TextEditingController();
+  final AudioRecorder _recorder = AudioRecorder();
+  final AudioPlayer _player = AudioPlayer();
+  StreamSubscription<PlayerState>? _playerSub;
   bool _recording = false;
+  bool _playing = false;
   int _seconds = 0;
   Timer? _timer;
+  String? _recordedPath;
   AdditionalFieldValue? _value;
+
+  @override
+  void initState() {
+    super.initState();
+    _playerSub = _player.onPlayerStateChanged.listen((state) {
+      if (!mounted) return;
+      setState(() => _playing = state == PlayerState.playing);
+    });
+  }
 
   @override
   void dispose() {
     _timer?.cancel();
+    _playerSub?.cancel();
     _controller.dispose();
+    _recorder.dispose();
+    _player.dispose();
     super.dispose();
   }
 
-  void _startRecording() {
+  Future<void> _startRecording() async {
+    final hasPermission = await _recorder.hasPermission();
+    if (!hasPermission || !mounted) return;
+    final dir = await getApplicationDocumentsDirectory();
+    final path = '${dir.path}/${const Uuid().v4()}.m4a';
     _timer?.cancel();
-    setState(() {
-      _recording = true;
-      _seconds = 0;
-    });
+    setState(() { _recording = true; _seconds = 0; _recordedPath = null; _value = null; });
+    await _recorder.start(const RecordConfig(encoder: AudioEncoder.aacLc), path: path);
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (!mounted) return;
       setState(() => _seconds++);
     });
   }
 
-  void _stopRecording() {
+  Future<void> _stopRecording() async {
     _timer?.cancel();
-    setState(() => _recording = false);
+    final path = await _recorder.stop();
+    if (!mounted) return;
+    setState(() {
+      _recording = false;
+      _recordedPath = path;
+      if (path != null) {
+        _value = AdditionalFieldValue.audio(RecordedAudio(localFile: path, durationSeconds: _seconds.clamp(1, 3600)));
+      }
+    });
+  }
 
-    final audio = AudioMock(
-      localFile: 'voltagem_ultra_denso_mock.mp3',
-      durationSeconds: _seconds.clamp(3, 20),
-      transcriptionMock: 'O visor mostrou sete mil e oitocentos volts.',
-    );
-    setState(() => _value = AdditionalFieldValue.audio(audio));
+  Future<void> _togglePlayback() async {
+    if (_playing) {
+      await _player.stop();
+    } else if (_recordedPath != null) {
+      await _player.play(DeviceFileSource(_recordedPath!));
+    }
   }
 
   void _confirmText() {
@@ -833,47 +865,72 @@ class _VoltagemObservadaSheetState extends State<VoltagemObservadaSheet> {
               color: theme.colorScheme.surfaceContainerHighest,
               borderRadius: BorderRadius.circular(AppRadius.xl),
               border: Border.all(
-                  color: theme.colorScheme.primary.withValues(alpha: 0.16)),
+                color: theme.colorScheme.primary.withValues(alpha: 0.16),
+              ),
             ),
             child: Row(
               children: [
-                Icon(_recording ? Icons.mic : Icons.mic_none,
-                    color: theme.colorScheme.primary, size: 26),
+                Icon(
+                  _recording ? Icons.mic : (_recordedPath != null ? Icons.check_circle : Icons.mic_none),
+                  color: _recording ? AppColors.error : (_recordedPath != null ? AppColors.success : theme.colorScheme.primary),
+                  size: 26,
+                ),
                 const SizedBox(width: AppSpacing.md),
                 Expanded(
                   child: Text(
                     _recording
                         ? 'Gravando... ${_seconds}s'
-                        : 'Gravar áudio (recomendado)',
-                    style: theme.textTheme.bodyLarge
-                        ?.copyWith(fontWeight: FontWeight.w800),
+                        : (_recordedPath != null ? 'Gravado (${_seconds}s)' : 'Gravar áudio (recomendado)'),
+                    style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w800),
                   ),
                 ),
-                if (_value?.type == 'audio')
-                  Icon(Icons.check_circle, color: AppColors.success, size: 22),
               ],
             ),
           ),
           const SizedBox(height: AppSpacing.md),
-          SizedBox(
-            height: 72,
-            child: FilledButton.icon(
-              onPressed: _recording ? _stopRecording : _startRecording,
-              style: FilledButton.styleFrom(
-                backgroundColor: theme.colorScheme.primary,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppRadius.xl)),
-              ),
-              icon: Icon(_recording ? Icons.stop : Icons.mic,
-                  color: theme.colorScheme.onPrimary, size: 26),
-              label: Text(
-                _recording ? 'Parar gravação' : 'Gravar áudio',
-                style: theme.textTheme.titleMedium?.copyWith(
-                    color: theme.colorScheme.onPrimary,
-                    fontWeight: FontWeight.w900),
+          if (_recordedPath != null) ...[
+            SizedBox(
+              height: 64,
+              child: OutlinedButton.icon(
+                onPressed: _togglePlayback,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: theme.colorScheme.primary,
+                  side: BorderSide(color: theme.colorScheme.primary.withValues(alpha: 0.28), width: 2),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.xl)),
+                ),
+                icon: Icon(_playing ? Icons.stop : Icons.play_arrow, color: theme.colorScheme.primary, size: 26),
+                label: Text(
+                  _playing ? 'Parar áudio' : 'Ouvir áudio',
+                  style: theme.textTheme.titleMedium?.copyWith(color: theme.colorScheme.primary, fontWeight: FontWeight.w900),
+                ),
               ),
             ),
-          ),
+            const SizedBox(height: AppSpacing.sm),
+            SizedBox(
+              height: 56,
+              child: TextButton.icon(
+                onPressed: _startRecording,
+                icon: Icon(Icons.refresh, color: theme.colorScheme.primary, size: 22),
+                label: Text('Gravar novamente', style: theme.textTheme.bodyLarge?.copyWith(color: theme.colorScheme.primary, fontWeight: FontWeight.w700)),
+              ),
+            ),
+          ] else ...[
+            SizedBox(
+              height: 72,
+              child: FilledButton.icon(
+                onPressed: _recording ? _stopRecording : _startRecording,
+                style: FilledButton.styleFrom(
+                  backgroundColor: theme.colorScheme.primary,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.xl)),
+                ),
+                icon: Icon(_recording ? Icons.stop : Icons.mic, color: theme.colorScheme.onPrimary, size: 26),
+                label: Text(
+                  _recording ? 'Parar gravação' : 'Gravar áudio',
+                  style: theme.textTheme.titleMedium?.copyWith(color: theme.colorScheme.onPrimary, fontWeight: FontWeight.w900),
+                ),
+              ),
+            ),
+          ],
           const SizedBox(height: AppSpacing.lg),
           TextField(
             controller: _controller,
@@ -930,75 +987,42 @@ class AdditionalFieldSheet extends StatefulWidget {
 
 class _AdditionalFieldSheetState extends State<AdditionalFieldSheet> {
   final TextEditingController _controller = TextEditingController();
+  final AudioRecorder _recorder = AudioRecorder();
   bool _recording = false;
   int _seconds = 0;
   Timer? _timer;
   bool _submitted = false;
 
-  AudioMock _buildAudioMockForField(ChecklistAdditionalFieldDefinition def) {
-    // Ajustes por campo (mocks mais realistas por checklist).
-    if (def.id == 'observacao_perdas_chao') {
-      return AudioMock(
-        localFile: 'perdas_chao_mock.mp3',
-        durationSeconds: _seconds.clamp(3, 60),
-        transcriptionMock: 'Perdas dentro do aceitável após regulagem.',
-      );
-    }
-    if (def.id == 'quantidade_por_curral') {
-      return AudioMock(
-        localFile: 'quantidade_por_curral_mock.mp3',
-        durationSeconds: _seconds.clamp(3, 90),
-        transcriptionMock:
-            'Curral 1, trezentos quilos. Curral 2, duzentos e oitenta quilos. Curral 3, trezentos e vinte quilos.',
-      );
-    }
-    if (def.id == 'valor_voltagem_observada') {
-      return AudioMock(
-        localFile: 'voltagem_ultra_denso_mock.mp3',
-        durationSeconds: _seconds.clamp(3, 20),
-        transcriptionMock: 'O visor mostrou sete mil e oitocentos volts.',
-      );
-    }
-    if (def.id == 'area_medida') {
-      return AudioMock(
-        localFile: 'area_medida_pastagem_mock.mp3',
-        durationSeconds: _seconds.clamp(3, 20),
-        transcriptionMock: 'A área medida foi de um vírgula quatro hectares.',
-      );
-    }
-    return AudioMock(
-      localFile: 'volume_produtos_mock.mp3',
-      durationSeconds: _seconds.clamp(3, 60),
-      transcriptionMock: 'Produto A, dois litros. Produto B, um litro.',
-    );
-  }
-
   @override
   void dispose() {
     _timer?.cancel();
     _controller.dispose();
+    _recorder.dispose();
     super.dispose();
   }
 
-  void _startRecording() {
+  Future<void> _startRecording() async {
+    final hasPermission = await _recorder.hasPermission();
+    if (!hasPermission || !mounted) return;
+    final dir = await getApplicationDocumentsDirectory();
+    final path = '${dir.path}/${const Uuid().v4()}.m4a';
     _timer?.cancel();
-    setState(() {
-      _recording = true;
-      _seconds = 0;
-    });
+    setState(() { _recording = true; _seconds = 0; });
+    await _recorder.start(const RecordConfig(encoder: AudioEncoder.aacLc), path: path);
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (!mounted) return;
       setState(() => _seconds++);
     });
   }
 
-  void _stopRecording() {
+  Future<void> _stopRecording() async {
     _timer?.cancel();
-    setState(() => _recording = false);
-
-    final audio = _buildAudioMockForField(widget.definition);
-    setState(() => _submitted = true);
-    context.pop(AdditionalFieldValue.audio(audio));
+    final path = await _recorder.stop();
+    if (!mounted) return;
+    setState(() { _recording = false; _submitted = true; });
+    if (path != null) {
+      context.pop(AdditionalFieldValue.audio(RecordedAudio(localFile: path, durationSeconds: _seconds.clamp(1, 3600))));
+    }
   }
 
   void _submitText() {
@@ -1125,7 +1149,7 @@ class _AdditionalFieldSheetState extends State<AdditionalFieldSheet> {
                   child: Text(
                     _recording
                         ? 'Gravando... ${_seconds}s'
-                        : 'Ou gravar áudio (simulação)',
+                        : 'Ou gravar áudio',
                     style: theme.textTheme.bodyLarge
                         ?.copyWith(fontWeight: FontWeight.w800),
                   ),
@@ -1187,41 +1211,69 @@ class AreaMedidaSheet extends StatefulWidget {
 
 class _AreaMedidaSheetState extends State<AreaMedidaSheet> {
   final TextEditingController _controller = TextEditingController();
+  final AudioRecorder _recorder = AudioRecorder();
+  final AudioPlayer _player = AudioPlayer();
+  StreamSubscription<PlayerState>? _playerSub;
   bool _showText = false;
   bool _recording = false;
+  bool _playing = false;
   int _seconds = 0;
   Timer? _timer;
+  String? _recordedPath;
   AdditionalFieldValue? _value;
+
+  @override
+  void initState() {
+    super.initState();
+    _playerSub = _player.onPlayerStateChanged.listen((state) {
+      if (!mounted) return;
+      setState(() => _playing = state == PlayerState.playing);
+    });
+  }
 
   @override
   void dispose() {
     _timer?.cancel();
+    _playerSub?.cancel();
     _controller.dispose();
+    _recorder.dispose();
+    _player.dispose();
     super.dispose();
   }
 
-  void _startRecording() {
+  Future<void> _startRecording() async {
+    final hasPermission = await _recorder.hasPermission();
+    if (!hasPermission || !mounted) return;
+    final dir = await getApplicationDocumentsDirectory();
+    final path = '${dir.path}/${const Uuid().v4()}.m4a';
     _timer?.cancel();
-    setState(() {
-      _recording = true;
-      _seconds = 0;
-    });
+    setState(() { _recording = true; _seconds = 0; _recordedPath = null; _value = null; });
+    await _recorder.start(const RecordConfig(encoder: AudioEncoder.aacLc), path: path);
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (!mounted) return;
       setState(() => _seconds++);
     });
   }
 
-  void _stopRecording() {
+  Future<void> _stopRecording() async {
     _timer?.cancel();
-    setState(() => _recording = false);
+    final path = await _recorder.stop();
+    if (!mounted) return;
+    setState(() {
+      _recording = false;
+      _recordedPath = path;
+      if (path != null) {
+        _value = AdditionalFieldValue.audio(RecordedAudio(localFile: path, durationSeconds: _seconds.clamp(1, 3600)));
+      }
+    });
+  }
 
-    final audio = AudioMock(
-      localFile: 'area_medida_pastagem_mock.mp3',
-      durationSeconds: _seconds.clamp(3, 20),
-      transcriptionMock: 'A área medida foi de um vírgula quatro hectares.',
-    );
-    setState(() => _value = AdditionalFieldValue.audio(audio));
+  Future<void> _togglePlayback() async {
+    if (_playing) {
+      await _player.stop();
+    } else if (_recordedPath != null) {
+      await _player.play(DeviceFileSource(_recordedPath!));
+    }
   }
 
   void _submitText() {
@@ -1268,25 +1320,49 @@ class _AreaMedidaSheetState extends State<AreaMedidaSheet> {
                 color: theme.colorScheme.onSurfaceVariant, height: 1.35),
           ),
           const SizedBox(height: AppSpacing.lg),
-          SizedBox(
-            height: 72,
-            child: FilledButton.icon(
-              onPressed: _recording ? _stopRecording : _startRecording,
-              style: FilledButton.styleFrom(
-                backgroundColor: theme.colorScheme.primary,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppRadius.xl)),
-              ),
-              icon: Icon(_recording ? Icons.stop : Icons.mic,
-                  color: theme.colorScheme.onPrimary, size: 28),
-              label: Text(
-                _recording ? 'Parar gravação (${_seconds}s)' : 'Gravar áudio',
-                style: theme.textTheme.titleMedium?.copyWith(
-                    color: theme.colorScheme.onPrimary,
-                    fontWeight: FontWeight.w900),
+          if (_recordedPath != null) ...[
+            SizedBox(
+              height: 64,
+              child: OutlinedButton.icon(
+                onPressed: _togglePlayback,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: theme.colorScheme.primary,
+                  side: BorderSide(color: theme.colorScheme.primary.withValues(alpha: 0.28), width: 2),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.xl)),
+                ),
+                icon: Icon(_playing ? Icons.stop : Icons.play_arrow, color: theme.colorScheme.primary, size: 26),
+                label: Text(
+                  _playing ? 'Parar áudio' : 'Ouvir áudio (${_seconds}s)',
+                  style: theme.textTheme.titleMedium?.copyWith(color: theme.colorScheme.primary, fontWeight: FontWeight.w900),
+                ),
               ),
             ),
-          ),
+            const SizedBox(height: AppSpacing.sm),
+            SizedBox(
+              height: 56,
+              child: TextButton.icon(
+                onPressed: _startRecording,
+                icon: Icon(Icons.refresh, color: theme.colorScheme.primary, size: 22),
+                label: Text('Gravar novamente', style: theme.textTheme.bodyLarge?.copyWith(color: theme.colorScheme.primary, fontWeight: FontWeight.w700)),
+              ),
+            ),
+          ] else ...[
+            SizedBox(
+              height: 72,
+              child: FilledButton.icon(
+                onPressed: _recording ? _stopRecording : _startRecording,
+                style: FilledButton.styleFrom(
+                  backgroundColor: theme.colorScheme.primary,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.xl)),
+                ),
+                icon: Icon(_recording ? Icons.stop : Icons.mic, color: theme.colorScheme.onPrimary, size: 28),
+                label: Text(
+                  _recording ? 'Parar gravação (${_seconds}s)' : 'Gravar áudio',
+                  style: theme.textTheme.titleMedium?.copyWith(color: theme.colorScheme.onPrimary, fontWeight: FontWeight.w900),
+                ),
+              ),
+            ),
+          ],
           const SizedBox(height: AppSpacing.md),
           SizedBox(
             height: 64,
@@ -1363,6 +1439,7 @@ class _AreaMedidaSheetState extends State<AreaMedidaSheet> {
 
 class _QuantidadePorCurralSheetState extends State<QuantidadePorCurralSheet> {
   final TextEditingController _controller = TextEditingController();
+  final AudioRecorder _recorder = AudioRecorder();
   bool _showText = false;
   bool _recording = false;
   int _seconds = 0;
@@ -1372,34 +1449,32 @@ class _QuantidadePorCurralSheetState extends State<QuantidadePorCurralSheet> {
   void dispose() {
     _timer?.cancel();
     _controller.dispose();
+    _recorder.dispose();
     super.dispose();
   }
 
-  void _startRecording() {
+  Future<void> _startRecording() async {
+    final hasPermission = await _recorder.hasPermission();
+    if (!hasPermission || !mounted) return;
+    final dir = await getApplicationDocumentsDirectory();
+    final path = '${dir.path}/${const Uuid().v4()}.m4a';
     _timer?.cancel();
-    setState(() {
-      _recording = true;
-      _seconds = 0;
-    });
+    setState(() { _recording = true; _seconds = 0; });
+    await _recorder.start(const RecordConfig(encoder: AudioEncoder.aacLc), path: path);
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (!mounted) return;
       setState(() => _seconds++);
     });
   }
 
-  void _stopRecording() {
+  Future<void> _stopRecording() async {
     _timer?.cancel();
+    final path = await _recorder.stop();
+    if (!mounted) return;
     setState(() => _recording = false);
-    context.pop(
-      AdditionalFieldValue.audio(
-        AudioMock(
-          localFile: 'quantidade_por_curral_mock.mp3',
-          durationSeconds: _seconds.clamp(3, 90),
-          transcriptionMock:
-              'Curral 1, trezentos quilos. Curral 2, duzentos e oitenta quilos. Curral 3, trezentos e vinte quilos.',
-        ),
-      ),
-    );
+    if (path != null) {
+      context.pop(AdditionalFieldValue.audio(RecordedAudio(localFile: path, durationSeconds: _seconds.clamp(1, 3600))));
+    }
   }
 
   void _submitText() {

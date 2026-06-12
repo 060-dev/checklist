@@ -41,14 +41,16 @@ class PenSelectionPage extends StatelessWidget {
             children: [
               Text(
                 'Escolha o curral para selecionar um checklist',
-                style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
+                style: theme.textTheme.titleLarge
+                    ?.copyWith(fontWeight: FontWeight.w900),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: AppSpacing.sm),
               if (op != null)
                 Text(
                   'Funcionário: ${op.name}',
-                  style: theme.textTheme.bodyLarge?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                  style: theme.textTheme.bodyLarge
+                      ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                   textAlign: TextAlign.center,
                 ),
               const SizedBox(height: AppSpacing.lg),
@@ -58,8 +60,6 @@ class PenSelectionPage extends StatelessWidget {
                     crossAxisCount: 2,
                     mainAxisSpacing: AppSpacing.md,
                     crossAxisSpacing: AppSpacing.md,
-                    // Um pouco mais alto para evitar overflow em telas menores.
-                    childAspectRatio: 1.05,
                   ),
                   itemCount: pens.length,
                   itemBuilder: (context, index) {
@@ -89,7 +89,11 @@ class PenCard extends StatelessWidget {
   final PenChecklistStatus status;
   final VoidCallback onTap;
 
-  const PenCard({super.key, required this.pen, required this.status, required this.onTap});
+  const PenCard(
+      {super.key,
+      required this.pen,
+      required this.status,
+      required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -116,8 +120,14 @@ class PenCard extends StatelessWidget {
             final padding = isCompact ? AppSpacing.md : AppSpacing.lg;
             final iconBox = isCompact ? 42.0 : 46.0;
             final iconSize = isCompact ? 24.0 : 26.0;
-            final titleStyle = (isCompact ? theme.textTheme.titleMedium : theme.textTheme.titleLarge)?.copyWith(fontWeight: FontWeight.w900);
-            final badgeTextStyle = (isCompact ? theme.textTheme.labelMedium : theme.textTheme.labelLarge)?.copyWith(fontWeight: FontWeight.w900, color: tone);
+            final titleStyle = (isCompact
+                    ? theme.textTheme.titleMedium
+                    : theme.textTheme.titleLarge)
+                ?.copyWith(fontWeight: FontWeight.w900);
+            final badgeTextStyle = (isCompact
+                    ? theme.textTheme.labelMedium
+                    : theme.textTheme.labelLarge)
+                ?.copyWith(fontWeight: FontWeight.w900, color: tone);
 
             return AnimatedContainer(
               duration: const Duration(milliseconds: 160),
@@ -125,7 +135,8 @@ class PenCard extends StatelessWidget {
               decoration: BoxDecoration(
                 color: theme.colorScheme.surface,
                 borderRadius: BorderRadius.circular(AppRadius.xl),
-                border: Border.all(color: primary.withValues(alpha: 0.16), width: 2),
+                border: Border.all(
+                    color: primary.withValues(alpha: 0.16), width: 2),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -139,20 +150,27 @@ class PenCard extends StatelessWidget {
                         decoration: BoxDecoration(
                           color: primary.withValues(alpha: 0.10),
                           borderRadius: BorderRadius.circular(AppRadius.lg),
-                          border: Border.all(color: primary.withValues(alpha: 0.18)),
+                          border: Border.all(
+                              color: primary.withValues(alpha: 0.18)),
                         ),
-                        child: Icon(Icons.holiday_village_rounded, color: primary, size: iconSize),
+                        child: Icon(Icons.holiday_village_rounded,
+                            color: primary, size: iconSize),
                       ),
                       const Spacer(),
-                      Icon(Icons.arrow_forward_ios, color: primary.withValues(alpha: 0.8), size: 18),
+                      Icon(Icons.arrow_forward_ios,
+                          color: primary.withValues(alpha: 0.8), size: 18),
                     ],
                   ),
                   const SizedBox(height: AppSpacing.sm),
-                  Text(pen.name, style: titleStyle, maxLines: 1, overflow: TextOverflow.ellipsis),
+                  Text(pen.name,
+                      style: titleStyle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis),
                   Align(
                     alignment: Alignment.centerLeft,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.xs),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.md, vertical: AppSpacing.xs),
                       decoration: BoxDecoration(
                         color: tone.withValues(alpha: 0.14),
                         borderRadius: BorderRadius.circular(999),
@@ -161,9 +179,18 @@ class PenCard extends StatelessWidget {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Container(width: 10, height: 10, decoration: BoxDecoration(color: tone, borderRadius: BorderRadius.circular(99))),
+                          Container(
+                              width: 10,
+                              height: 10,
+                              decoration: BoxDecoration(
+                                  color: tone,
+                                  borderRadius: BorderRadius.circular(99))),
                           const SizedBox(width: AppSpacing.sm),
-                          Flexible(child: Text(label, style: badgeTextStyle, maxLines: 1, overflow: TextOverflow.ellipsis)),
+                          Flexible(
+                              child: Text(label,
+                                  style: badgeTextStyle,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis)),
                         ],
                       ),
                     ),
