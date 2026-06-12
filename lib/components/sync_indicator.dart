@@ -60,7 +60,8 @@ class SyncIndicator extends StatelessWidget {
             height: 18,
             child: CircularProgressIndicator(
               strokeWidth: 2,
-              valueColor: const AlwaysStoppedAnimation<Color>(AppColors.warning),
+              valueColor:
+                  const AlwaysStoppedAnimation<Color>(AppColors.warning),
             ),
           ),
           const SizedBox(width: AppSpacing.sm),
@@ -99,8 +100,8 @@ class OfflineIndicator extends StatelessWidget {
           const SizedBox(width: AppSpacing.sm),
           Text(
             pendingCount > 0
-                ? 'Sem internet - $pendingCount checklist(s) salvo(s) no aparelho'
-                : 'Sem internet - Dados salvos no aparelho',
+                ? '$pendingCount checklist(s) salvo(s) no aparelho'
+                : 'Dados salvos no aparelho',
             style: TextStyle(
               fontSize: FontSizes.labelMedium,
               fontWeight: FontWeight.w600,
