@@ -1,9 +1,12 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:morro_do_peo/data/checklists_repository.dart';
 import 'package:morro_do_peo/models/checklist_models.dart';
 import 'package:morro_do_peo/models/operator.dart';
+import 'package:morro_do_peo/services/api_config_store.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 @immutable
 class RecordedAudio {
@@ -123,6 +126,24 @@ class AppSession extends ChangeNotifier {
   String _successReturnLabel = 'Voltar';
   bool _successIsQueued = false;
 
+  // --- Mobile API v1 configuration -----------------------------------------
+  ApiConfig? _apiConfig;
+  bool _loaded = false;
+
+  static const String defaultOrigin = 'https://morropeao.yplanejamento.com.br';
+  static const String defaultApiBaseUrl = 'https://morropeao.yplanejamento.com.br/api/mobile/v1';
+
+  /// Environment injection (build-time), e.g.:
+  /// `--dart-define=MORROPEAO_ORIGIN=...`
+  /// `--dart-define=MORROPEAO_BASE_URL=...`
+  /// `--dart-define=MORROPEAO_API_KEY=...`
+  static const String envOrigin = String.fromEnvironment('MORROPEAO_ORIGIN');
+  static const String envBaseUrl = String.fromEnvironment('MORROPEAO_BASE_URL');
+  static const String envApiKey = String.fromEnvironment('MORROPEAO_API_KEY');
+
+  static const String _kLastEmployeeId = 'last_employee_id_v1';
+  static const String _kLastEmployeeName = 'last_employee_name_v1';
+
   Operator? get selectedOperator => _selectedOperator;
   OperationalAreaDefinition? get selectedArea => _selectedArea;
   PenDefinition? get selectedPen => _selectedPen;
@@ -141,13 +162,98 @@ class AppSession extends ChangeNotifier {
   String get successReturnLabel => _successReturnLabel;
   bool get successIsQueued => _successIsQueued;
 
+  /// For audio URLs (which are relative to origin, not the API base URL).
+  String get origin {
+    final env = envOrigin.trim();
+    if (env.isNotEmpty) return env;
+    return defaultOrigin;
+  }
+
+  String get apiBaseUrl => _apiConfig?.apiBaseUrl ?? (envBaseUrl.trim().isNotEmpty ? envBaseUrl.trim() : defaultApiBaseUrl);
+
+  /// Resolution order: secure storage -> `--dart-define` -> empty (no
+  /// hardcoded fallback key). An empty key means the API-driven screens are
+  /// unavailable until credentials are configured.
+  String get apiKey {
+    final stored = _apiConfig?.apiKey.trim() ?? '';
+    if (stored.isNotEmpty) return stored;
+
+    final injected = envApiKey.trim();
+    if (injected.isNotEmpty) return injected;
+
+    return '';
+  }
+
+  int get requestTimeoutSeconds => _apiConfig?.requestTimeoutSeconds ?? 30;
+  int get uploadTimeoutSeconds => _apiConfig?.uploadTimeoutSeconds ?? 120;
+
+  bool get hasApiConfig => apiBaseUrl.trim().isNotEmpty && apiKey.trim().isNotEmpty;
+
+  bool get isLoaded => _loaded;
+
+  /// Restores API config (secure storage) and the last selected employee
+  /// (SharedPreferences) for the API-driven flow. Safe to call more than
+  /// once; only runs once.
+  Future<void> ensureLoaded() async {
+    if (_loaded) return;
+    try {
+      _apiConfig = await ApiConfigStore.instance.load();
+
+      final injectedKey = envApiKey.trim();
+      final injectedBase = envBaseUrl.trim();
+      if (_apiConfig == null && injectedKey.isNotEmpty) {
+        final cfg = ApiConfig(
+          apiBaseUrl: injectedBase.isNotEmpty ? injectedBase : defaultApiBaseUrl,
+          apiKey: injectedKey,
+          requestTimeoutSeconds: 30,
+          uploadTimeoutSeconds: 120,
+        );
+        await ApiConfigStore.instance.save(cfg);
+        _apiConfig = cfg;
+      }
+
+      final prefs = await SharedPreferences.getInstance();
+      final id = (prefs.getString(_kLastEmployeeId) ?? '').trim();
+      final name = (prefs.getString(_kLastEmployeeName) ?? '').trim();
+      if (id.isNotEmpty && name.isNotEmpty && _selectedOperator == null) {
+        _selectedOperator = Operator(id: id, farmId: 'morro-do-peao', name: name, active: true);
+      }
+    } catch (e) {
+      debugPrint('AppSession ensureLoaded failed: $e');
+    } finally {
+      _loaded = true;
+      notifyListeners();
+    }
+  }
+
   String? answerFor(String questionId) =>
       _responsesByQuestionId[questionId]?.answer;
 
   void selectOperator(Operator op) {
     _selectedOperator = op;
     _operationalResponsible = null;
+    unawaited(_persistSelectedOperator(op));
     notifyListeners();
+  }
+
+  Future<void> _persistSelectedOperator(Operator op) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_kLastEmployeeId, op.id);
+      await prefs.setString(_kLastEmployeeName, op.name);
+    } catch (e) {
+      debugPrint('Failed to persist selected employee: $e');
+    }
+  }
+
+  Future<void> _clearSelectedOperator() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_kLastEmployeeId);
+      await prefs.remove(_kLastEmployeeName);
+    } catch (e) {
+      debugPrint('Failed to clear selected employee: $e');
+    }
   }
 
   void selectOperationalArea(OperationalAreaDefinition area) {
@@ -319,6 +425,8 @@ class AppSession extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Clears both the offline checklist run state (area/checklist/responses)
+  /// and the selected operator (including its persisted employee prefs).
   void resetAll() {
     _selectedOperator = null;
     _selectedArea = null;
@@ -337,9 +445,12 @@ class AppSession extends ChangeNotifier {
     _successReturnLocation = '/';
     _successReturnLabel = 'Voltar';
     _successIsQueued = false;
+    unawaited(_clearSelectedOperator());
     notifyListeners();
   }
 
+  /// Resets only the current checklist run (mid-flow), keeping the selected
+  /// operator intact.
   void resetChecklistRunOnly() {
     _selectedChecklist = null;
     _startedAt = null;

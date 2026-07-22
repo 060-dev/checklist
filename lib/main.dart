@@ -10,6 +10,8 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Connectivity.instance.init();
   await OfflineQueueService.instance.init(sendAttempt: (_, __) async {});
+  // Note: `sendApiMutation` isn't wired yet — Mobile API v1 mutation sending
+  // is a follow-up step (see OfflineQueueService.enqueueApiMutation).
   runApp(const MorroDoPeaoApp());
 }
 
@@ -23,6 +25,14 @@ class MorroDoPeaoApp extends StatefulWidget {
 class _MorroDoPeaoAppState extends State<MorroDoPeaoApp> {
   late final AppSession _session = AppSession();
   late final RouterConfig<Object> _router = AppRouter.create(_session);
+
+  @override
+  void initState() {
+    super.initState();
+    // Fire-and-forget: restores API config + last selected employee. UI can
+    // react to `session.isLoaded` if it needs to gate on this.
+    _session.ensureLoaded();
+  }
 
   @override
   Widget build(BuildContext context) {

@@ -11,6 +11,21 @@ import 'package:morro_do_peo/utils/connectivity.dart';
 typedef SendAttempt = Future<void> Function(
     Map<String, dynamic> payload, Map<String, dynamic>? attachments);
 
+/// Sends a single Mobile API v1 mutation item. Not implemented yet — wiring
+/// this to `MobileApiClient`/`MobileApiServices` is a follow-up step. Until
+/// then, items enqueued via [OfflineQueueService.enqueueApiMutation] simply
+/// stay pending and retry with backoff instead of silently reporting success.
+typedef ApiMutationSendAttempt = Future<void> Function(PendingQueueItem item);
+
+Future<void> _unimplementedApiMutationSend(PendingQueueItem item) {
+  throw UnimplementedError(
+      'API mutation sending is not implemented yet (item ${item.id}, ${item.method} ${item.path}).');
+}
+
+/// Single offline queue for both the legacy offline-checklist submissions and
+/// (in a follow-up step) Mobile API v1 mutations. Persists to
+/// SharedPreferences, retries with exponential backoff, and auto-flushes when
+/// connectivity returns.
 class OfflineQueueService {
   static final OfflineQueueService instance = OfflineQueueService._internal();
   factory OfflineQueueService() => instance;
@@ -25,25 +40,33 @@ class OfflineQueueService {
   Timer? _timer;
   StreamSubscription<bool>? _onlineSub;
 
+  SendAttempt? _sendAttempt;
+  ApiMutationSendAttempt _sendApiMutation = _unimplementedApiMutationSend;
+
   final ValueNotifier<int> pendingCountNotifier = ValueNotifier<int>(0);
 
-  Future<void> init({required SendAttempt sendAttempt}) async {
+  Future<void> init({
+    required SendAttempt sendAttempt,
+    ApiMutationSendAttempt? sendApiMutation,
+  }) async {
     if (_initialized) return;
+    _sendAttempt = sendAttempt;
+    _sendApiMutation = sendApiMutation ?? _unimplementedApiMutationSend;
+
     await _load();
     _initialized = true;
     pendingCountNotifier.value =
         _queue.where((e) => e.status != PendingQueueStatus.sent).length;
 
     _timer?.cancel();
-    _timer = Timer.periodic(
-        const Duration(seconds: 15), (_) => flush(sendAttempt: sendAttempt));
+    _timer = Timer.periodic(const Duration(seconds: 15), (_) => flush());
 
     _onlineSub?.cancel();
     _onlineSub = Connectivity.instance.onOnlineChanged.listen((online) {
-      if (online) flush(sendAttempt: sendAttempt);
+      if (online) flush();
     });
 
-    unawaited(flush(sendAttempt: sendAttempt));
+    unawaited(flush());
   }
 
   List<PendingQueueItem> get items => List.unmodifiable(_queue);
@@ -57,6 +80,7 @@ class OfflineQueueService {
     final now = DateTime.now();
     final item = PendingQueueItem(
       id: _uuid.v4(),
+      kind: PendingQueueKind.legacyChecklistSubmission,
       checklistId: checklistId,
       operatorId: operatorId,
       createdAt: now,
@@ -67,6 +91,39 @@ class OfflineQueueService {
       payload: payload,
       attachments: attachments,
     );
+    return _enqueueItem(item);
+  }
+
+  /// Enqueues a Mobile API v1 mutation. Sending isn't wired up yet (see
+  /// [ApiMutationSendAttempt]) — the item will stay pending and retry with
+  /// backoff until a real `sendApiMutation` implementation is provided to
+  /// [init].
+  Future<PendingQueueItem> enqueueApiMutation({
+    required String method,
+    required String path,
+    required Map<String, dynamic> jsonBody,
+    String? idempotencyKey,
+    List<String> mediaFilePaths = const [],
+  }) async {
+    final now = DateTime.now();
+    final item = PendingQueueItem(
+      id: _uuid.v4(),
+      kind: PendingQueueKind.apiMutation,
+      createdAt: now,
+      updatedAt: now,
+      status: PendingQueueStatus.pending,
+      retryCount: 0,
+      nextRetryAt: now,
+      method: method,
+      path: path,
+      jsonBody: jsonBody,
+      idempotencyKey: idempotencyKey ?? _uuid.v4(),
+      mediaFilePaths: mediaFilePaths,
+    );
+    return _enqueueItem(item);
+  }
+
+  Future<PendingQueueItem> _enqueueItem(PendingQueueItem item) async {
     _queue.insert(0, item);
     await _save();
     pendingCountNotifier.value =
@@ -74,7 +131,7 @@ class OfflineQueueService {
     return item;
   }
 
-  Future<void> flush({required SendAttempt sendAttempt}) async {
+  Future<void> flush() async {
     if (!_initialized) return;
     if (_sendingNow) return;
     if (!Connectivity.instance.isOnline) return;
@@ -93,7 +150,6 @@ class OfflineQueueService {
             updatedAt: DateTime.fromMillisecondsSinceEpoch(0),
             status: PendingQueueStatus.sent,
             retryCount: 0,
-            payload: const <String, dynamic>{},
           ),
         );
 
@@ -112,7 +168,7 @@ class OfflineQueueService {
           pendingCountNotifier.value =
               _queue.where((e) => e.status != PendingQueueStatus.sent).length;
 
-          await sendAttempt(_queue[idx].payload, _queue[idx].attachments);
+          await _sendOne(_queue[idx]);
 
           _queue[idx] = _queue[idx].copyWith(
               status: PendingQueueStatus.sent, updatedAt: DateTime.now());
@@ -137,6 +193,15 @@ class OfflineQueueService {
       }
     } finally {
       _sendingNow = false;
+    }
+  }
+
+  Future<void> _sendOne(PendingQueueItem item) {
+    switch (item.kind) {
+      case PendingQueueKind.legacyChecklistSubmission:
+        return _sendAttempt!(item.payload, item.attachments);
+      case PendingQueueKind.apiMutation:
+        return _sendApiMutation(item);
     }
   }
 

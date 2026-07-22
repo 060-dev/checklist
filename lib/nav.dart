@@ -13,6 +13,11 @@ import 'package:morro_do_peo/screens/observation_prompt_page.dart';
 import 'package:morro_do_peo/screens/observation_record_page.dart';
 import 'package:morro_do_peo/screens/review_submit_page.dart';
 import 'package:morro_do_peo/screens/success_page.dart';
+import 'package:morro_do_peo/screens/api/api_home_page.dart';
+import 'package:morro_do_peo/screens/api/api_checklists_page.dart';
+import 'package:morro_do_peo/screens/api/api_execution_detail_page.dart';
+import 'package:morro_do_peo/screens/api/api_occurrence_detail_page.dart';
+import 'package:morro_do_peo/screens/api/api_create_occurrence_page.dart';
 import 'package:morro_do_peo/state/app_session.dart';
 
 class AppRouter {
@@ -21,14 +26,18 @@ class AppRouter {
         refreshListenable: session,
         redirect: (context, state) {
           final loc = state.matchedLocation;
-          final isFlow = loc.startsWith('/areas') ||
+
+          final isOfflineFlow = loc.startsWith('/areas') ||
               loc.startsWith('/checklists') ||
               loc.startsWith('/pecuaria') ||
               loc.startsWith('/observation') ||
               loc.startsWith('/review') ||
               loc.startsWith('/success');
+          final isApiFlow = loc.startsWith('/api');
 
-          if (isFlow && session.selectedOperator == null) return AppRoutes.collaborators;
+          if ((isOfflineFlow || isApiFlow) && session.selectedOperator == null) {
+            return AppRoutes.collaborators;
+          }
           return null;
         },
         routes: [
@@ -45,6 +54,8 @@ class AppRouter {
               transitionsBuilder: _slideTransition,
             ),
           ),
+
+          // --- Offline checklist flow --------------------------------------
           GoRoute(
             path: AppRoutes.areas,
             name: 'areas',
@@ -136,6 +147,45 @@ class AppRouter {
               transitionsBuilder: _slideTransition,
             ),
           ),
+
+          // --- API v1 flow (backend-driven) --------------------------------
+          GoRoute(
+            path: AppRoutes.apiHome,
+            name: 'apiHome',
+            pageBuilder: (context, state) => CustomTransitionPage(
+              child: const ApiHomePage(),
+              transitionsBuilder: _slideTransition,
+            ),
+          ),
+          GoRoute(
+            path: AppRoutes.apiAssignmentDetail,
+            name: 'apiAssignmentDetail',
+            pageBuilder: (context, state) {
+              final id = state.pathParameters['assignmentId'] ?? '';
+              return CustomTransitionPage(child: ApiAssignmentDetailPage(assignmentId: id), transitionsBuilder: _slideTransition);
+            },
+          ),
+          GoRoute(
+            path: AppRoutes.apiExecutionDetail,
+            name: 'apiExecutionDetail',
+            pageBuilder: (context, state) {
+              final id = state.pathParameters['executionId'] ?? '';
+              return CustomTransitionPage(child: ApiExecutionDetailPage(executionId: id), transitionsBuilder: _slideTransition);
+            },
+          ),
+          GoRoute(
+            path: AppRoutes.apiOccurrenceDetail,
+            name: 'apiOccurrenceDetail',
+            pageBuilder: (context, state) {
+              final id = state.pathParameters['occurrenceId'] ?? '';
+              return CustomTransitionPage(child: ApiOccurrenceDetailPage(occurrenceId: id), transitionsBuilder: _slideTransition);
+            },
+          ),
+          GoRoute(
+            path: AppRoutes.apiOccurrenceNew,
+            name: 'apiOccurrenceNew',
+            pageBuilder: (context, state) => CustomTransitionPage(child: const ApiCreateOccurrencePage(), transitionsBuilder: _slideTransition),
+          ),
         ],
       );
 
@@ -156,12 +206,13 @@ class AppRouter {
       child: child,
     );
   }
-
 }
 
 class AppRoutes {
   static const String home = '/';
   static const String collaborators = '/collaborators';
+
+  // Offline checklist flow.
   static const String areas = '/areas';
   static const String checklists = '/checklists';
   static const String pecuaria = '/pecuaria';
@@ -173,4 +224,11 @@ class AppRoutes {
   static const String observationRecord = '/observation/record';
   static const String review = '/review';
   static const String success = '/success';
+
+  // API v1 flow (backend-driven).
+  static const String apiHome = '/api';
+  static const String apiAssignmentDetail = '/api/checklists/:assignmentId';
+  static const String apiExecutionDetail = '/api/executions/:executionId';
+  static const String apiOccurrenceDetail = '/api/occurrences/:occurrenceId';
+  static const String apiOccurrenceNew = '/api/occurrences/new';
 }

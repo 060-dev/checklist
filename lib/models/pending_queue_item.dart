@@ -2,9 +2,20 @@ import 'package:flutter/foundation.dart';
 
 enum PendingQueueStatus { pending, sending, failed, sent }
 
+/// What kind of work a queued item represents.
+///
+/// - [legacyChecklistSubmission]: the offline checklist flow's final JSON
+///   (no backend endpoint wired yet — kept for backward compatibility with
+///   the existing local-only staging behavior).
+/// - [apiMutation]: a Mobile API v1 request (method/path/body/idempotency),
+///   for the API-driven screens. Sending logic is not implemented yet; see
+///   `OfflineQueueService._sendApiMutation`.
+enum PendingQueueKind { legacyChecklistSubmission, apiMutation }
+
 @immutable
 class PendingQueueItem {
   final String id;
+  final PendingQueueKind kind;
   final String? checklistId;
   final String? operatorId;
   final DateTime createdAt;
@@ -13,11 +24,21 @@ class PendingQueueItem {
   final int retryCount;
   final DateTime? lastAttemptAt;
   final DateTime? nextRetryAt;
+
+  /// Legacy checklist submission payload (kind == legacyChecklistSubmission).
   final Map<String, dynamic> payload;
   final Map<String, dynamic>? attachments;
 
+  /// Mobile API v1 mutation fields (kind == apiMutation).
+  final String? method;
+  final String? path;
+  final Map<String, dynamic>? jsonBody;
+  final String? idempotencyKey;
+  final List<String> mediaFilePaths;
+
   const PendingQueueItem({
     required this.id,
+    this.kind = PendingQueueKind.legacyChecklistSubmission,
     this.checklistId,
     this.operatorId,
     required this.createdAt,
@@ -26,12 +47,21 @@ class PendingQueueItem {
     required this.retryCount,
     this.lastAttemptAt,
     this.nextRetryAt,
-    required this.payload,
+    this.payload = const {},
     this.attachments,
+    this.method,
+    this.path,
+    this.jsonBody,
+    this.idempotencyKey,
+    this.mediaFilePaths = const [],
   });
 
   factory PendingQueueItem.fromJson(Map<String, dynamic> json) => PendingQueueItem(
         id: json['id'] as String,
+        kind: PendingQueueKind.values.firstWhere(
+          (e) => e.name == (json['kind'] as String?),
+          orElse: () => PendingQueueKind.legacyChecklistSubmission,
+        ),
         checklistId: json['checklistId'] as String?,
         operatorId: json['operatorId'] as String?,
         createdAt: DateTime.parse(json['createdAt'] as String),
@@ -40,12 +70,18 @@ class PendingQueueItem {
         retryCount: (json['retryCount'] as num?)?.toInt() ?? 0,
         lastAttemptAt: json['lastAttemptAt'] != null ? DateTime.parse(json['lastAttemptAt'] as String) : null,
         nextRetryAt: json['nextRetryAt'] != null ? DateTime.parse(json['nextRetryAt'] as String) : null,
-        payload: (json['payload'] as Map).cast<String, dynamic>(),
+        payload: (json['payload'] as Map?)?.cast<String, dynamic>() ?? const {},
         attachments: (json['attachments'] as Map?)?.cast<String, dynamic>(),
+        method: json['method'] as String?,
+        path: json['path'] as String?,
+        jsonBody: (json['jsonBody'] as Map?)?.cast<String, dynamic>(),
+        idempotencyKey: json['idempotencyKey'] as String?,
+        mediaFilePaths: (json['mediaFilePaths'] is List) ? (json['mediaFilePaths'] as List).whereType<String>().toList() : const [],
       );
 
   Map<String, dynamic> toJson() => {
         'id': id,
+        'kind': kind.name,
         'checklistId': checklistId,
         'operatorId': operatorId,
         'createdAt': createdAt.toIso8601String(),
@@ -56,10 +92,16 @@ class PendingQueueItem {
         'nextRetryAt': nextRetryAt?.toIso8601String(),
         'payload': payload,
         'attachments': attachments,
+        'method': method,
+        'path': path,
+        'jsonBody': jsonBody,
+        'idempotencyKey': idempotencyKey,
+        'mediaFilePaths': mediaFilePaths,
       };
 
   PendingQueueItem copyWith({
     String? id,
+    PendingQueueKind? kind,
     String? checklistId,
     String? operatorId,
     DateTime? createdAt,
@@ -70,9 +112,15 @@ class PendingQueueItem {
     DateTime? nextRetryAt,
     Map<String, dynamic>? payload,
     Map<String, dynamic>? attachments,
+    String? method,
+    String? path,
+    Map<String, dynamic>? jsonBody,
+    String? idempotencyKey,
+    List<String>? mediaFilePaths,
   }) =>
       PendingQueueItem(
         id: id ?? this.id,
+        kind: kind ?? this.kind,
         checklistId: checklistId ?? this.checklistId,
         operatorId: operatorId ?? this.operatorId,
         createdAt: createdAt ?? this.createdAt,
@@ -83,5 +131,10 @@ class PendingQueueItem {
         nextRetryAt: nextRetryAt ?? this.nextRetryAt,
         payload: payload ?? this.payload,
         attachments: attachments ?? this.attachments,
+        method: method ?? this.method,
+        path: path ?? this.path,
+        jsonBody: jsonBody ?? this.jsonBody,
+        idempotencyKey: idempotencyKey ?? this.idempotencyKey,
+        mediaFilePaths: mediaFilePaths ?? this.mediaFilePaths,
       );
 }
