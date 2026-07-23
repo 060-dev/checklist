@@ -364,16 +364,8 @@ class MobileApiServices {
   }) {
     final notes = (resolutionNotes ?? '').trim();
     return <String, dynamic>{
-      'title': currentDetail.raw['title'],
-      'description': currentDetail.raw['description'],
-      'location': currentDetail.raw['location'],
-      'priority': currentDetail.raw['priority'],
-      'checklist_id': currentDetail.raw['checklist_id'],
-      'due_at': currentDetail.raw['due_at'],
       'status': 'resolved',
-      'resolution_notes': notes.isNotEmpty
-          ? notes
-          : currentDetail.raw['resolution_notes'],
+      if (notes.isNotEmpty) 'resolution_notes': notes,
     };
   }
 
