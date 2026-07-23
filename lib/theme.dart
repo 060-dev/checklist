@@ -239,7 +239,7 @@ ThemeData get lightTheme => ThemeData(
   ),
   chipTheme: ChipThemeData(
     backgroundColor: AppColors.surfaceVariant,
-    selectedColor: AppColors.brandRed.withValues(alpha: 0.14),
+    selectedColor: AppColors.brandRed,
     side: BorderSide(color: AppColors.divider.withValues(alpha: 0.8)),
     selectedShadowColor: Colors.transparent,
     showCheckmark: false,
@@ -248,7 +248,7 @@ ThemeData get lightTheme => ThemeData(
       fontWeight: FontWeight.w700,
     ),
     secondaryLabelStyle: GoogleFonts.montserrat(
-      color: AppColors.brandRedDeep,
+      color: AppColors.white,
       fontWeight: FontWeight.w800,
     ),
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(99)),
@@ -391,7 +391,7 @@ ThemeData get darkTheme => ThemeData(
   ),
   chipTheme: ChipThemeData(
     backgroundColor: AppColors.darkSurfaceVariant,
-    selectedColor: AppColors.brandRed.withValues(alpha: 0.22),
+    selectedColor: AppColors.brandRed,
     side: BorderSide(
       color: AppColors.darkSurfaceVariant.withValues(alpha: 0.9),
     ),
@@ -402,7 +402,7 @@ ThemeData get darkTheme => ThemeData(
       fontWeight: FontWeight.w700,
     ),
     secondaryLabelStyle: GoogleFonts.montserrat(
-      color: AppColors.darkTextPrimary,
+      color: AppColors.white,
       fontWeight: FontWeight.w800,
     ),
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(99)),

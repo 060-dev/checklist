@@ -1465,15 +1465,13 @@ class _YesNoSelector extends StatelessWidget {
             duration: const Duration(milliseconds: 140),
             padding: const EdgeInsets.symmetric(vertical: 14),
             decoration: BoxDecoration(
-              color: selected
-                  ? color.withValues(alpha: 0.16)
-                  : theme.colorScheme.surfaceContainerHighest,
+              color: selected ? color : Colors.transparent,
               borderRadius: BorderRadius.circular(99),
               border: Border.all(
                 color: selected
                     ? color
-                    : theme.colorScheme.outlineVariant.withValues(alpha: 0.6),
-                width: 1.5,
+                    : theme.colorScheme.outlineVariant.withValues(alpha: 0.4),
+                width: selected ? 0 : 1.5,
               ),
             ),
             child: Text(
@@ -1481,7 +1479,9 @@ class _YesNoSelector extends StatelessWidget {
               textAlign: TextAlign.center,
               style: theme.textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w900,
-                color: selected ? color : theme.colorScheme.onSurfaceVariant,
+                color: selected
+                    ? Colors.white
+                    : theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
               ),
             ),
           ),
