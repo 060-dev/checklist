@@ -108,34 +108,8 @@ class _OperatorSelectionPageState extends State<OperatorSelectionPage> {
     _cacheUpdatedAt = cached.updatedAt;
   }
 
-  Future<void> _confirmAndSelect(Operator op) async {
+  void _selectAndGo(Operator op) {
     setState(() => _selectedOperatorId = op.id);
-
-    final theme = Theme.of(context);
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Confirmação'),
-        content: Text(
-          'Você é ${op.name}?',
-          style: theme.textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => context.pop(false),
-            child: const Text('Não'),
-          ),
-          FilledButton(
-            onPressed: () => context.pop(true),
-            child: const Text('Sim'),
-          ),
-        ],
-      ),
-    );
-    if (ok != true || !mounted) return;
-
     context.read<AppSession>().selectOperator(op);
     context.go('/api');
   }
@@ -217,7 +191,7 @@ class _OperatorSelectionPageState extends State<OperatorSelectionPage> {
                                 return _OperatorTile(
                                   name: op.name,
                                   selected: _selectedOperatorId == op.id,
-                                  onTap: () => _confirmAndSelect(op),
+                                  onTap: () => _selectAndGo(op),
                                 );
                               },
                             ),
