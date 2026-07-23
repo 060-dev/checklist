@@ -263,4 +263,39 @@ class MobileApiServices {
     );
     return env.data ?? const <String, dynamic>{};
   }
+
+  /// STUB — there is currently no Mobile API v1 endpoint for resolving an
+  /// occurrence (only `/api/checklists/occurrences/{id}` exists, which is the
+  /// web admin API using cookie/CSRF auth, not this app's Bearer-token auth).
+  /// The backend team is adding a proper mobile-scoped endpoint; once it
+  /// exists, replace the body below with a real call, e.g.:
+  ///
+  /// ```dart
+  /// final env = await client.patchJson<Map<String, dynamic>>(
+  ///   path: '/employees/$employeeId/occurrences/$occurrenceId/resolve',
+  ///   idempotencyKey: idempotencyKey,
+  ///   body: {if ((resolutionNotes ?? '').trim().isNotEmpty) 'resolution_notes': resolutionNotes!.trim()},
+  ///   decodeData: (json) => (json is Map) ? json.cast<String, dynamic>() : <String, dynamic>{},
+  /// );
+  /// return ApiOccurrenceDetail(env.data ?? const <String, dynamic>{});
+  /// ```
+  /// Until then this only simulates success locally (nothing is persisted
+  /// server-side) so the UI can be built/tested without depending on the
+  /// backend — [currentDetail] is only needed for that simulation and should
+  /// be dropped once the real call returns the updated detail itself.
+  Future<ApiOccurrenceDetail> resolveOccurrence({
+    required String employeeId,
+    required String occurrenceId,
+    required String idempotencyKey,
+    required ApiOccurrenceDetail currentDetail,
+    String? resolutionNotes,
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 400));
+    final updated = Map<String, dynamic>.from(currentDetail.raw);
+    updated['status'] = 'resolved';
+    updated['resolved_at'] = DateTime.now().toUtc().toIso8601String();
+    final notes = (resolutionNotes ?? '').trim();
+    if (notes.isNotEmpty) updated['resolution_notes'] = notes;
+    return ApiOccurrenceDetail(updated);
+  }
 }

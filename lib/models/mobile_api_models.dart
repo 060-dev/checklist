@@ -305,6 +305,10 @@ class ApiOccurrenceDetail {
   DateTime? get createdAt => (raw['created_at'] is String)
       ? DateTime.tryParse(raw['created_at'] as String)
       : null;
+  DateTime? get resolvedAt => (raw['resolved_at'] is String)
+      ? DateTime.tryParse(raw['resolved_at'] as String)
+      : null;
+  String? get resolutionNotes => raw['resolution_notes'] as String?;
 
   List<Map<String, dynamic>> get attachments => (raw['attachments'] is List)
       ? (raw['attachments'] as List).whereType<Map>().map((e) => e.cast<String, dynamic>()).toList()

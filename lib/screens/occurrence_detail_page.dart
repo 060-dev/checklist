@@ -17,6 +17,7 @@ import 'package:morro_do_peo/models/mobile_api_models.dart';
 import 'package:morro_do_peo/services/mobile_api_client.dart';
 import 'package:morro_do_peo/services/mobile_api_services.dart';
 import 'package:morro_do_peo/services/private_audio_player.dart';
+import 'package:morro_do_peo/services/tts_service.dart';
 import 'package:morro_do_peo/state/app_session.dart';
 import 'package:morro_do_peo/theme.dart';
 
@@ -39,6 +40,8 @@ class _OccurrenceDetailPageState extends State<OccurrenceDetailPage> {
   String? _pickedMediaKind; // 'photo' | 'audio' | 'video'
   bool _recordingAudio = false;
 
+  final _resolutionNotesController = TextEditingController();
+
   @override
   void initState() {
     super.initState();
@@ -48,6 +51,8 @@ class _OccurrenceDetailPageState extends State<OccurrenceDetailPage> {
   @override
   void dispose() {
     PrivateAudioPlayer.instance.stop();
+    TtsService.instance.stop();
+    _resolutionNotesController.dispose();
     super.dispose();
   }
 
@@ -333,6 +338,109 @@ class _OccurrenceDetailPageState extends State<OccurrenceDetailPage> {
     }
   }
 
+  Future<bool> _showResolveConfirmation() async {
+    _resolutionNotesController.clear();
+    const prompt = 'Você tem certeza que deseja marcar essa ocorrência como resolvida?';
+    final theme = Theme.of(context);
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirmar Resolução'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(child: Text(prompt, style: theme.textTheme.bodyMedium)),
+                IconButton(
+                  onPressed: () => TtsService.instance.speak(prompt),
+                  icon: Icon(Icons.volume_up_rounded, color: theme.colorScheme.primary),
+                  tooltip: 'Ouvir',
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            TextField(
+              controller: _resolutionNotesController,
+              maxLines: 2,
+              decoration: const InputDecoration(labelText: 'Observação da solução (opcional)'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => context.pop(false),
+            child: const Text('Não'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppColors.success),
+            onPressed: () => context.pop(true),
+            child: const Text('Sim, Resolver'),
+          ),
+        ],
+      ),
+    );
+    return confirmed ?? false;
+  }
+
+  Future<void> _resolve() async {
+    if (_mutating) return;
+    final d = _detail;
+    if (d == null) return;
+
+    final confirmed = await _showResolveConfirmation();
+    if (!confirmed || !mounted) return;
+
+    setState(() {
+      _mutating = true;
+      _error = null;
+    });
+
+    final session = context.read<AppSession>();
+    final employeeId = session.selectedOperator?.id ?? '';
+    if (!session.hasApiConfig || employeeId.isEmpty) {
+      setState(() {
+        _mutating = false;
+        _error = 'Sem configuração da API ou funcionário não selecionado.';
+      });
+      return;
+    }
+
+    final client = MobileApiClient(
+      apiBaseUrl: session.apiBaseUrl.trim(),
+      apiKey: session.apiKey.trim(),
+      requestTimeout: Duration(seconds: session.requestTimeoutSeconds),
+      uploadTimeout: Duration(seconds: session.uploadTimeoutSeconds),
+    );
+    final api = MobileApiServices(client: client);
+    try {
+      final updated = await api.resolveOccurrence(
+        employeeId: employeeId,
+        occurrenceId: widget.occurrenceId,
+        idempotencyKey: const Uuid().v4(),
+        currentDetail: d,
+        resolutionNotes: _resolutionNotesController.text,
+      );
+      // NOTE: since resolveOccurrence is currently a local-only stub (see its
+      // doc comment), we set state directly instead of calling `_load()` —
+      // reloading would just re-fetch the real, still-unresolved backend
+      // record and wipe this out. Once the real endpoint is wired in, switch
+      // this back to `await _load();` so the authoritative server state wins.
+      setState(() => _detail = updated);
+    } on MobileApiException catch (e) {
+      setState(() => _error = e.message);
+    } catch (e) {
+      debugPrint('Resolve occurrence failed: $e');
+      setState(() => _error = 'Falha ao resolver ocorrência.');
+    } finally {
+      client.dispose();
+      if (mounted) setState(() => _mutating = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -389,6 +497,19 @@ class _OccurrenceDetailPageState extends State<OccurrenceDetailPage> {
                     ],
                     if (d != null) ...[
                       _OccurrenceHeader(detail: d),
+                      const SizedBox(height: AppSpacing.lg),
+                      if (d.status == 'resolved')
+                        _ResolvedStatusCard(detail: d)
+                      else
+                        SizedBox(
+                          height: 56,
+                          child: FilledButton.icon(
+                            onPressed: _mutating ? null : _resolve,
+                            style: FilledButton.styleFrom(backgroundColor: AppColors.success, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg))),
+                            icon: const Icon(Icons.check_circle, color: Colors.white),
+                            label: Text('Resolver Ocorrência', style: theme.textTheme.titleSmall?.copyWith(color: Colors.white, fontWeight: FontWeight.w900)),
+                          ),
+                        ),
                       const SizedBox(height: AppSpacing.lg),
                     ],
                     Text(
@@ -743,6 +864,50 @@ class _OccurrenceHeader extends StatelessWidget {
           ],
         ],
       ],
+    );
+  }
+}
+
+class _ResolvedStatusCard extends StatelessWidget {
+  final ApiOccurrenceDetail detail;
+  const _ResolvedStatusCard({required this.detail});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final resolvedText = detail.resolvedAt == null ? null : DateFormat('dd/MM/yyyy HH:mm').format(detail.resolvedAt!.toLocal());
+    final notes = (detail.resolutionNotes ?? '').trim();
+
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: AppColors.successLight,
+        borderRadius: BorderRadius.circular(AppRadius.xl),
+        border: Border.all(color: AppColors.success.withValues(alpha: 0.3), width: 2),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.check_circle_rounded, color: AppColors.success, size: 32),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Ocorrência Resolvida', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900, color: AppColors.success)),
+                if (resolvedText != null) ...[
+                  const SizedBox(height: AppSpacing.xs),
+                  Text('Resolvida em: $resolvedText', style: theme.textTheme.bodySmall?.copyWith(color: AppColors.success)),
+                ],
+                if (notes.isNotEmpty) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  Text(notes, style: theme.textTheme.bodyMedium?.copyWith(color: AppColors.success)),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
