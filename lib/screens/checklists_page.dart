@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
+import 'package:morro_do_peo/components/error_banner.dart';
 import 'package:morro_do_peo/components/responsive_body.dart';
 import 'package:morro_do_peo/components/sync_indicator.dart';
 import 'package:morro_do_peo/models/mobile_api_models.dart';
@@ -114,20 +115,7 @@ class _ChecklistsPageState extends State<ChecklistsPage> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   if ((_error ?? '').trim().isNotEmpty) ...[
-                    Container(
-                      padding: const EdgeInsets.all(AppSpacing.md),
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.errorContainer,
-                        borderRadius: BorderRadius.circular(AppRadius.lg),
-                      ),
-                      child: Text(
-                        _error!,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: theme.colorScheme.onErrorContainer,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
+                    ErrorBanner(message: _error!, onRetry: _load),
                     const SizedBox(height: AppSpacing.md),
                   ],
                   Row(
@@ -319,8 +307,7 @@ class AssignmentDetailPage extends StatefulWidget {
   const AssignmentDetailPage({super.key, required this.assignmentId});
 
   @override
-  State<AssignmentDetailPage> createState() =>
-      _AssignmentDetailPageState();
+  State<AssignmentDetailPage> createState() => _AssignmentDetailPageState();
 }
 
 class _AssignmentDetailPageState extends State<AssignmentDetailPage> {
@@ -452,20 +439,7 @@ class _AssignmentDetailPageState extends State<AssignmentDetailPage> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     if ((_error ?? '').trim().isNotEmpty) ...[
-                      Container(
-                        padding: const EdgeInsets.all(AppSpacing.md),
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.errorContainer,
-                          borderRadius: BorderRadius.circular(AppRadius.lg),
-                        ),
-                        child: Text(
-                          _error!,
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: theme.colorScheme.onErrorContainer,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
+                      ErrorBanner(message: _error!, onRetry: _load),
                       const SizedBox(height: AppSpacing.md),
                     ],
                     if (_fromCache) ...[

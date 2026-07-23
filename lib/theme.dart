@@ -81,6 +81,11 @@ class AppColors {
   static const Color warningLight = Color(0xFFFFF3E0);
   static const Color error = Color(0xFFE53935);
   static const Color errorLight = Color(0xFFFFEBEE);
+  // High-contrast error container colors (WCAG AAA compliant)
+  static const Color errorContainer = Color(0xFFFDE8E8);
+  static const Color onErrorContainer = Color(0xFF9B1C1C);
+  static const Color errorContainerDark = Color(0xFF771D1D);
+  static const Color onErrorContainerDark = Color(0xFFFDE8E8);
   static const Color info = Color(0xFF2196F3);
   static const Color infoLight = Color(0xFFE3F2FD);
 
@@ -162,7 +167,8 @@ ThemeData get lightTheme => ThemeData(
     onTertiary: AppColors.white,
     error: AppColors.error,
     onError: AppColors.white,
-    errorContainer: AppColors.errorLight,
+    errorContainer: AppColors.errorContainer,
+    onErrorContainer: AppColors.onErrorContainer,
     surface: AppColors.surface,
     onSurface: AppColors.textPrimary,
     surfaceContainerHighest: AppColors.surfaceVariant,
@@ -310,7 +316,8 @@ ThemeData get darkTheme => ThemeData(
     onTertiary: AppColors.darkBackground,
     error: AppColors.error,
     onError: AppColors.white,
-    errorContainer: AppColors.errorLight,
+    errorContainer: AppColors.errorContainerDark,
+    onErrorContainer: AppColors.onErrorContainerDark,
     surface: AppColors.darkSurface,
     onSurface: AppColors.darkTextPrimary,
     surfaceContainerHighest: AppColors.darkSurfaceVariant,

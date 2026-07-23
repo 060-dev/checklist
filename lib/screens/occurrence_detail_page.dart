@@ -9,6 +9,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 
+import 'package:morro_do_peo/components/error_banner.dart';
 import 'package:morro_do_peo/components/inline_audio_recorder.dart';
 import 'package:morro_do_peo/components/media_preview.dart';
 import 'package:morro_do_peo/components/media_source_sheet.dart';
@@ -479,20 +480,7 @@ class _OccurrenceDetailPageState extends State<OccurrenceDetailPage> {
               : ListView(
                   children: [
                     if ((_error ?? '').trim().isNotEmpty) ...[
-                      Container(
-                        padding: const EdgeInsets.all(AppSpacing.md),
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.errorContainer,
-                          borderRadius: BorderRadius.circular(AppRadius.lg),
-                        ),
-                        child: Text(
-                          _error!,
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: theme.colorScheme.onErrorContainer,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
+                      ErrorBanner(message: _error!, onRetry: _load),
                       const SizedBox(height: AppSpacing.md),
                     ],
                     if (d != null) ...[

@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 
+import 'package:morro_do_peo/components/error_banner.dart';
 import 'package:morro_do_peo/components/responsive_body.dart';
 import 'package:morro_do_peo/services/mobile_api_client.dart';
 import 'package:morro_do_peo/services/mobile_api_services.dart';
@@ -13,8 +14,7 @@ class CreateOccurrencePage extends StatefulWidget {
   const CreateOccurrencePage({super.key});
 
   @override
-  State<CreateOccurrencePage> createState() =>
-      _CreateOccurrencePageState();
+  State<CreateOccurrencePage> createState() => _CreateOccurrencePageState();
 }
 
 class _CreateOccurrencePageState extends State<CreateOccurrencePage> {
@@ -99,7 +99,7 @@ class _CreateOccurrencePageState extends State<CreateOccurrencePage> {
     if (due == null) {
       setState(() {
         _submitting = false;
-        _error = 'Informe um prazo (due_at).';
+        _error = 'Informe um prazo para a ocorrência.';
       });
       return;
     }
@@ -147,7 +147,7 @@ class _CreateOccurrencePageState extends State<CreateOccurrencePage> {
     final theme = Theme.of(context);
     final dueLabel = _dueAt == null
         ? 'Selecionar prazo'
-        : _dueAt!.toLocal().toIso8601String();
+        : 'Prazo: ${_dueAt!.toLocal().day.toString().padLeft(2, '0')}/${_dueAt!.toLocal().month.toString().padLeft(2, '0')}/${_dueAt!.toLocal().year} ${_dueAt!.toLocal().hour.toString().padLeft(2, '0')}:${_dueAt!.toLocal().minute.toString().padLeft(2, '0')}';
 
     return Scaffold(
       appBar: AppBar(
@@ -164,20 +164,7 @@ class _CreateOccurrencePageState extends State<CreateOccurrencePage> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               if ((_error ?? '').trim().isNotEmpty) ...[
-                Container(
-                  padding: const EdgeInsets.all(AppSpacing.md),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.errorContainer,
-                    borderRadius: BorderRadius.circular(AppRadius.lg),
-                  ),
-                  child: Text(
-                    _error!,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.onErrorContainer,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
+                ErrorBanner(message: _error!),
                 const SizedBox(height: AppSpacing.md),
               ],
               TextField(

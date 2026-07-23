@@ -8,6 +8,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 
+import 'package:morro_do_peo/components/error_banner.dart';
 import 'package:morro_do_peo/components/inline_audio_recorder.dart';
 import 'package:morro_do_peo/components/media_preview.dart';
 import 'package:morro_do_peo/components/media_source_sheet.dart';
@@ -688,20 +689,7 @@ class _ExecutionDetailPageState extends State<ExecutionDetailPage> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     if ((_error ?? '').trim().isNotEmpty) ...[
-                      Container(
-                        padding: const EdgeInsets.all(AppSpacing.md),
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.errorContainer,
-                          borderRadius: BorderRadius.circular(AppRadius.lg),
-                        ),
-                        child: Text(
-                          _error!,
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: theme.colorScheme.onErrorContainer,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
+                      ErrorBanner(message: _error!, onRetry: _load),
                       const SizedBox(height: AppSpacing.md),
                     ],
                     if (_fromCache) ...[
@@ -747,88 +735,98 @@ class _ExecutionDetailPageState extends State<ExecutionDetailPage> {
                       child: d == null
                           ? const SizedBox.shrink()
                           : (d.status == 'completed'
-                              ? _CompletedExecutionView(
-                                  detail: d,
-                                  questions: _questionsFrom(d),
-                                  origin: context.read<AppSession>().origin,
-                                  authHeaders: {'Authorization': 'Bearer ${context.read<AppSession>().apiKey}'},
-                                  onPlayAudio: _playAudioRef,
-                                )
-                              : _ExecutionForm(
-                              detail: d,
-                              notesController: _notesController,
-                              onPlayQuestionNarration: _playAudioRef,
-                              onSpeakQuestion: (text) => _speakQuestion(text),
-                              simpleBoolean: _simpleBoolean,
-                              onSimpleBooleanChanged: (v) =>
-                                  setState(() => _simpleBoolean = v),
-                              simplePhoto: _simplePhoto,
-                              onPickSimplePhoto: _mutating
-                                  ? null
-                                  : () async {
-                                      final file = await _pickImage();
-                                      if (file == null) return;
-                                      setState(() => _simplePhoto = file);
+                                ? _CompletedExecutionView(
+                                    detail: d,
+                                    questions: _questionsFrom(d),
+                                    origin: context.read<AppSession>().origin,
+                                    authHeaders: {
+                                      'Authorization':
+                                          'Bearer ${context.read<AppSession>().apiKey}',
                                     },
-                              simpleAudio: _simpleAudio,
-                              onSimpleAudioChanged: _mutating
-                                  ? null
-                                  : (file) =>
-                                        setState(() => _simpleAudio = file),
-                              simpleVideo: _simpleVideo,
-                              onPickSimpleVideo: _mutating
-                                  ? null
-                                  : () async {
-                                      final file = await _pickVideo();
-                                      if (file == null) return;
-                                      setState(() => _simpleVideo = file);
-                                    },
-                              answers: _answers,
-                              onPickQuestionPhoto: _mutating
-                                  ? null
-                                  : (questionId) async {
-                                      final file = await _pickImage();
-                                      if (file == null) return;
-                                      setState(
-                                        () => _answers[questionId] =
-                                            (_answers[questionId] ??
-                                                    _QuestionAnswerState(
-                                                      questionId: questionId,
-                                                    ))
-                                                .copyWith(photo: file),
-                                      );
-                                    },
-                              onQuestionAudioChanged: _mutating
-                                  ? null
-                                  : (questionId, file) {
-                                      setState(
-                                        () => _answers[questionId] =
-                                            (_answers[questionId] ??
-                                                    _QuestionAnswerState(
-                                                      questionId: questionId,
-                                                    ))
-                                                .copyWith(
-                                                  additionalAudio: file,
-                                                ),
-                                      );
-                                    },
-                              onPickQuestionVideo: _mutating
-                                  ? null
-                                  : (questionId) async {
-                                      final file = await _pickVideo();
-                                      if (file == null) return;
-                                      setState(
-                                        () => _answers[questionId] =
-                                            (_answers[questionId] ??
-                                                    _QuestionAnswerState(
-                                                      questionId: questionId,
-                                                    ))
-                                                .copyWith(video: file),
-                                      );
-                                    },
-                              onAnswerChanged: (questionId, next) =>
-                                  setState(() => _answers[questionId] = next),
-                            )),
+                                    onPlayAudio: _playAudioRef,
+                                  )
+                                : _ExecutionForm(
+                                    detail: d,
+                                    notesController: _notesController,
+                                    onPlayQuestionNarration: _playAudioRef,
+                                    onSpeakQuestion: (text) =>
+                                        _speakQuestion(text),
+                                    simpleBoolean: _simpleBoolean,
+                                    onSimpleBooleanChanged: (v) =>
+                                        setState(() => _simpleBoolean = v),
+                                    simplePhoto: _simplePhoto,
+                                    onPickSimplePhoto: _mutating
+                                        ? null
+                                        : () async {
+                                            final file = await _pickImage();
+                                            if (file == null) return;
+                                            setState(() => _simplePhoto = file);
+                                          },
+                                    simpleAudio: _simpleAudio,
+                                    onSimpleAudioChanged: _mutating
+                                        ? null
+                                        : (file) => setState(
+                                            () => _simpleAudio = file,
+                                          ),
+                                    simpleVideo: _simpleVideo,
+                                    onPickSimpleVideo: _mutating
+                                        ? null
+                                        : () async {
+                                            final file = await _pickVideo();
+                                            if (file == null) return;
+                                            setState(() => _simpleVideo = file);
+                                          },
+                                    answers: _answers,
+                                    onPickQuestionPhoto: _mutating
+                                        ? null
+                                        : (questionId) async {
+                                            final file = await _pickImage();
+                                            if (file == null) return;
+                                            setState(
+                                              () => _answers[questionId] =
+                                                  (_answers[questionId] ??
+                                                          _QuestionAnswerState(
+                                                            questionId:
+                                                                questionId,
+                                                          ))
+                                                      .copyWith(photo: file),
+                                            );
+                                          },
+                                    onQuestionAudioChanged: _mutating
+                                        ? null
+                                        : (questionId, file) {
+                                            setState(
+                                              () => _answers[questionId] =
+                                                  (_answers[questionId] ??
+                                                          _QuestionAnswerState(
+                                                            questionId:
+                                                                questionId,
+                                                          ))
+                                                      .copyWith(
+                                                        additionalAudio: file,
+                                                      ),
+                                            );
+                                          },
+                                    onPickQuestionVideo: _mutating
+                                        ? null
+                                        : (questionId) async {
+                                            final file = await _pickVideo();
+                                            if (file == null) return;
+                                            setState(
+                                              () => _answers[questionId] =
+                                                  (_answers[questionId] ??
+                                                          _QuestionAnswerState(
+                                                            questionId:
+                                                                questionId,
+                                                          ))
+                                                      .copyWith(video: file),
+                                            );
+                                          },
+                                    onAnswerChanged: (questionId, next) =>
+                                        setState(
+                                          () => _answers[questionId] = next,
+                                        ),
+                                  )),
                     ),
                   ],
                 ),
@@ -849,7 +847,11 @@ class _ExecutionDetailPageState extends State<ExecutionDetailPage> {
   }
 
   Future<XFile?> _pickVideo() async {
-    final source = await showMediaSourceSheet(context, title: 'Enviar Vídeo', isVideo: true);
+    final source = await showMediaSourceSheet(
+      context,
+      title: 'Enviar Vídeo',
+      isVideo: true,
+    );
     if (source == null) return null;
     try {
       return await ImagePicker().pickVideo(source: source);
@@ -936,21 +938,28 @@ class _QuestionAnswerState {
     this.video,
   });
 
+  /// Use [_absent] as the default for nullable XFile/String fields so that
+  /// passing `null` explicitly clears the value (workaround for Dart's lack
+  /// of a built-in absent/present distinction in copyWith patterns).
+  static const Object _absent = Object();
+
   _QuestionAnswerState copyWith({
     String? answer,
     String? additionalText,
     Object? levelValue,
-    XFile? photo,
-    XFile? additionalAudio,
-    XFile? video,
+    Object? photo = _absent,
+    Object? additionalAudio = _absent,
+    Object? video = _absent,
   }) => _QuestionAnswerState(
     questionId: questionId,
     answer: answer ?? this.answer,
     additionalText: additionalText ?? this.additionalText,
     levelValue: levelValue ?? this.levelValue,
-    photo: photo ?? this.photo,
-    additionalAudio: additionalAudio ?? this.additionalAudio,
-    video: video ?? this.video,
+    photo: identical(photo, _absent) ? this.photo : photo as XFile?,
+    additionalAudio: identical(additionalAudio, _absent)
+        ? this.additionalAudio
+        : additionalAudio as XFile?,
+    video: identical(video, _absent) ? this.video : video as XFile?,
   );
 }
 
@@ -1483,17 +1492,17 @@ class _YesNoSelector extends StatelessWidget {
     return Row(
       children: [
         pill(
-          'Sim',
-          yesSelected,
-          () => onChanged(true),
-          color: theme.colorScheme.primary,
-        ),
-        const SizedBox(width: AppSpacing.md),
-        pill(
           'Não',
           noSelected,
           () => onChanged(false),
           color: theme.colorScheme.error,
+        ),
+        const SizedBox(width: AppSpacing.md),
+        pill(
+          'Sim',
+          yesSelected,
+          () => onChanged(true),
+          color: theme.colorScheme.primary,
         ),
       ],
     );
@@ -1613,20 +1622,7 @@ class _QuestionCard extends StatelessWidget {
           ),
           if (showAlert && (question.alertMessage ?? '').trim().isNotEmpty) ...[
             const SizedBox(height: AppSpacing.md),
-            Container(
-              padding: const EdgeInsets.all(AppSpacing.md),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.errorContainer,
-                borderRadius: BorderRadius.circular(AppRadius.lg),
-              ),
-              child: Text(
-                question.alertMessage!,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onErrorContainer,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
+            ErrorBanner(message: question.alertMessage!),
           ],
           if (wantsLevel) ...[
             const SizedBox(height: AppSpacing.md),
@@ -1729,8 +1725,12 @@ class _CompletedExecutionView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final evidence = detail.completedEvidence.map(MobileEvidenceRef.fromJson).toList();
-    final generalEvidence = evidence.where((e) => (e.questionId ?? '').trim().isEmpty).toList();
+    final evidence = detail.completedEvidence
+        .map(MobileEvidenceRef.fromJson)
+        .toList();
+    final generalEvidence = evidence
+        .where((e) => (e.questionId ?? '').trim().isEmpty)
+        .toList();
 
     return ListView(
       padding: const EdgeInsets.only(bottom: AppSpacing.xl),
@@ -1750,7 +1750,10 @@ class _CompletedExecutionView extends StatelessWidget {
           for (final q in questions) ...[
             _CompletedQuestionCard(
               question: q,
-              answer: (detail.completedAnswers[q.id] is Map) ? (detail.completedAnswers[q.id] as Map).cast<String, dynamic>() : const <String, dynamic>{},
+              answer: (detail.completedAnswers[q.id] is Map)
+                  ? (detail.completedAnswers[q.id] as Map)
+                        .cast<String, dynamic>()
+                  : const <String, dynamic>{},
               evidence: evidence.where((e) => e.questionId == q.id).toList(),
               origin: origin,
               authHeaders: authHeaders,
@@ -1759,7 +1762,12 @@ class _CompletedExecutionView extends StatelessWidget {
             const SizedBox(height: AppSpacing.md),
           ],
           if (generalEvidence.isNotEmpty) ...[
-            _GeneralEvidenceCard(evidence: generalEvidence, origin: origin, authHeaders: authHeaders, onPlayAudio: onPlayAudio),
+            _GeneralEvidenceCard(
+              evidence: generalEvidence,
+              origin: origin,
+              authHeaders: authHeaders,
+              onPlayAudio: onPlayAudio,
+            ),
             const SizedBox(height: AppSpacing.lg),
           ],
         ],
@@ -1777,31 +1785,56 @@ class _CompletedHeaderCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final completedAt = detail.completedAt;
-    final dateText = completedAt == null ? null : DateFormat('dd/MM/yyyy HH:mm').format(completedAt.toLocal());
+    final dateText = completedAt == null
+        ? null
+        : DateFormat('dd/MM/yyyy HH:mm').format(completedAt.toLocal());
 
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
         color: AppColors.successLight,
         borderRadius: BorderRadius.circular(AppRadius.xl),
-        border: Border.all(color: AppColors.success.withValues(alpha: 0.3), width: 2),
+        border: Border.all(
+          color: AppColors.success.withValues(alpha: 0.3),
+          width: 2,
+        ),
       ),
       child: Row(
         children: [
-          const Icon(Icons.check_circle_rounded, color: AppColors.success, size: 40),
+          const Icon(
+            Icons.check_circle_rounded,
+            color: AppColors.success,
+            size: 40,
+          ),
           const SizedBox(width: AppSpacing.md),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Checklist Concluído', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900, color: AppColors.success)),
+                Text(
+                  'Checklist Concluído',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w900,
+                    color: AppColors.success,
+                  ),
+                ),
                 if (dateText != null) ...[
                   const SizedBox(height: AppSpacing.xs),
-                  Text(dateText, style: theme.textTheme.bodyMedium?.copyWith(color: AppColors.success)),
+                  Text(
+                    dateText,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: AppColors.success,
+                    ),
+                  ),
                 ],
                 if ((detail.location ?? '').trim().isNotEmpty) ...[
                   const SizedBox(height: AppSpacing.xs),
-                  Text(detail.location!, style: theme.textTheme.bodySmall?.copyWith(color: AppColors.success)),
+                  Text(
+                    detail.location!,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: AppColors.success,
+                    ),
+                  ),
                 ],
               ],
             ),
@@ -1837,9 +1870,21 @@ class _AnswerBadge extends StatelessWidget {
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
-      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(99)),
-      child: Text(answer.toUpperCase(), style: theme.textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w900, color: fg)),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(99),
+      ),
+      child: Text(
+        answer.toUpperCase(),
+        style: theme.textTheme.labelLarge?.copyWith(
+          fontWeight: FontWeight.w900,
+          color: fg,
+        ),
+      ),
     );
   }
 }
@@ -1851,7 +1896,13 @@ class _SimpleAnswerCard extends StatelessWidget {
   final Map<String, String> authHeaders;
   final void Function(PrivateAudioRef ref) onPlayAudio;
 
-  const _SimpleAnswerCard({required this.booleanAnswer, required this.evidence, required this.origin, required this.authHeaders, required this.onPlayAudio});
+  const _SimpleAnswerCard({
+    required this.booleanAnswer,
+    required this.evidence,
+    required this.origin,
+    required this.authHeaders,
+    required this.onPlayAudio,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1861,17 +1912,34 @@ class _SimpleAnswerCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: theme.colorScheme.primary.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(AppRadius.xl),
-        border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.18), width: 1.5),
+        border: Border.all(
+          color: theme.colorScheme.primary.withValues(alpha: 0.18),
+          width: 1.5,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Resposta', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900)),
+          Text(
+            'Resposta',
+            style: theme.textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w900,
+            ),
+          ),
           const SizedBox(height: AppSpacing.sm),
-          _AnswerBadge(answer: booleanAnswer == null ? '—' : (booleanAnswer! ? 'Sim' : 'Não')),
+          _AnswerBadge(
+            answer: booleanAnswer == null
+                ? '—'
+                : (booleanAnswer! ? 'Sim' : 'Não'),
+          ),
           if (evidence.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.md),
-            _EvidenceGrid(evidence: evidence, origin: origin, authHeaders: authHeaders, onPlayAudio: onPlayAudio),
+            _EvidenceGrid(
+              evidence: evidence,
+              origin: origin,
+              authHeaders: authHeaders,
+              onPlayAudio: onPlayAudio,
+            ),
           ],
         ],
       ),
@@ -1908,12 +1976,20 @@ class _CompletedQuestionCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: theme.colorScheme.primary.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(AppRadius.xl),
-        border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.18), width: 1.5),
+        border: Border.all(
+          color: theme.colorScheme.primary.withValues(alpha: 0.18),
+          width: 1.5,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(question.text, style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900)),
+          Text(
+            question.text,
+            style: theme.textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w900,
+            ),
+          ),
           const SizedBox(height: AppSpacing.sm),
           Wrap(
             spacing: AppSpacing.sm,
@@ -1923,9 +1999,20 @@ class _CompletedQuestionCard extends StatelessWidget {
               if (answerText.isNotEmpty) _AnswerBadge(answer: answerText),
               if (level != null)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
-                  decoration: BoxDecoration(color: theme.colorScheme.surfaceContainerHighest, borderRadius: BorderRadius.circular(99)),
-                  child: Text('Nível $level', style: theme.textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w900)),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.md,
+                    vertical: AppSpacing.sm,
+                  ),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(99),
+                  ),
+                  child: Text(
+                    'Nível $level',
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
                 ),
             ],
           ),
@@ -1933,20 +2020,37 @@ class _CompletedQuestionCard extends StatelessWidget {
             const SizedBox(height: AppSpacing.md),
             Container(
               padding: const EdgeInsets.all(AppSpacing.md),
-              decoration: BoxDecoration(color: theme.colorScheme.surfaceContainerHighest, borderRadius: BorderRadius.circular(AppRadius.lg)),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(AppRadius.lg),
+              ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.chat_bubble_outline, size: 20, color: theme.colorScheme.onSurfaceVariant),
+                  Icon(
+                    Icons.chat_bubble_outline,
+                    size: 20,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
                   const SizedBox(width: AppSpacing.sm),
-                  Expanded(child: Text(additionalText, style: theme.textTheme.bodyMedium)),
+                  Expanded(
+                    child: Text(
+                      additionalText,
+                      style: theme.textTheme.bodyMedium,
+                    ),
+                  ),
                 ],
               ),
             ),
           ],
           if (evidence.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.md),
-            _EvidenceGrid(evidence: evidence, origin: origin, authHeaders: authHeaders, onPlayAudio: onPlayAudio),
+            _EvidenceGrid(
+              evidence: evidence,
+              origin: origin,
+              authHeaders: authHeaders,
+              onPlayAudio: onPlayAudio,
+            ),
           ],
         ],
       ),
@@ -1960,20 +2064,38 @@ class _GeneralEvidenceCard extends StatelessWidget {
   final Map<String, String> authHeaders;
   final void Function(PrivateAudioRef ref) onPlayAudio;
 
-  const _GeneralEvidenceCard({required this.evidence, required this.origin, required this.authHeaders, required this.onPlayAudio});
+  const _GeneralEvidenceCard({
+    required this.evidence,
+    required this.origin,
+    required this.authHeaders,
+    required this.onPlayAudio,
+  });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: BoxDecoration(color: theme.colorScheme.surfaceContainerHighest, borderRadius: BorderRadius.circular(AppRadius.xl)),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(AppRadius.xl),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Evidências gerais', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900)),
+          Text(
+            'Evidências gerais',
+            style: theme.textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w900,
+            ),
+          ),
           const SizedBox(height: AppSpacing.md),
-          _EvidenceGrid(evidence: evidence, origin: origin, authHeaders: authHeaders, onPlayAudio: onPlayAudio),
+          _EvidenceGrid(
+            evidence: evidence,
+            origin: origin,
+            authHeaders: authHeaders,
+            onPlayAudio: onPlayAudio,
+          ),
         ],
       ),
     );
@@ -1997,11 +2119,18 @@ class _CompletedNotesCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Observações gerais', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900)),
+          Text(
+            'Observações gerais',
+            style: theme.textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w900,
+            ),
+          ),
           const SizedBox(height: AppSpacing.sm),
           Text(
             text.isEmpty ? 'Nenhuma observação adicional informada.' : text,
-            style: theme.textTheme.bodyMedium?.copyWith(color: text.isEmpty ? theme.colorScheme.onSurfaceVariant : null),
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: text.isEmpty ? theme.colorScheme.onSurfaceVariant : null,
+            ),
           ),
         ],
       ),
@@ -2015,7 +2144,12 @@ class _EvidenceGrid extends StatelessWidget {
   final Map<String, String> authHeaders;
   final void Function(PrivateAudioRef ref) onPlayAudio;
 
-  const _EvidenceGrid({required this.evidence, required this.origin, required this.authHeaders, required this.onPlayAudio});
+  const _EvidenceGrid({
+    required this.evidence,
+    required this.origin,
+    required this.authHeaders,
+    required this.onPlayAudio,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -2023,7 +2157,12 @@ class _EvidenceGrid extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         for (final e in evidence) ...[
-          _EvidenceThumb(evidence: e, origin: origin, authHeaders: authHeaders, onPlayAudio: onPlayAudio),
+          _EvidenceThumb(
+            evidence: e,
+            origin: origin,
+            authHeaders: authHeaders,
+            onPlayAudio: onPlayAudio,
+          ),
           const SizedBox(height: AppSpacing.sm),
         ],
       ],
@@ -2037,7 +2176,12 @@ class _EvidenceThumb extends StatelessWidget {
   final Map<String, String> authHeaders;
   final void Function(PrivateAudioRef ref) onPlayAudio;
 
-  const _EvidenceThumb({required this.evidence, required this.origin, required this.authHeaders, required this.onPlayAudio});
+  const _EvidenceThumb({
+    required this.evidence,
+    required this.origin,
+    required this.authHeaders,
+    required this.onPlayAudio,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -2047,7 +2191,8 @@ class _EvidenceThumb extends StatelessWidget {
     switch (evidence.kind) {
       case 'photo':
         return GestureDetector(
-          onTap: () => showFullscreenImage(context, url: absUrl, headers: authHeaders),
+          onTap: () =>
+              showFullscreenImage(context, url: absUrl, headers: authHeaders),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(AppRadius.lg),
             child: Image.network(
@@ -2058,37 +2203,61 @@ class _EvidenceThumb extends StatelessWidget {
               fit: BoxFit.cover,
               loadingBuilder: (context, child, progress) => progress == null
                   ? child
-                  : Container(height: 160, alignment: Alignment.center, child: const CircularProgressIndicator()),
+                  : Container(
+                      height: 160,
+                      alignment: Alignment.center,
+                      child: const CircularProgressIndicator(),
+                    ),
               errorBuilder: (context, error, stack) => Container(
                 height: 160,
                 color: theme.colorScheme.surfaceContainerHighest,
                 alignment: Alignment.center,
-                child: Icon(Icons.broken_image, color: theme.colorScheme.onSurfaceVariant),
+                child: Icon(
+                  Icons.broken_image,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
               ),
             ),
           ),
         );
       case 'audio':
         return OutlinedButton.icon(
-          onPressed: () => onPlayAudio(PrivateAudioRef(sha256: evidence.sha256, url: evidence.url)),
+          onPressed: () => onPlayAudio(
+            PrivateAudioRef(sha256: evidence.sha256, url: evidence.url),
+          ),
           icon: Icon(Icons.play_circle, color: theme.colorScheme.primary),
-          label: Text('Reproduzir áudio', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800)),
+          label: Text(
+            'Reproduzir áudio',
+            style: theme.textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w800,
+            ),
+          ),
         );
       case 'video':
         return EvidenceVideoPlayer(url: absUrl, headers: authHeaders);
       default:
         return Container(
           padding: const EdgeInsets.all(AppSpacing.md),
-          decoration: BoxDecoration(color: theme.colorScheme.surfaceContainerHighest, borderRadius: BorderRadius.circular(AppRadius.lg)),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+          ),
           child: Row(
             children: [
-              Icon(Icons.insert_drive_file, color: theme.colorScheme.onSurfaceVariant),
+              Icon(
+                Icons.insert_drive_file,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
               const SizedBox(width: AppSpacing.sm),
-              Expanded(child: Text(evidence.originalName, overflow: TextOverflow.ellipsis)),
+              Expanded(
+                child: Text(
+                  evidence.originalName,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
             ],
           ),
         );
     }
   }
 }
-
