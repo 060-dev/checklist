@@ -105,9 +105,10 @@ class _ApiCreateOccurrencePageState extends State<ApiCreateOccurrencePage> {
     );
     final api = MobileApiServices(client: client);
     try {
-      await api.createOccurrence(employeeId: employeeId, idempotencyKey: const Uuid().v4(), payload: payload);
+      final created = await api.createOccurrence(employeeId: employeeId, idempotencyKey: const Uuid().v4(), payload: payload);
       if (!mounted) return;
-      context.pop(true);
+      final newId = (created['occurrence_id'] as num?)?.toString() ?? (created['id'] as num?)?.toString() ?? '';
+      context.pop(newId.isNotEmpty ? newId : true);
     } on MobileApiException catch (e) {
       setState(() => _error = e.message);
     } catch (e) {

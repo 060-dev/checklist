@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 
 import 'package:morro_do_peo/components/inline_audio_recorder.dart';
+import 'package:morro_do_peo/components/media_source_sheet.dart';
 import 'package:morro_do_peo/components/responsive_body.dart';
 import 'package:morro_do_peo/components/sync_indicator.dart';
 import 'package:morro_do_peo/models/mobile_api_models.dart';
@@ -827,8 +828,10 @@ class _ApiExecutionDetailPageState extends State<ApiExecutionDetailPage> {
   }
 
   Future<XFile?> _pickImage() async {
+    final source = await showMediaSourceSheet(context, title: 'Enviar Foto');
+    if (source == null) return null;
     try {
-      return await ImagePicker().pickImage(source: ImageSource.gallery);
+      return await ImagePicker().pickImage(source: source);
     } catch (e) {
       debugPrint('Pick image failed: $e');
       return null;
@@ -836,8 +839,10 @@ class _ApiExecutionDetailPageState extends State<ApiExecutionDetailPage> {
   }
 
   Future<XFile?> _pickVideo() async {
+    final source = await showMediaSourceSheet(context, title: 'Enviar Vídeo', isVideo: true);
+    if (source == null) return null;
     try {
-      return await ImagePicker().pickVideo(source: ImageSource.gallery);
+      return await ImagePicker().pickVideo(source: source);
     } catch (e) {
       debugPrint('Pick video failed: $e');
       return null;

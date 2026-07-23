@@ -179,7 +179,14 @@ class _ApiOccurrencesPageState extends State<ApiOccurrencesPage> {
                           final res = await context.push(
                             '/api/occurrences/new',
                           );
-                          if (res == true) await _load();
+                          if (res is String && res.isNotEmpty) {
+                            await _load();
+                            if (mounted) {
+                              await context.push('/api/occurrences/$res');
+                            }
+                          } else if (res == true) {
+                            await _load();
+                          }
                         },
                         icon: Icon(
                           Icons.add_circle_outline,
@@ -229,8 +236,9 @@ class _OccurrenceCard extends StatelessWidget {
         ? null
         : '${due.toLocal().day.toString().padLeft(2, '0')}/${due.toLocal().month.toString().padLeft(2, '0')} ${due.toLocal().hour.toString().padLeft(2, '0')}:${due.toLocal().minute.toString().padLeft(2, '0')}';
     final subtitleBits = <String>[];
-    if ((item.location ?? '').trim().isNotEmpty)
+    if ((item.location ?? '').trim().isNotEmpty) {
       subtitleBits.add(item.location!.trim());
+    }
     if (dueText != null) subtitleBits.add('Até: $dueText');
     final subtitle = subtitleBits.join(' · ');
 

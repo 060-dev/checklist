@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 
+import 'package:morro_do_peo/components/media_source_sheet.dart';
 import 'package:morro_do_peo/components/responsive_body.dart';
 import 'package:morro_do_peo/models/mobile_api_models.dart';
 import 'package:morro_do_peo/services/mobile_api_client.dart';
@@ -127,8 +128,10 @@ class _ApiOccurrenceDetailPageState extends State<ApiOccurrenceDetailPage> {
   }
 
   Future<void> _pickImage() async {
+    final source = await showMediaSourceSheet(context, title: 'Anexar Foto à Ocorrência');
+    if (source == null) return;
     try {
-      final file = await ImagePicker().pickImage(source: ImageSource.gallery);
+      final file = await ImagePicker().pickImage(source: source);
       if (file == null) return;
       setState(() => _pickedImage = file);
     } catch (e) {
