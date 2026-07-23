@@ -62,17 +62,17 @@ class AppRouter {
             },
           ),
           GoRoute(
+            path: AppRoutes.apiOccurrenceNew,
+            name: 'apiOccurrenceNew',
+            pageBuilder: (context, state) => CustomTransitionPage(child: const CreateOccurrencePage(), transitionsBuilder: _slideTransition),
+          ),
+          GoRoute(
             path: AppRoutes.apiOccurrenceDetail,
             name: 'apiOccurrenceDetail',
             pageBuilder: (context, state) {
               final id = state.pathParameters['occurrenceId'] ?? '';
               return CustomTransitionPage(child: OccurrenceDetailPage(occurrenceId: id), transitionsBuilder: _slideTransition);
             },
-          ),
-          GoRoute(
-            path: AppRoutes.apiOccurrenceNew,
-            name: 'apiOccurrenceNew',
-            pageBuilder: (context, state) => CustomTransitionPage(child: const CreateOccurrencePage(), transitionsBuilder: _slideTransition),
           ),
         ],
       );
