@@ -35,7 +35,7 @@ class _ExecutionDetailPageState extends State<ExecutionDetailPage> {
   bool _loading = true;
   bool _mutating = false;
   String? _error;
-  ApiExecutionDetail? _detail;
+  ExecutionDetail? _detail;
   bool _fromCache = false;
 
   // Simple checklist state.
@@ -63,7 +63,7 @@ class _ExecutionDetailPageState extends State<ExecutionDetailPage> {
     super.dispose();
   }
 
-  PrivateAudioRef? _narrationRef(ApiExecutionDetail d) {
+  PrivateAudioRef? _narrationRef(ExecutionDetail d) {
     final raw = d.raw['narration_audio'];
     if (raw is! Map) return null;
     final map = raw.cast<String, dynamic>();
@@ -187,7 +187,7 @@ class _ExecutionDetailPageState extends State<ExecutionDetailPage> {
       return;
     }
     final (_, raw) = cached;
-    final detail = ApiExecutionDetail(raw);
+    final detail = ExecutionDetail(raw);
     setState(() {
       _detail = detail;
       _fromCache = true;
@@ -197,7 +197,7 @@ class _ExecutionDetailPageState extends State<ExecutionDetailPage> {
     });
   }
 
-  void _bootstrapForm(ApiExecutionDetail d) {
+  void _bootstrapForm(ExecutionDetail d) {
     final req = (d.raw['requirements'] is Map)
         ? (d.raw['requirements'] as Map).cast<String, dynamic>()
         : const <String, dynamic>{};
@@ -278,7 +278,7 @@ class _ExecutionDetailPageState extends State<ExecutionDetailPage> {
     }
   }
 
-  Map<String, dynamic>? _buildCompletionPayload(ApiExecutionDetail d) {
+  Map<String, dynamic>? _buildCompletionPayload(ExecutionDetail d) {
     setState(() => _error = null);
 
     final req = (d.raw['requirements'] is Map)
@@ -393,7 +393,7 @@ class _ExecutionDetailPageState extends State<ExecutionDetailPage> {
     };
   }
 
-  Future<_EvidenceParts?> _buildEvidenceParts(ApiExecutionDetail d) async {
+  Future<_EvidenceParts?> _buildEvidenceParts(ExecutionDetail d) async {
     setState(() => _error = null);
 
     final req = (d.raw['requirements'] is Map)
@@ -861,7 +861,7 @@ class _ExecutionDetailPageState extends State<ExecutionDetailPage> {
     }
   }
 
-  List<_ApiQuestion> _questionsFrom(ApiExecutionDetail d) {
+  List<_ApiQuestion> _questionsFrom(ExecutionDetail d) {
     final raw = d.raw['questions'];
     if (raw is! List) return const [];
     final out = <_ApiQuestion>[];
@@ -876,7 +876,7 @@ class _ExecutionDetailPageState extends State<ExecutionDetailPage> {
     return out;
   }
 
-  List<_ApiQuestion> _visibleQuestions(ApiExecutionDetail d) {
+  List<_ApiQuestion> _visibleQuestions(ExecutionDetail d) {
     final all = _questionsFrom(d);
     return all.where((q) => _isQuestionVisible(q)).toList();
   }
@@ -1226,7 +1226,7 @@ class _LevelOption {
 }
 
 class _ExecutionForm extends StatelessWidget {
-  final ApiExecutionDetail detail;
+  final ExecutionDetail detail;
   final TextEditingController notesController;
 
   final void Function(PrivateAudioRef ref) onPlayQuestionNarration;
@@ -1709,7 +1709,7 @@ class _QuestionCard extends StatelessWidget {
 /// Read-only summary shown once an execution's status is `completed` — no
 /// inputs, no evidence pickers, just what was actually submitted.
 class _CompletedExecutionView extends StatelessWidget {
-  final ApiExecutionDetail detail;
+  final ExecutionDetail detail;
   final List<_ApiQuestion> questions;
   final String origin;
   final Map<String, String> authHeaders;
@@ -1778,7 +1778,7 @@ class _CompletedExecutionView extends StatelessWidget {
 }
 
 class _CompletedHeaderCard extends StatelessWidget {
-  final ApiExecutionDetail detail;
+  final ExecutionDetail detail;
   const _CompletedHeaderCard({required this.detail});
 
   @override

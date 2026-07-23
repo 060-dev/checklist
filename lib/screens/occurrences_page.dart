@@ -24,7 +24,7 @@ class OccurrencesPage extends StatefulWidget {
 class _OccurrencesPageState extends State<OccurrencesPage> {
   bool _loading = true;
   String? _error;
-  List<ApiOccurrenceSummary> _items = const [];
+  List<OccurrenceSummary> _items = const [];
   String _statusFilter = 'open';
   bool _fromCache = false;
 
@@ -64,7 +64,7 @@ class _OccurrencesPageState extends State<OccurrencesPage> {
         status: _statusFilter,
       );
       // Defensive de-duplication (some backends/proxies can return duplicated rows).
-      final byId = <String, ApiOccurrenceSummary>{};
+      final byId = <String, OccurrenceSummary>{};
       for (final it in res.items) {
         byId[it.occurrenceId] = it;
       }
@@ -212,7 +212,7 @@ class _OccurrencesPageState extends State<OccurrencesPage> {
 }
 
 class _OccurrenceCard extends StatelessWidget {
-  final ApiOccurrenceSummary item;
+  final OccurrenceSummary item;
   final VoidCallback onTap;
   const _OccurrenceCard({required this.item, required this.onTap});
 

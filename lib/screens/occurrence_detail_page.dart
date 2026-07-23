@@ -34,7 +34,7 @@ class _OccurrenceDetailPageState extends State<OccurrenceDetailPage> {
   bool _loading = true;
   bool _mutating = false;
   String? _error;
-  ApiOccurrenceDetail? _detail;
+  OccurrenceDetail? _detail;
 
   // Draft evidence being composed before upload.
   XFile? _pickedMedia;
@@ -57,7 +57,7 @@ class _OccurrenceDetailPageState extends State<OccurrenceDetailPage> {
     super.dispose();
   }
 
-  PrivateAudioRef? _narrationRef(ApiOccurrenceDetail d) {
+  PrivateAudioRef? _narrationRef(OccurrenceDetail d) {
     final raw = d.raw['narration_audio'];
     if (raw is! Map) return null;
     final map = raw.cast<String, dynamic>();
@@ -341,7 +341,8 @@ class _OccurrenceDetailPageState extends State<OccurrenceDetailPage> {
 
   Future<bool> _showResolveConfirmation() async {
     _resolutionNotesController.clear();
-    const prompt = 'Você tem certeza que deseja marcar essa ocorrência como resolvida?';
+    const prompt =
+        'Você tem certeza que deseja marcar essa ocorrência como resolvida?';
     final theme = Theme.of(context);
 
     final confirmed = await showDialog<bool>(
@@ -355,10 +356,15 @@ class _OccurrenceDetailPageState extends State<OccurrenceDetailPage> {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(child: Text(prompt, style: theme.textTheme.bodyMedium)),
+                Expanded(
+                  child: Text(prompt, style: theme.textTheme.bodyMedium),
+                ),
                 IconButton(
                   onPressed: () => TtsService.instance.speak(prompt),
-                  icon: Icon(Icons.volume_up_rounded, color: theme.colorScheme.primary),
+                  icon: Icon(
+                    Icons.volume_up_rounded,
+                    color: theme.colorScheme.primary,
+                  ),
                   tooltip: 'Ouvir',
                 ),
               ],
@@ -367,7 +373,9 @@ class _OccurrenceDetailPageState extends State<OccurrenceDetailPage> {
             TextField(
               controller: _resolutionNotesController,
               maxLines: 2,
-              decoration: const InputDecoration(labelText: 'Observação da solução (opcional)'),
+              decoration: const InputDecoration(
+                labelText: 'Observação da solução (opcional)',
+              ),
             ),
           ],
         ),
@@ -493,9 +501,25 @@ class _OccurrenceDetailPageState extends State<OccurrenceDetailPage> {
                           height: 56,
                           child: FilledButton.icon(
                             onPressed: _mutating ? null : _resolve,
-                            style: FilledButton.styleFrom(backgroundColor: AppColors.success, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg))),
-                            icon: const Icon(Icons.check_circle, color: Colors.white),
-                            label: Text('Resolver Ocorrência', style: theme.textTheme.titleSmall?.copyWith(color: Colors.white, fontWeight: FontWeight.w900)),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: AppColors.success,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(
+                                  AppRadius.lg,
+                                ),
+                              ),
+                            ),
+                            icon: const Icon(
+                              Icons.check_circle,
+                              color: Colors.white,
+                            ),
+                            label: Text(
+                              'Resolver Ocorrência',
+                              style: theme.textTheme.titleSmall?.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
                           ),
                         ),
                       const SizedBox(height: AppSpacing.lg),
@@ -763,7 +787,7 @@ class _UploadedAttachments extends StatelessWidget {
 }
 
 class _OccurrenceHeader extends StatelessWidget {
-  final ApiOccurrenceDetail detail;
+  final OccurrenceDetail detail;
   const _OccurrenceHeader({required this.detail});
 
   @override
@@ -857,13 +881,15 @@ class _OccurrenceHeader extends StatelessWidget {
 }
 
 class _ResolvedStatusCard extends StatelessWidget {
-  final ApiOccurrenceDetail detail;
+  final OccurrenceDetail detail;
   const _ResolvedStatusCard({required this.detail});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final resolvedText = detail.resolvedAt == null ? null : DateFormat('dd/MM/yyyy HH:mm').format(detail.resolvedAt!.toLocal());
+    final resolvedText = detail.resolvedAt == null
+        ? null
+        : DateFormat('dd/MM/yyyy HH:mm').format(detail.resolvedAt!.toLocal());
     final notes = (detail.resolutionNotes ?? '').trim();
 
     return Container(
@@ -871,25 +897,48 @@ class _ResolvedStatusCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.successLight,
         borderRadius: BorderRadius.circular(AppRadius.xl),
-        border: Border.all(color: AppColors.success.withValues(alpha: 0.3), width: 2),
+        border: Border.all(
+          color: AppColors.success.withValues(alpha: 0.3),
+          width: 2,
+        ),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.check_circle_rounded, color: AppColors.success, size: 32),
+          const Icon(
+            Icons.check_circle_rounded,
+            color: AppColors.success,
+            size: 32,
+          ),
           const SizedBox(width: AppSpacing.md),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Ocorrência Resolvida', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900, color: AppColors.success)),
+                Text(
+                  'Ocorrência Resolvida',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w900,
+                    color: AppColors.success,
+                  ),
+                ),
                 if (resolvedText != null) ...[
                   const SizedBox(height: AppSpacing.xs),
-                  Text('Resolvida em: $resolvedText', style: theme.textTheme.bodySmall?.copyWith(color: AppColors.success)),
+                  Text(
+                    'Resolvida em: $resolvedText',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: AppColors.success,
+                    ),
+                  ),
                 ],
                 if (notes.isNotEmpty) ...[
                   const SizedBox(height: AppSpacing.sm),
-                  Text(notes, style: theme.textTheme.bodyMedium?.copyWith(color: AppColors.success)),
+                  Text(
+                    notes,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: AppColors.success,
+                    ),
+                  ),
                 ],
               ],
             ),

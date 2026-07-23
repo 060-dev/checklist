@@ -82,13 +82,13 @@ class LocalCacheService {
 
   Future<void> saveAssignments(
     String employeeId,
-    List<ApiChecklistAssignment> assignments,
+    List<ChecklistAssignment> assignments,
   ) => _writeEntry(
     _assignmentsKey(employeeId),
     assignments.map((e) => e.toJson()).toList(),
   );
 
-  Future<CachedList<ApiChecklistAssignment>?> getAssignments(
+  Future<CachedList<ChecklistAssignment>?> getAssignments(
     String employeeId,
   ) async {
     final entry = await _readEntry(_assignmentsKey(employeeId));
@@ -97,7 +97,7 @@ class LocalCacheService {
     if (data is! List) return null;
     final items = data
         .whereType<Map>()
-        .map((e) => ApiChecklistAssignment.fromJson(e.cast<String, dynamic>()))
+        .map((e) => ChecklistAssignment.fromJson(e.cast<String, dynamic>()))
         .toList();
     return CachedList(items: items, updatedAt: updatedAt);
   }
@@ -106,14 +106,14 @@ class LocalCacheService {
   /// e.g. "today" vs "history" (different date ranges/filters).
   Future<void> saveExecutions(
     String employeeId,
-    List<ApiExecutionSummary> executions, {
+    List<ExecutionSummary> executions, {
     required String scope,
   }) => _writeEntry(
     _executionsKey(employeeId, scope),
     executions.map((e) => e.toJson()).toList(),
   );
 
-  Future<CachedList<ApiExecutionSummary>?> getExecutions(
+  Future<CachedList<ExecutionSummary>?> getExecutions(
     String employeeId, {
     required String scope,
   }) async {
@@ -123,7 +123,7 @@ class LocalCacheService {
     if (data is! List) return null;
     final items = data
         .whereType<Map>()
-        .map((e) => ApiExecutionSummary.fromJson(e.cast<String, dynamic>()))
+        .map((e) => ExecutionSummary.fromJson(e.cast<String, dynamic>()))
         .toList();
     return CachedList(items: items, updatedAt: updatedAt);
   }
@@ -168,13 +168,13 @@ class LocalCacheService {
 
   Future<void> saveOccurrences(
     String employeeId,
-    List<ApiOccurrenceSummary> occurrences,
+    List<OccurrenceSummary> occurrences,
   ) => _writeEntry(
     _occurrencesKey(employeeId),
     occurrences.map((e) => e.toJson()).toList(),
   );
 
-  Future<CachedList<ApiOccurrenceSummary>?> getOccurrences(
+  Future<CachedList<OccurrenceSummary>?> getOccurrences(
     String employeeId,
   ) async {
     final entry = await _readEntry(_occurrencesKey(employeeId));
@@ -183,7 +183,7 @@ class LocalCacheService {
     if (data is! List) return null;
     final items = data
         .whereType<Map>()
-        .map((e) => ApiOccurrenceSummary.fromJson(e.cast<String, dynamic>()))
+        .map((e) => OccurrenceSummary.fromJson(e.cast<String, dynamic>()))
         .toList();
     return CachedList(items: items, updatedAt: updatedAt);
   }

@@ -27,7 +27,7 @@ class _HistoryPageState extends State<HistoryPage> {
 
   bool _loading = true;
   String? _error;
-  List<ApiExecutionSummary> _items = const [];
+  List<ExecutionSummary> _items = const [];
   bool _fromCache = false;
 
   @override
@@ -211,7 +211,7 @@ class _HistoryPageState extends State<HistoryPage> {
 }
 
 class _HistoryCard extends StatelessWidget {
-  final ApiExecutionSummary item;
+  final ExecutionSummary item;
   final VoidCallback onTap;
   const _HistoryCard({required this.item, required this.onTap});
 

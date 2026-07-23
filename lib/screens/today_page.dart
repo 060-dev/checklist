@@ -27,7 +27,7 @@ class _TodayPageState extends State<TodayPage> {
 
   bool _loading = true;
   String? _error;
-  List<ApiExecutionSummary> _items = const [];
+  List<ExecutionSummary> _items = const [];
   bool _fromCache = false;
 
   @override
@@ -111,7 +111,7 @@ class _TodayPageState extends State<TodayPage> {
       });
       return;
     }
-    final items = List<ApiExecutionSummary>.from(cached.items)
+    final items = List<ExecutionSummary>.from(cached.items)
       ..sort((a, b) => _statusRank(a.status).compareTo(_statusRank(b.status)));
     setState(() {
       _items = items;
@@ -240,7 +240,7 @@ class _TodayPageState extends State<TodayPage> {
 }
 
 class _ExecutionCard extends StatelessWidget {
-  final ApiExecutionSummary item;
+  final ExecutionSummary item;
   final VoidCallback onTap;
   const _ExecutionCard({required this.item, required this.onTap});
 

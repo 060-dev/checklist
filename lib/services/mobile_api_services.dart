@@ -9,7 +9,13 @@ class MobileApiServices {
   final MobileApiClient client;
   const MobileApiServices({required this.client});
 
-  Future<PaginatedResult<ApiChecklistAssignment>> listAssignments({required String employeeId, String? search, int page = 1, int pageSize = 25, String order = 'title_asc'}) async {
+  Future<PaginatedResult<ChecklistAssignment>> listAssignments({
+    required String employeeId,
+    String? search,
+    int page = 1,
+    int pageSize = 25,
+    String order = 'title_asc',
+  }) async {
     final env = await client.getJson<Map<String, dynamic>>(
       path: '/employees/$employeeId/checklists',
       query: {
@@ -18,20 +24,21 @@ class MobileApiServices {
         'order': order,
         if ((search ?? '').trim().isNotEmpty) 'search': search!.trim(),
       },
-      decodeData: (json) => (json is Map) ? json.cast<String, dynamic>() : <String, dynamic>{},
+      decodeData: (json) =>
+          (json is Map) ? json.cast<String, dynamic>() : <String, dynamic>{},
     );
 
     final data = env.data ?? const <String, dynamic>{};
     final itemsRaw = data['items'];
-    final items = <ApiChecklistAssignment>[];
+    final items = <ChecklistAssignment>[];
     if (itemsRaw is List) {
       for (final it in itemsRaw) {
         try {
           // Avoid double-adding when `it` is already `Map<String, dynamic>`.
           if (it is Map<String, dynamic>) {
-            items.add(ApiChecklistAssignment.fromJson(it));
+            items.add(ChecklistAssignment.fromJson(it));
           } else if (it is Map) {
-            items.add(ApiChecklistAssignment.fromJson(it.cast<String, dynamic>()));
+            items.add(ChecklistAssignment.fromJson(it.cast<String, dynamic>()));
           }
         } catch (e) {
           debugPrint('Skipping invalid assignment item: $e');
@@ -48,15 +55,28 @@ class MobileApiServices {
     );
   }
 
-  Future<Map<String, dynamic>> getAssignmentDetail({required String employeeId, required String assignmentId}) async {
+  Future<Map<String, dynamic>> getAssignmentDetail({
+    required String employeeId,
+    required String assignmentId,
+  }) async {
     final env = await client.getJson<Map<String, dynamic>>(
       path: '/employees/$employeeId/checklists/$assignmentId',
-      decodeData: (json) => (json is Map) ? json.cast<String, dynamic>() : <String, dynamic>{},
+      decodeData: (json) =>
+          (json is Map) ? json.cast<String, dynamic>() : <String, dynamic>{},
     );
     return env.data ?? const <String, dynamic>{};
   }
 
-  Future<PaginatedResult<ApiExecutionSummary>> listExecutions({required String employeeId, String? status, String? assignmentId, String? dateFrom, String? dateTo, String order = 'due_asc', int page = 1, int pageSize = 25}) async {
+  Future<PaginatedResult<ExecutionSummary>> listExecutions({
+    required String employeeId,
+    String? status,
+    String? assignmentId,
+    String? dateFrom,
+    String? dateTo,
+    String order = 'due_asc',
+    int page = 1,
+    int pageSize = 25,
+  }) async {
     final env = await client.getJson<Map<String, dynamic>>(
       path: '/employees/$employeeId/executions',
       query: {
@@ -64,23 +84,25 @@ class MobileApiServices {
         'page_size': pageSize.toString(),
         'order': order,
         if ((status ?? '').trim().isNotEmpty) 'status': status!.trim(),
-        if ((assignmentId ?? '').trim().isNotEmpty) 'assignment_id': assignmentId!.trim(),
+        if ((assignmentId ?? '').trim().isNotEmpty)
+          'assignment_id': assignmentId!.trim(),
         if ((dateFrom ?? '').trim().isNotEmpty) 'date_from': dateFrom!.trim(),
         if ((dateTo ?? '').trim().isNotEmpty) 'date_to': dateTo!.trim(),
       },
-      decodeData: (json) => (json is Map) ? json.cast<String, dynamic>() : <String, dynamic>{},
+      decodeData: (json) =>
+          (json is Map) ? json.cast<String, dynamic>() : <String, dynamic>{},
     );
 
     final data = env.data ?? const <String, dynamic>{};
     final itemsRaw = data['items'];
-    final items = <ApiExecutionSummary>[];
+    final items = <ExecutionSummary>[];
     if (itemsRaw is List) {
       for (final it in itemsRaw) {
         try {
           if (it is Map<String, dynamic>) {
-            items.add(ApiExecutionSummary.fromJson(it));
+            items.add(ExecutionSummary.fromJson(it));
           } else if (it is Map) {
-            items.add(ApiExecutionSummary.fromJson(it.cast<String, dynamic>()));
+            items.add(ExecutionSummary.fromJson(it.cast<String, dynamic>()));
           }
         } catch (e) {
           debugPrint('Skipping invalid execution item: $e');
@@ -97,38 +119,58 @@ class MobileApiServices {
     );
   }
 
-  Future<ApiExecutionDetail> getExecutionDetail({required String employeeId, required String executionId}) async {
+  Future<ExecutionDetail> getExecutionDetail({
+    required String employeeId,
+    required String executionId,
+  }) async {
     final env = await client.getJson<Map<String, dynamic>>(
       path: '/employees/$employeeId/executions/$executionId',
-      decodeData: (json) => (json is Map) ? json.cast<String, dynamic>() : <String, dynamic>{},
+      decodeData: (json) =>
+          (json is Map) ? json.cast<String, dynamic>() : <String, dynamic>{},
     );
-    return ApiExecutionDetail(env.data ?? const <String, dynamic>{});
+    return ExecutionDetail(env.data ?? const <String, dynamic>{});
   }
 
-  Future<void> markExecutionStarted({required String employeeId, required String executionId, required String idempotencyKey}) async {
+  Future<void> markExecutionStarted({
+    required String employeeId,
+    required String executionId,
+    required String idempotencyKey,
+  }) async {
     await client.postJson<Map<String, dynamic>>(
       path: '/employees/$employeeId/executions/$executionId/start',
       body: const {},
       idempotencyKey: idempotencyKey,
-      decodeData: (json) => (json is Map) ? json.cast<String, dynamic>() : <String, dynamic>{},
+      decodeData: (json) =>
+          (json is Map) ? json.cast<String, dynamic>() : <String, dynamic>{},
     );
   }
 
-  Future<void> markExecutionPending({required String employeeId, required String executionId, required String idempotencyKey}) async {
+  Future<void> markExecutionPending({
+    required String employeeId,
+    required String executionId,
+    required String idempotencyKey,
+  }) async {
     await client.postJson<Map<String, dynamic>>(
       path: '/employees/$employeeId/executions/$executionId/pending',
       body: const {},
       idempotencyKey: idempotencyKey,
-      decodeData: (json) => (json is Map) ? json.cast<String, dynamic>() : <String, dynamic>{},
+      decodeData: (json) =>
+          (json is Map) ? json.cast<String, dynamic>() : <String, dynamic>{},
     );
   }
 
-  Future<void> completeExecutionJson({required String employeeId, required String executionId, required String idempotencyKey, required Map<String, dynamic> payload}) async {
+  Future<void> completeExecutionJson({
+    required String employeeId,
+    required String executionId,
+    required String idempotencyKey,
+    required Map<String, dynamic> payload,
+  }) async {
     await client.postJson<Map<String, dynamic>>(
       path: '/employees/$employeeId/executions/$executionId/complete',
       body: payload,
       idempotencyKey: idempotencyKey,
-      decodeData: (json) => (json is Map) ? json.cast<String, dynamic>() : <String, dynamic>{},
+      decodeData: (json) =>
+          (json is Map) ? json.cast<String, dynamic>() : <String, dynamic>{},
     );
   }
 
@@ -146,7 +188,9 @@ class MobileApiServices {
     List<http.MultipartFile> videos = const [],
     List<String> videoQuestionIds = const [],
   }) async {
-    final fields = <MapEntry<String, String>>[MapEntry('payload', jsonEncode(payload))];
+    final fields = <MapEntry<String, String>>[
+      MapEntry('payload', jsonEncode(payload)),
+    ];
 
     // Structured evidence must be sent as repeated fields in the same order:
     // - photos + photo_question_ids
@@ -182,21 +226,38 @@ class MobileApiServices {
     }
 
     await client.postMultipart<Map<String, dynamic>>(
-      path: '/employees/$employeeId/executions/$executionId/complete-with-evidence',
+      path:
+          '/employees/$employeeId/executions/$executionId/complete-with-evidence',
       idempotencyKey: idempotencyKey,
       fields: fields,
       files: files,
-      decodeData: (json) => (json is Map) ? json.cast<String, dynamic>() : <String, dynamic>{},
+      decodeData: (json) =>
+          (json is Map) ? json.cast<String, dynamic>() : <String, dynamic>{},
     );
   }
 
-  Future<Uint8List> downloadEvidence({required String employeeId, required String executionId, required String evidenceId}) async {
+  Future<Uint8List> downloadEvidence({
+    required String employeeId,
+    required String executionId,
+    required String evidenceId,
+  }) async {
     // This endpoint does not use JSON envelope.
-    final url = client.buildUri('/employees/$employeeId/executions/$executionId/evidence/$evidenceId').toString();
+    final url = client
+        .buildUri(
+          '/employees/$employeeId/executions/$executionId/evidence/$evidenceId',
+        )
+        .toString();
     return client.getBinaryAbsoluteUrl(url);
   }
 
-  Future<PaginatedResult<ApiOccurrenceSummary>> listOccurrences({required String employeeId, String? status, String? search, String order = 'due_desc', int page = 1, int pageSize = 25}) async {
+  Future<PaginatedResult<OccurrenceSummary>> listOccurrences({
+    required String employeeId,
+    String? status,
+    String? search,
+    String order = 'due_desc',
+    int page = 1,
+    int pageSize = 25,
+  }) async {
     final env = await client.getJson<Map<String, dynamic>>(
       path: '/employees/$employeeId/occurrences',
       query: {
@@ -206,19 +267,20 @@ class MobileApiServices {
         if ((status ?? '').trim().isNotEmpty) 'status': status!.trim(),
         if ((search ?? '').trim().isNotEmpty) 'search': search!.trim(),
       },
-      decodeData: (json) => (json is Map) ? json.cast<String, dynamic>() : <String, dynamic>{},
+      decodeData: (json) =>
+          (json is Map) ? json.cast<String, dynamic>() : <String, dynamic>{},
     );
 
     final data = env.data ?? const <String, dynamic>{};
     final itemsRaw = data['items'];
-    final items = <ApiOccurrenceSummary>[];
+    final items = <OccurrenceSummary>[];
     if (itemsRaw is List) {
       for (final it in itemsRaw) {
         try {
           if (it is Map<String, dynamic>) {
-            items.add(ApiOccurrenceSummary.fromJson(it));
+            items.add(OccurrenceSummary.fromJson(it));
           } else if (it is Map) {
-            items.add(ApiOccurrenceSummary.fromJson(it.cast<String, dynamic>()));
+            items.add(OccurrenceSummary.fromJson(it.cast<String, dynamic>()));
           }
         } catch (e) {
           debugPrint('Skipping invalid occurrence item: $e');
@@ -235,31 +297,46 @@ class MobileApiServices {
     );
   }
 
-  Future<ApiOccurrenceDetail> getOccurrenceDetail({required String employeeId, required String occurrenceId}) async {
+  Future<OccurrenceDetail> getOccurrenceDetail({
+    required String employeeId,
+    required String occurrenceId,
+  }) async {
     final env = await client.getJson<Map<String, dynamic>>(
       path: '/employees/$employeeId/occurrences/$occurrenceId',
-      decodeData: (json) => (json is Map) ? json.cast<String, dynamic>() : <String, dynamic>{},
+      decodeData: (json) =>
+          (json is Map) ? json.cast<String, dynamic>() : <String, dynamic>{},
     );
-    return ApiOccurrenceDetail(env.data ?? const <String, dynamic>{});
+    return OccurrenceDetail(env.data ?? const <String, dynamic>{});
   }
 
-  Future<Map<String, dynamic>> createOccurrence({required String employeeId, required String idempotencyKey, required Map<String, dynamic> payload}) async {
+  Future<Map<String, dynamic>> createOccurrence({
+    required String employeeId,
+    required String idempotencyKey,
+    required Map<String, dynamic> payload,
+  }) async {
     final env = await client.postJson<Map<String, dynamic>>(
       path: '/employees/$employeeId/occurrences',
       body: payload,
       idempotencyKey: idempotencyKey,
-      decodeData: (json) => (json is Map) ? json.cast<String, dynamic>() : <String, dynamic>{},
+      decodeData: (json) =>
+          (json is Map) ? json.cast<String, dynamic>() : <String, dynamic>{},
     );
     return env.data ?? const <String, dynamic>{};
   }
 
-  Future<Map<String, dynamic>> attachOccurrenceFile({required String employeeId, required String occurrenceId, required String idempotencyKey, required http.MultipartFile file}) async {
+  Future<Map<String, dynamic>> attachOccurrenceFile({
+    required String employeeId,
+    required String occurrenceId,
+    required String idempotencyKey,
+    required http.MultipartFile file,
+  }) async {
     final env = await client.postMultipart<Map<String, dynamic>>(
       path: '/employees/$employeeId/occurrences/$occurrenceId/attachments',
       idempotencyKey: idempotencyKey,
       fields: const [],
       files: [file],
-      decodeData: (json) => (json is Map) ? json.cast<String, dynamic>() : <String, dynamic>{},
+      decodeData: (json) =>
+          (json is Map) ? json.cast<String, dynamic>() : <String, dynamic>{},
     );
     return env.data ?? const <String, dynamic>{};
   }
@@ -283,11 +360,11 @@ class MobileApiServices {
   /// server-side) so the UI can be built/tested without depending on the
   /// backend — [currentDetail] is only needed for that simulation and should
   /// be dropped once the real call returns the updated detail itself.
-  Future<ApiOccurrenceDetail> resolveOccurrence({
+  Future<OccurrenceDetail> resolveOccurrence({
     required String employeeId,
     required String occurrenceId,
     required String idempotencyKey,
-    required ApiOccurrenceDetail currentDetail,
+    required OccurrenceDetail currentDetail,
     String? resolutionNotes,
   }) async {
     await Future<void>.delayed(const Duration(milliseconds: 400));
@@ -296,6 +373,6 @@ class MobileApiServices {
     updated['resolved_at'] = DateTime.now().toUtc().toIso8601String();
     final notes = (resolutionNotes ?? '').trim();
     if (notes.isNotEmpty) updated['resolution_notes'] = notes;
-    return ApiOccurrenceDetail(updated);
+    return OccurrenceDetail(updated);
   }
 }

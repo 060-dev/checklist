@@ -18,7 +18,7 @@ class PaginatedResult<T> {
 }
 
 @immutable
-class ApiChecklistAssignment {
+class ChecklistAssignment {
   final String assignmentId;
   final String checklistId;
   final String title;
@@ -35,7 +35,7 @@ class ApiChecklistAssignment {
   final DateTime? nextDueAt;
   final String? nextStatus;
 
-  const ApiChecklistAssignment({
+  const ChecklistAssignment({
     required this.assignmentId,
     required this.checklistId,
     required this.title,
@@ -53,8 +53,8 @@ class ApiChecklistAssignment {
     required this.nextStatus,
   });
 
-  factory ApiChecklistAssignment.fromJson(Map<String, dynamic> json) =>
-      ApiChecklistAssignment(
+  factory ChecklistAssignment.fromJson(Map<String, dynamic> json) =>
+      ChecklistAssignment(
         assignmentId:
             (json['assignment_id'] as num?)?.toString() ??
             (json['assignment_id']?.toString() ?? ''),
@@ -105,7 +105,7 @@ class ApiChecklistAssignment {
 }
 
 @immutable
-class ApiExecutionSummary {
+class ExecutionSummary {
   final String executionId;
   final String assignmentId;
   final String checklistId;
@@ -115,7 +115,7 @@ class ApiExecutionSummary {
   final DateTime? dueAt;
   final String status;
 
-  const ApiExecutionSummary({
+  const ExecutionSummary({
     required this.executionId,
     required this.assignmentId,
     required this.checklistId,
@@ -126,8 +126,8 @@ class ApiExecutionSummary {
     required this.status,
   });
 
-  factory ApiExecutionSummary.fromJson(Map<String, dynamic> json) =>
-      ApiExecutionSummary(
+  factory ExecutionSummary.fromJson(Map<String, dynamic> json) =>
+      ExecutionSummary(
         executionId:
             (json['execution_id'] as num?)?.toString() ??
             (json['execution_id']?.toString() ?? ''),
@@ -161,10 +161,10 @@ class ApiExecutionSummary {
 }
 
 @immutable
-class ApiExecutionDetail {
+class ExecutionDetail {
   final Map<String, dynamic> raw;
 
-  const ApiExecutionDetail(this.raw);
+  const ExecutionDetail(this.raw);
 
   String get executionId =>
       (raw['execution_id'] as num?)?.toString() ??
@@ -198,15 +198,20 @@ class ApiExecutionDetail {
 
   bool? get completedBooleanAnswer => raw['boolean_answer'] as bool?;
 
-  Map<String, dynamic> get completedAnswers =>
-      (raw['answers'] is Map) ? (raw['answers'] as Map).cast<String, dynamic>() : const <String, dynamic>{};
+  Map<String, dynamic> get completedAnswers => (raw['answers'] is Map)
+      ? (raw['answers'] as Map).cast<String, dynamic>()
+      : const <String, dynamic>{};
 
   List<Map<String, dynamic>> get completedEvidence => (raw['evidence'] is List)
-      ? (raw['evidence'] as List).whereType<Map>().map((e) => e.cast<String, dynamic>()).toList()
+      ? (raw['evidence'] as List)
+            .whereType<Map>()
+            .map((e) => e.cast<String, dynamic>())
+            .toList()
       : const <Map<String, dynamic>>[];
 
-  DateTime? get completedAt =>
-      (raw['completed_at'] is String) ? DateTime.tryParse(raw['completed_at'] as String) : null;
+  DateTime? get completedAt => (raw['completed_at'] is String)
+      ? DateTime.tryParse(raw['completed_at'] as String)
+      : null;
 }
 
 @immutable
@@ -218,7 +223,14 @@ class MobileEvidenceRef {
   final String url;
   final String sha256;
 
-  const MobileEvidenceRef({required this.id, required this.kind, required this.questionId, required this.originalName, required this.url, required this.sha256});
+  const MobileEvidenceRef({
+    required this.id,
+    required this.kind,
+    required this.questionId,
+    required this.originalName,
+    required this.url,
+    required this.sha256,
+  });
 
   /// Checklist evidence (`MobileEvidence`) carries an explicit `kind`.
   /// Occurrence attachments (`MobileOccurrenceAttachment`) don't have a
@@ -232,18 +244,21 @@ class MobileEvidenceRef {
     return '';
   }
 
-  factory MobileEvidenceRef.fromJson(Map<String, dynamic> json) => MobileEvidenceRef(
-    id: (json['id'] as num?)?.toString() ?? (json['id']?.toString() ?? ''),
-    kind: (json['kind'] as String?) ?? kindFromContentType((json['content_type'] as String?) ?? ''),
-    questionId: json['question_id']?.toString(),
-    originalName: (json['original_name'] as String?) ?? '',
-    url: (json['url'] as String?) ?? '',
-    sha256: (json['sha256'] as String?) ?? '',
-  );
+  factory MobileEvidenceRef.fromJson(Map<String, dynamic> json) =>
+      MobileEvidenceRef(
+        id: (json['id'] as num?)?.toString() ?? (json['id']?.toString() ?? ''),
+        kind:
+            (json['kind'] as String?) ??
+            kindFromContentType((json['content_type'] as String?) ?? ''),
+        questionId: json['question_id']?.toString(),
+        originalName: (json['original_name'] as String?) ?? '',
+        url: (json['url'] as String?) ?? '',
+        sha256: (json['sha256'] as String?) ?? '',
+      );
 }
 
 @immutable
-class ApiOccurrenceSummary {
+class OccurrenceSummary {
   final String occurrenceId;
   final String title;
   final String? location;
@@ -251,7 +266,7 @@ class ApiOccurrenceSummary {
   final String? priority;
   final DateTime? dueAt;
 
-  const ApiOccurrenceSummary({
+  const OccurrenceSummary({
     required this.occurrenceId,
     required this.title,
     required this.location,
@@ -260,8 +275,8 @@ class ApiOccurrenceSummary {
     required this.dueAt,
   });
 
-  factory ApiOccurrenceSummary.fromJson(Map<String, dynamic> json) =>
-      ApiOccurrenceSummary(
+  factory OccurrenceSummary.fromJson(Map<String, dynamic> json) =>
+      OccurrenceSummary(
         occurrenceId:
             (json['occurrence_id'] as num?)?.toString() ??
             (json['id'] as num?)?.toString() ??
@@ -287,9 +302,9 @@ class ApiOccurrenceSummary {
 }
 
 @immutable
-class ApiOccurrenceDetail {
+class OccurrenceDetail {
   final Map<String, dynamic> raw;
-  const ApiOccurrenceDetail(this.raw);
+  const OccurrenceDetail(this.raw);
   String get occurrenceId =>
       (raw['occurrence_id'] as num?)?.toString() ??
       (raw['id'] as num?)?.toString() ??
@@ -311,6 +326,9 @@ class ApiOccurrenceDetail {
   String? get resolutionNotes => raw['resolution_notes'] as String?;
 
   List<Map<String, dynamic>> get attachments => (raw['attachments'] is List)
-      ? (raw['attachments'] as List).whereType<Map>().map((e) => e.cast<String, dynamic>()).toList()
+      ? (raw['attachments'] as List)
+            .whereType<Map>()
+            .map((e) => e.cast<String, dynamic>())
+            .toList()
       : const <Map<String, dynamic>>[];
 }

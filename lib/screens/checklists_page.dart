@@ -24,7 +24,7 @@ class ChecklistsPage extends StatefulWidget {
 class _ChecklistsPageState extends State<ChecklistsPage> {
   bool _loading = true;
   String? _error;
-  List<ApiChecklistAssignment> _items = const [];
+  List<ChecklistAssignment> _items = const [];
   bool _fromCache = false;
 
   @override
@@ -62,7 +62,7 @@ class _ChecklistsPageState extends State<ChecklistsPage> {
       final res = await api.listAssignments(employeeId: employeeId);
       // Defensive de-duplication: if the backend returns duplicate rows (or if
       // there is caching/proxy duplication), we keep the latest occurrence.
-      final byKey = <String, ApiChecklistAssignment>{};
+      final byKey = <String, ChecklistAssignment>{};
       for (final it in res.items) {
         final k = '${it.assignmentId}::${(it.nextExecutionId ?? '').trim()}';
         byKey[k] = it;
@@ -180,7 +180,7 @@ class _ChecklistsPageState extends State<ChecklistsPage> {
 }
 
 class _AssignmentCard extends StatelessWidget {
-  final ApiChecklistAssignment item;
+  final ChecklistAssignment item;
   final VoidCallback onTap;
 
   const _AssignmentCard({required this.item, required this.onTap});
