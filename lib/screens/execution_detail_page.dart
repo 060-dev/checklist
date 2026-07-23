@@ -224,13 +224,13 @@ class _ExecutionDetailPageState extends State<ExecutionDetailPage> {
     }
   }
 
-  Future<void> _start() => _mutate(
-    (api, employeeId, key) => api.markExecutionStarted(
-      employeeId: employeeId,
-      executionId: widget.executionId,
-      idempotencyKey: key,
-    ),
-  );
+  // Future<void> _start() => _mutate(
+  //   (api, employeeId, key) => api.markExecutionStarted(
+  //     employeeId: employeeId,
+  //     executionId: widget.executionId,
+  //     idempotencyKey: key,
+  //   ),
+  // );
 
   Future<void> _complete() async {
     final d = _detail;
@@ -590,7 +590,7 @@ class _ExecutionDetailPageState extends State<ExecutionDetailPage> {
     final d = _detail;
 
     final status = d?.status ?? '';
-    final canStart = status == 'pending' || status == 'overdue';
+    // final canStart = status == 'pending' || status == 'overdue';
     final canComplete =
         status == 'in_progress' || status == 'pending' || status == 'overdue';
 
@@ -639,25 +639,25 @@ class _ExecutionDetailPageState extends State<ExecutionDetailPage> {
                 ),
                 child: Row(
                   children: [
-                    if (canStart) ...[
-                      Expanded(
-                        child: FilledButton.icon(
-                          onPressed: _mutating ? null : _start,
-                          icon: Icon(
-                            Icons.play_arrow,
-                            color: theme.colorScheme.onPrimary,
-                          ),
-                          label: Text(
-                            'Iniciar',
-                            style: theme.textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.w900,
-                              color: theme.colorScheme.onPrimary,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: AppSpacing.md),
-                    ],
+                    // if (canStart) ...[
+                    //   Expanded(
+                    //     child: FilledButton.icon(
+                    //       onPressed: _mutating ? null : _start,
+                    //       icon: Icon(
+                    //         Icons.play_arrow,
+                    //         color: theme.colorScheme.onPrimary,
+                    //       ),
+                    //       label: Text(
+                    //         'Iniciar',
+                    //         style: theme.textTheme.titleSmall?.copyWith(
+                    //           fontWeight: FontWeight.w900,
+                    //           color: theme.colorScheme.onPrimary,
+                    //         ),
+                    //       ),
+                    //     ),
+                    //   ),
+                    //   const SizedBox(width: AppSpacing.md),
+                    // ],
                     Expanded(
                       child: FilledButton.icon(
                         onPressed: (!canComplete || _mutating)
