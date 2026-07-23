@@ -1,137 +1,20 @@
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
-import 'package:morro_do_peo/data/checklists_repository.dart';
-import 'package:morro_do_peo/models/checklist_models.dart';
 import 'package:morro_do_peo/models/operator.dart';
 import 'package:morro_do_peo/services/api_config_store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-@immutable
-class RecordedAudio {
-  final String localFile;
-  final int durationSeconds;
-
-  const RecordedAudio({required this.localFile, required this.durationSeconds});
-
-  Map<String, dynamic> toJson() => {
-        'tipo': 'audio',
-        'arquivoLocal': localFile,
-        'duracaoSegundos': durationSeconds,
-      };
-}
-
-@immutable
-class ChecklistPhoto {
-  final String localFile;
-
-  const ChecklistPhoto({required this.localFile});
-
-  Map<String, dynamic> toJson() => {
-        'capturada': true,
-        'arquivoLocal': localFile,
-      };
-}
-
-@immutable
-class AdditionalFieldValue {
-  final String type; // 'texto' | 'audio'
-  final String? text;
-  final RecordedAudio? audio;
-
-  const AdditionalFieldValue._({required this.type, this.text, this.audio});
-
-  const AdditionalFieldValue.text(String value)
-      : this._(type: 'texto', text: value, audio: null);
-
-  const AdditionalFieldValue.audio(RecordedAudio value)
-      : this._(type: 'audio', text: null, audio: value);
-
-  Map<String, dynamic> toJson() {
-    if (type == 'audio') return audio!.toJson();
-    return {'tipo': 'texto', 'valor': text};
-  }
-}
-
-@immutable
-class ChecklistResponse {
-  final String answer;
-  final ChecklistLevelOption? level;
-  final bool generatedAlert;
-  final Map<String, AdditionalFieldValue> additionalFields;
-  final ChecklistPhoto? photo;
-
-  const ChecklistResponse(
-      {required this.answer,
-      this.level,
-      this.generatedAlert = false,
-      this.additionalFields = const {},
-      this.photo});
-
-  ChecklistResponse copyWith({
-    String? answer,
-    ChecklistLevelOption? level,
-    bool? generatedAlert,
-    Map<String, AdditionalFieldValue>? additionalFields,
-    ChecklistPhoto? photo,
-  }) =>
-      ChecklistResponse(
-        answer: answer ?? this.answer,
-        level: level ?? this.level,
-        generatedAlert: generatedAlert ?? this.generatedAlert,
-        additionalFields: additionalFields ?? this.additionalFields,
-        photo: photo ?? this.photo,
-      );
-}
-
-@immutable
-class ObservationAudio {
-  final String localFile;
-  final int durationSeconds;
-
-  const ObservationAudio({required this.localFile, required this.durationSeconds});
-
-  Map<String, dynamic> toJson() => {
-        'arquivoLocal': localFile,
-        'duracaoSegundos': durationSeconds,
-      };
-}
-
 class AppSession extends ChangeNotifier {
   Operator? _selectedOperator;
-  OperationalAreaDefinition? _selectedArea;
-  PenDefinition? _selectedPen;
-  ChecklistDefinition? _selectedChecklist;
-  OperationalResponsible? _operationalResponsible;
-
-  DateTime? _startedAt;
-  DateTime? _finishedAt;
-
-  final Map<String, ChecklistResponse> _responsesByQuestionId = {};
-  ObservationAudio? _observation;
-
-  /// Status por curral (penId) e por checklist (checklistId) para o dia atual.
-  final Map<String, Map<String, PenChecklistStatus>>
-      _penChecklistStatusByPenIdToday = {};
-
-  /// Status dos checklists gerais da Pecuária (por checklistId) para o dia atual.
-  final Map<String, ChecklistDayStatus> _generalPecuariaChecklistStatusToday =
-      {};
-  final Set<String> _shownInterstitialIds = {};
-
-  String? _successTitleOverride;
-  String? _successMessageOverride;
-  String _successReturnLocation = '/areas';
-  String _successReturnLabel = 'Voltar';
-  bool _successIsQueued = false;
 
   // --- Mobile API v1 configuration -----------------------------------------
   ApiConfig? _apiConfig;
   bool _loaded = false;
 
   static const String defaultOrigin = 'https://morropeao.yplanejamento.com.br';
-  static const String defaultApiBaseUrl = 'https://morropeao.yplanejamento.com.br/api/mobile/v1';
+  static const String defaultApiBaseUrl =
+      'https://morropeao.yplanejamento.com.br/api/mobile/v1';
 
   /// Environment injection (build-time), e.g.:
   /// `--dart-define=MORROPEAO_ORIGIN=...`
@@ -145,22 +28,6 @@ class AppSession extends ChangeNotifier {
   static const String _kLastEmployeeName = 'last_employee_name_v1';
 
   Operator? get selectedOperator => _selectedOperator;
-  OperationalAreaDefinition? get selectedArea => _selectedArea;
-  PenDefinition? get selectedPen => _selectedPen;
-  ChecklistDefinition? get selectedChecklist => _selectedChecklist;
-  OperationalResponsible? get operationalResponsible => _operationalResponsible;
-  DateTime? get startedAt => _startedAt;
-  DateTime? get finishedAt => _finishedAt;
-
-  Map<String, ChecklistResponse> get responsesByQuestionId =>
-      Map.unmodifiable(_responsesByQuestionId);
-  ObservationAudio? get observation => _observation;
-
-  String? get successTitleOverride => _successTitleOverride;
-  String? get successMessageOverride => _successMessageOverride;
-  String get successReturnLocation => _successReturnLocation;
-  String get successReturnLabel => _successReturnLabel;
-  bool get successIsQueued => _successIsQueued;
 
   /// For audio URLs (which are relative to origin, not the API base URL).
   String get origin {
@@ -169,7 +36,9 @@ class AppSession extends ChangeNotifier {
     return defaultOrigin;
   }
 
-  String get apiBaseUrl => _apiConfig?.apiBaseUrl ?? (envBaseUrl.trim().isNotEmpty ? envBaseUrl.trim() : defaultApiBaseUrl);
+  String get apiBaseUrl =>
+      _apiConfig?.apiBaseUrl ??
+      (envBaseUrl.trim().isNotEmpty ? envBaseUrl.trim() : defaultApiBaseUrl);
 
   /// Resolution order: secure storage -> `--dart-define` -> empty (no
   /// hardcoded fallback key). An empty key means the API-driven screens are
@@ -187,7 +56,8 @@ class AppSession extends ChangeNotifier {
   int get requestTimeoutSeconds => _apiConfig?.requestTimeoutSeconds ?? 30;
   int get uploadTimeoutSeconds => _apiConfig?.uploadTimeoutSeconds ?? 120;
 
-  bool get hasApiConfig => apiBaseUrl.trim().isNotEmpty && apiKey.trim().isNotEmpty;
+  bool get hasApiConfig =>
+      apiBaseUrl.trim().isNotEmpty && apiKey.trim().isNotEmpty;
 
   bool get isLoaded => _loaded;
 
@@ -203,7 +73,9 @@ class AppSession extends ChangeNotifier {
       final injectedBase = envBaseUrl.trim();
       if (_apiConfig == null && injectedKey.isNotEmpty) {
         final cfg = ApiConfig(
-          apiBaseUrl: injectedBase.isNotEmpty ? injectedBase : defaultApiBaseUrl,
+          apiBaseUrl: injectedBase.isNotEmpty
+              ? injectedBase
+              : defaultApiBaseUrl,
           apiKey: injectedKey,
           requestTimeoutSeconds: 30,
           uploadTimeoutSeconds: 120,
@@ -216,7 +88,12 @@ class AppSession extends ChangeNotifier {
       final id = (prefs.getString(_kLastEmployeeId) ?? '').trim();
       final name = (prefs.getString(_kLastEmployeeName) ?? '').trim();
       if (id.isNotEmpty && name.isNotEmpty && _selectedOperator == null) {
-        _selectedOperator = Operator(id: id, farmId: 'morro-do-peao', name: name, active: true);
+        _selectedOperator = Operator(
+          id: id,
+          farmId: 'morro-do-peao',
+          name: name,
+          active: true,
+        );
       }
     } catch (e) {
       debugPrint('AppSession ensureLoaded failed: $e');
@@ -226,12 +103,8 @@ class AppSession extends ChangeNotifier {
     }
   }
 
-  String? answerFor(String questionId) =>
-      _responsesByQuestionId[questionId]?.answer;
-
   void selectOperator(Operator op) {
     _selectedOperator = op;
-    _operationalResponsible = null;
     unawaited(_persistSelectedOperator(op));
     notifyListeners();
   }
@@ -256,373 +129,10 @@ class AppSession extends ChangeNotifier {
     }
   }
 
-  void selectOperationalArea(OperationalAreaDefinition area) {
-    _selectedArea = area;
-    _selectedPen = null;
-    notifyListeners();
-  }
-
-  void selectPen(PenDefinition pen) {
-    _selectedPen = pen;
-    notifyListeners();
-  }
-
-  void setOperationalResponsible(OperationalResponsible? value) {
-    _operationalResponsible = value;
-    notifyListeners();
-  }
-
-  void startChecklist(ChecklistDefinition checklist) {
-    _selectedChecklist = checklist;
-    _startedAt = DateTime.now();
-    _finishedAt = null;
-    _responsesByQuestionId.clear();
-    _observation = null;
-    _shownInterstitialIds.clear();
-    notifyListeners();
-  }
-
-  void saveAnswer({required String questionId, required String answer}) {
-    final current = _responsesByQuestionId[questionId];
-    _responsesByQuestionId[questionId] =
-        (current ?? ChecklistResponse(answer: answer)).copyWith(answer: answer);
-    notifyListeners();
-  }
-
-  void setLevel(
-      {required String questionId, required ChecklistLevelOption level}) {
-    final current = _responsesByQuestionId[questionId];
-    if (current == null) return;
-    _responsesByQuestionId[questionId] = current.copyWith(level: level);
-    notifyListeners();
-  }
-
-  void markAlert({required String questionId, required bool generated}) {
-    final current = _responsesByQuestionId[questionId];
-    if (current == null) return;
-    _responsesByQuestionId[questionId] =
-        current.copyWith(generatedAlert: generated);
-    notifyListeners();
-  }
-
-  void removeResponse(String questionId) {
-    if (_responsesByQuestionId.remove(questionId) != null) notifyListeners();
-  }
-
-  void removeResponses(Iterable<String> questionIds) {
-    var changed = false;
-    for (final id in questionIds) {
-      changed = _responsesByQuestionId.remove(id) != null || changed;
-    }
-    if (changed) notifyListeners();
-  }
-
-  void setAdditionalField(
-      {required String questionId,
-      required String fieldId,
-      required AdditionalFieldValue value}) {
-    final current = _responsesByQuestionId[questionId];
-    if (current == null) return;
-    final next =
-        Map<String, AdditionalFieldValue>.from(current.additionalFields);
-    next[fieldId] = value;
-    _responsesByQuestionId[questionId] =
-        current.copyWith(additionalFields: next);
-    notifyListeners();
-  }
-
-  void setPhoto({required String questionId, required ChecklistPhoto photo}) {
-    final current = _responsesByQuestionId[questionId];
-    if (current == null) return;
-    _responsesByQuestionId[questionId] = current.copyWith(photo: photo);
-    notifyListeners();
-  }
-
-  void setObservation(ObservationAudio? obs) {
-    _observation = obs;
-    notifyListeners();
-  }
-
-  void finishNow() {
-    _finishedAt = DateTime.now();
-    notifyListeners();
-  }
-
-  PenChecklistStatus statusForPenToday(String penId) {
-    final required = _requiredPerPenChecklistIds();
-    if (required.isEmpty) return PenChecklistStatus.pendente;
-
-    final map = _penChecklistStatusByPenIdToday[penId] ??
-        const <String, PenChecklistStatus>{};
-    final statuses = required
-        .map((id) => map[id] ?? PenChecklistStatus.pendente)
-        .toList(growable: false);
-
-    if (statuses.every((s) => s == PenChecklistStatus.pendente)) {
-      return PenChecklistStatus.pendente;
-    }
-    if (statuses.any((s) => s == PenChecklistStatus.comAlerta)) {
-      return PenChecklistStatus.comAlerta;
-    }
-    if (statuses.every((s) => s == PenChecklistStatus.preenchido)) {
-      return PenChecklistStatus.preenchido;
-    }
-    return PenChecklistStatus.parcial;
-  }
-
-  PenChecklistStatus statusForPenChecklistToday(
-      {required String penId, required String checklistId}) {
-    return _penChecklistStatusByPenIdToday[penId]?[checklistId] ??
-        PenChecklistStatus.pendente;
-  }
-
-  void updatePenChecklistStatusToday(
-      {required String penId,
-      required String checklistId,
-      required PenChecklistStatus status}) {
-    final next = Map<String, PenChecklistStatus>.from(
-        _penChecklistStatusByPenIdToday[penId] ?? const {});
-    next[checklistId] = status;
-    _penChecklistStatusByPenIdToday[penId] = next;
-    notifyListeners();
-  }
-
-  ChecklistDayStatus statusForGeneralChecklistToday(String checklistId) =>
-      _generalPecuariaChecklistStatusToday[checklistId] ??
-      ChecklistDayStatus.pendente;
-
-  void updateGeneralChecklistStatusToday(
-      {required String checklistId, required ChecklistDayStatus status}) {
-    _generalPecuariaChecklistStatusToday[checklistId] = status;
-    notifyListeners();
-  }
-
-  List<String> _requiredPerPenChecklistIds() {
-    return ChecklistsRepository.availableForArea(
-            OperationalAreasRepository.pecuariaId)
-        .where((c) => c.appliesPerPen)
-        .map((c) => c.id)
-        .toList();
-  }
-
-  bool hasShownInterstitial(String id) => _shownInterstitialIds.contains(id);
-
-  void markInterstitialShown(String id) {
-    _shownInterstitialIds.add(id);
-  }
-
-  void prepareSuccess(
-      {String? title,
-      String? message,
-      required String returnLocation,
-      required String returnLabel,
-      bool isQueued = false}) {
-    _successTitleOverride = title;
-    _successMessageOverride = message;
-    _successReturnLocation = returnLocation;
-    _successReturnLabel = returnLabel;
-    _successIsQueued = isQueued;
-    notifyListeners();
-  }
-
-  /// Clears both the offline checklist run state (area/checklist/responses)
-  /// and the selected operator (including its persisted employee prefs).
+  /// Clears the selected operator, including its persisted employee prefs.
   void resetAll() {
     _selectedOperator = null;
-    _selectedArea = null;
-    _selectedPen = null;
-    _selectedChecklist = null;
-    _operationalResponsible = null;
-    _startedAt = null;
-    _finishedAt = null;
-    _responsesByQuestionId.clear();
-    _observation = null;
-    _penChecklistStatusByPenIdToday.clear();
-    _generalPecuariaChecklistStatusToday.clear();
-    _shownInterstitialIds.clear();
-    _successTitleOverride = null;
-    _successMessageOverride = null;
-    _successReturnLocation = '/';
-    _successReturnLabel = 'Voltar';
-    _successIsQueued = false;
     unawaited(_clearSelectedOperator());
     notifyListeners();
   }
-
-  /// Resets only the current checklist run (mid-flow), keeping the selected
-  /// operator intact.
-  void resetChecklistRunOnly() {
-    _selectedChecklist = null;
-    _startedAt = null;
-    _finishedAt = null;
-    _responsesByQuestionId.clear();
-    _observation = null;
-    _shownInterstitialIds.clear();
-    _successTitleOverride = null;
-    _successMessageOverride = null;
-    _successIsQueued = false;
-    notifyListeners();
-  }
-
-  int countAnswer(String value) =>
-      _responsesByQuestionId.values.where((r) => r.answer == value).length;
-
-  bool hasAnyAdditionalField() =>
-      _responsesByQuestionId.values.any((r) => r.additionalFields.isNotEmpty);
-
-  bool hasAnyPhoto() =>
-      _responsesByQuestionId.values.any((r) => r.photo != null);
-
-  int photoCount() =>
-      _responsesByQuestionId.values.where((r) => r.photo != null).length;
-
-  int alertCount() =>
-      _responsesByQuestionId.values.where((r) => r.generatedAlert).length;
-
-  bool hasAnyAlert() =>
-      _responsesByQuestionId.values.any((r) => r.generatedAlert);
-
-  Map<String, dynamic> buildFinalJson() {
-    final operator = _selectedOperator;
-    final checklist = _selectedChecklist;
-    if (operator == null || checklist == null) {
-      throw StateError('Missing operator/checklist to build final JSON');
-    }
-
-    final started = _startedAt ?? DateTime.now();
-    final finished = _finishedAt ?? DateTime.now();
-
-    final responses = <Map<String, dynamic>>[];
-    for (final q in checklist.questions) {
-      final r = _responsesByQuestionId[q.id];
-      if (r == null) continue;
-
-      final row = <String, dynamic>{
-        'perguntaId': q.id,
-        if ((q.stage ?? '').trim().isNotEmpty) 'etapa': q.stage,
-        if ((q.block ?? '').trim().isNotEmpty) 'bloco': q.block,
-        'pergunta': q.text,
-        'resposta': r.answer,
-      };
-
-      if (r.level != null) {
-        row['nivel'] = {'label': r.level!.label, 'valor': r.level!.value};
-      }
-
-      if (r.generatedAlert) {
-        row['gerouAlerta'] = true;
-      }
-      if (r.additionalFields.isNotEmpty) {
-        final additional = <String, dynamic>{};
-        for (final entry in r.additionalFields.entries) {
-          additional[entry.key] = entry.value.toJson();
-        }
-        row['campoAdicional'] = additional;
-      }
-      if (r.photo != null) {
-        row['foto'] = r.photo!.toJson();
-      }
-      responses.add(row);
-    }
-
-    final observation = _observation;
-
-    final area = _selectedArea;
-    final pen = _selectedPen;
-    final responsible = _operationalResponsible;
-    final totalPhotos = photoCount();
-    final totalAlerts = alertCount();
-    final statusAfterSend = hasAnyAlert() ? 'com_alerta' : 'preenchido';
-
-    final hasQuantidadePorCurral =
-        _responsesByQuestionId['conferiu_quantidade_necessaria_por_curral']
-                ?.additionalFields['quantidade_por_curral'] !=
-            null;
-    final hasVoltagemInformada = _responsesByQuestionId['conferiu_voltagem']
-            ?.additionalFields['valor_voltagem_observada'] !=
-        null;
-    final hasAreaMedida = _responsesByQuestionId['medicao_dentro_padrao']
-            ?.additionalFields['area_medida'] !=
-        null;
-
-    final hasEstadoGeralGado =
-        _responsesByQuestionId['informou_estado_geral_gado']
-                ?.additionalFields['estado_geral_gado'] !=
-            null;
-    final hasOcorrenciaGado =
-        _responsesByQuestionId['registrou_ocorrencia']?.answer == 'sim';
-
-    return {
-      if (area != null) ...{
-        'areaId': area.id,
-        'areaTitulo': area.title,
-      },
-      'checklistId': checklist.id,
-      'checklistTitulo': checklist.title,
-      'aplicacaoPorCurral': checklist.appliesPerPen,
-      if (checklist.appliesPerPen && pen != null)
-        'curral': {'id': pen.id, 'nome': pen.name},
-      if (responsible != null) 'responsavelOperacional': responsible.label,
-      'funcionario': {'id': operator.id, 'nome': operator.name},
-      'dataHoraInicio': _formatIsoWithOffset(started.toLocal()),
-      'dataHoraFim': _formatIsoWithOffset(finished.toLocal()),
-      if ((checklist.periodicity ?? '').trim().isNotEmpty)
-        'periodicidade': checklist.periodicity,
-      'respostas': responses,
-      'observacao': observation == null
-          ? {
-              'possuiObservacao': false,
-              'tipo': null,
-              'arquivoLocal': null,
-              'duracaoSegundos': null,
-            }
-          : {
-              'possuiObservacao': true,
-              'tipo': 'audio',
-              'arquivoLocal': observation.localFile,
-              'duracaoSegundos': observation.durationSeconds,
-            },
-      'resumo': {
-        'totalPerguntasRespondidas': responses.length,
-        'totalAlertas': totalAlerts,
-        'totalFotos': totalPhotos,
-        'statusChecklistAposEnvio': statusAfterSend,
-        if (!checklist.appliesPerPen && hasQuantidadePorCurral)
-          'possuiQuantidadePorCurral': true,
-        if (!checklist.appliesPerPen &&
-            checklist.id == ChecklistsRepository.ultraDensoPecuariaId)
-          'possuiVoltagemInformada': hasVoltagemInformada,
-        if (!checklist.appliesPerPen &&
-            checklist.id == ChecklistsRepository.montagemNovaPastagemPecuariaId)
-          'possuiAreaMedida': hasAreaMedida,
-        if (!checklist.appliesPerPen &&
-            checklist.id == ChecklistsRepository.analiseGadoPecuariaId) ...{
-          'possuiEstadoGeralInformado': hasEstadoGeralGado,
-          'possuiOcorrencia': hasOcorrenciaGado,
-        },
-      },
-      'status': 'pronto_para_envio',
-    };
-  }
-
-  String buildFinalJsonPretty() =>
-      const JsonEncoder.withIndent('  ').convert(buildFinalJson());
-}
-
-String _formatIsoWithOffset(DateTime dt) {
-  String two(int v) => v.toString().padLeft(2, '0');
-
-  final y = dt.year.toString().padLeft(4, '0');
-  final m = two(dt.month);
-  final d = two(dt.day);
-  final hh = two(dt.hour);
-  final mm = two(dt.minute);
-  final ss = two(dt.second);
-
-  final off = dt.timeZoneOffset;
-  final sign = off.isNegative ? '-' : '+';
-  final offAbs = off.abs();
-  final offH = two(offAbs.inHours);
-  final offM = two(offAbs.inMinutes.remainder(60));
-  return '$y-$m-${d}T$hh:$mm:$ss$sign$offH:$offM';
 }

@@ -25,7 +25,11 @@ class MobileApiException implements Exception {
   final String message;
   final List<MobileApiError> errors;
 
-  const MobileApiException({required this.statusCode, required this.message, this.errors = const []});
+  const MobileApiException({
+    required this.statusCode,
+    required this.message,
+    this.errors = const [],
+  });
 
   @override
   String toString() => 'MobileApiException($statusCode): $message';
@@ -38,7 +42,12 @@ class MobileApiEnvelope<T> {
   final String? message;
   final List<MobileApiError> errors;
 
-  const MobileApiEnvelope({required this.success, required this.data, required this.message, required this.errors});
+  const MobileApiEnvelope({
+    required this.success,
+    required this.data,
+    required this.message,
+    required this.errors,
+  });
 }
 
 /// Minimal HTTP client for Fazenda Morro do Peão Mobile API v1.
@@ -54,10 +63,18 @@ class MobileApiClient {
   final Duration uploadTimeout;
   final http.Client _http;
 
-  MobileApiClient({required this.apiBaseUrl, required this.apiKey, this.requestTimeout = const Duration(seconds: 30), this.uploadTimeout = const Duration(seconds: 120), http.Client? httpClient}) : _http = httpClient ?? http.Client();
+  MobileApiClient({
+    required this.apiBaseUrl,
+    required this.apiKey,
+    this.requestTimeout = const Duration(seconds: 30),
+    this.uploadTimeout = const Duration(seconds: 120),
+    http.Client? httpClient,
+  }) : _http = httpClient ?? http.Client();
 
   Uri buildUri(String path, [Map<String, String>? query]) {
-    final base = apiBaseUrl.endsWith('/') ? apiBaseUrl.substring(0, apiBaseUrl.length - 1) : apiBaseUrl;
+    final base = apiBaseUrl.endsWith('/')
+        ? apiBaseUrl.substring(0, apiBaseUrl.length - 1)
+        : apiBaseUrl;
     final cleanPath = path.startsWith('/') ? path : '/$path';
     return Uri.parse('$base$cleanPath').replace(queryParameters: query);
   }
@@ -73,15 +90,29 @@ class MobileApiClient {
     'Authorization': 'Bearer $apiKey',
   };
 
-  Future<MobileApiEnvelope<T>> getJson<T>({required String path, Map<String, String>? query, required T Function(dynamic json) decodeData}) async {
-    final res = await _http.get(buildUri(path, query), headers: _headersAcceptJson()).timeout(requestTimeout);
+  Future<MobileApiEnvelope<T>> getJson<T>({
+    required String path,
+    Map<String, String>? query,
+    required T Function(dynamic json) decodeData,
+  }) async {
+    final res = await _http
+        .get(buildUri(path, query), headers: _headersAcceptJson())
+        .timeout(requestTimeout);
     return _decodeEnvelope<T>(res, decodeData: decodeData);
   }
 
-  Future<MobileApiEnvelope<T>> postJson<T>({required String path, Map<String, String>? query, required Object body, required String idempotencyKey, required T Function(dynamic json) decodeData}) async {
+  Future<MobileApiEnvelope<T>> postJson<T>({
+    required String path,
+    Map<String, String>? query,
+    required Object body,
+    required String idempotencyKey,
+    required T Function(dynamic json) decodeData,
+  }) async {
     final headers = _headersJson();
     headers['Idempotency-Key'] = idempotencyKey;
-    final res = await _http.post(buildUri(path, query), headers: headers, body: jsonEncode(body)).timeout(requestTimeout);
+    final res = await _http
+        .post(buildUri(path, query), headers: headers, body: jsonEncode(body))
+        .timeout(requestTimeout);
     return _decodeEnvelope<T>(res, decodeData: decodeData);
   }
 
@@ -126,23 +157,37 @@ class MobileApiClient {
 
   Future<Uint8List> getBinaryAbsoluteUrl(String url) async {
     final uri = Uri.parse(url);
-    final res = await _http.get(uri, headers: {'Authorization': 'Bearer $apiKey'}).timeout(requestTimeout);
+    final res = await _http
+        .get(uri, headers: {'Authorization': 'Bearer $apiKey'})
+        .timeout(requestTimeout);
     if (res.statusCode >= 200 && res.statusCode < 300) {
       return res.bodyBytes;
     }
-    throw MobileApiException(statusCode: res.statusCode, message: 'Falha ao baixar arquivo (${res.statusCode}).');
+    throw MobileApiException(
+      statusCode: res.statusCode,
+      message: 'Falha ao baixar arquivo (${res.statusCode}).',
+    );
   }
 
-  MobileApiEnvelope<T> _decodeEnvelope<T>(http.Response res, {required T Function(dynamic json) decodeData}) {
+  MobileApiEnvelope<T> _decodeEnvelope<T>(
+    http.Response res, {
+    required T Function(dynamic json) decodeData,
+  }) {
     dynamic decoded;
     try {
       decoded = jsonDecode(utf8.decode(res.bodyBytes));
     } catch (e) {
-      throw MobileApiException(statusCode: res.statusCode, message: 'Resposta inválida do servidor (JSON).');
+      throw MobileApiException(
+        statusCode: res.statusCode,
+        message: 'Resposta inválida do servidor (JSON).',
+      );
     }
 
     if (decoded is! Map) {
-      throw MobileApiException(statusCode: res.statusCode, message: 'Resposta inválida do servidor (envelope).');
+      throw MobileApiException(
+        statusCode: res.statusCode,
+        message: 'Resposta inválida do servidor (envelope).',
+      );
     }
 
     final map = decoded.cast<String, dynamic>();
@@ -161,11 +206,22 @@ class MobileApiClient {
     }
 
     if (!success) {
-      throw MobileApiException(statusCode: res.statusCode, message: message ?? (errors.isNotEmpty ? errors.first.detail : 'Falha na requisição.'), errors: errors);
+      throw MobileApiException(
+        statusCode: res.statusCode,
+        message:
+            message ??
+            (errors.isNotEmpty ? errors.first.detail : 'Falha na requisição.'),
+        errors: errors,
+      );
     }
 
     final data = decodeData(map['data']);
-    return MobileApiEnvelope<T>(success: true, data: data, message: message, errors: errors);
+    return MobileApiEnvelope<T>(
+      success: true,
+      data: data,
+      message: message,
+      errors: errors,
+    );
   }
 
   void dispose() {

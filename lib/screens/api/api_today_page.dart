@@ -1,10 +1,14 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import 'package:morro_do_peo/components/responsive_body.dart';
+import 'package:morro_do_peo/components/sync_indicator.dart';
 import 'package:morro_do_peo/models/mobile_api_models.dart';
+import 'package:morro_do_peo/services/local_cache_service.dart';
 import 'package:morro_do_peo/services/mobile_api_client.dart';
 import 'package:morro_do_peo/services/mobile_api_services.dart';
 import 'package:morro_do_peo/state/app_session.dart';
@@ -18,9 +22,12 @@ class ApiTodayPage extends StatefulWidget {
 }
 
 class _ApiTodayPageState extends State<ApiTodayPage> {
+  static const String _scope = 'today';
+
   bool _loading = true;
   String? _error;
   List<ApiExecutionSummary> _items = const [];
+  bool _fromCache = false;
 
   @override
   void initState() {
@@ -55,30 +62,62 @@ class _ApiTodayPageState extends State<ApiTodayPage> {
     try {
       // The "today" boundary follows the device's local calendar day.
       final ymd = DateFormat('yyyy-MM-dd').format(DateTime.now().toLocal());
-      final res = await api.listExecutions(employeeId: employeeId, dateFrom: ymd, dateTo: ymd, order: 'due_asc', pageSize: 100);
+      final res = await api.listExecutions(
+        employeeId: employeeId,
+        dateFrom: ymd,
+        dateTo: ymd,
+        order: 'due_asc',
+        pageSize: 100,
+      );
 
       final items = res.items;
-      items.sort((a, b) => _statusRank(a.status).compareTo(_statusRank(b.status)));
+      items.sort(
+        (a, b) => _statusRank(a.status).compareTo(_statusRank(b.status)),
+      );
+      unawaited(
+        LocalCacheService.instance.saveExecutions(
+          employeeId,
+          items,
+          scope: _scope,
+        ),
+      );
 
       setState(() {
         _items = items;
+        _fromCache = false;
         _loading = false;
       });
     } on MobileApiException catch (e) {
-      setState(() {
-        _error = e.message;
-        _items = const [];
-        _loading = false;
-      });
+      await _fallBackToCache(employeeId, e.message);
     } catch (_) {
-      setState(() {
-        _error = 'Falha ao carregar.';
-        _items = const [];
-        _loading = false;
-      });
+      await _fallBackToCache(employeeId, 'Falha ao carregar.');
     } finally {
       client.dispose();
     }
+  }
+
+  Future<void> _fallBackToCache(String employeeId, String errorMessage) async {
+    final cached = await LocalCacheService.instance.getExecutions(
+      employeeId,
+      scope: _scope,
+    );
+    if (cached == null) {
+      setState(() {
+        _error = errorMessage;
+        _items = const [];
+        _fromCache = false;
+        _loading = false;
+      });
+      return;
+    }
+    final items = List<ApiExecutionSummary>.from(cached.items)
+      ..sort((a, b) => _statusRank(a.status).compareTo(_statusRank(b.status)));
+    setState(() {
+      _items = items;
+      _fromCache = true;
+      _error = null;
+      _loading = false;
+    });
   }
 
   int _statusRank(String status) {
@@ -110,17 +149,43 @@ class _ApiTodayPageState extends State<ApiTodayPage> {
                   if ((_error ?? '').trim().isNotEmpty) ...[
                     Container(
                       padding: const EdgeInsets.all(AppSpacing.md),
-                      decoration: BoxDecoration(color: theme.colorScheme.errorContainer, borderRadius: BorderRadius.circular(AppRadius.lg)),
-                      child: Text(_error!, style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onErrorContainer, fontWeight: FontWeight.w800)),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.errorContainer,
+                        borderRadius: BorderRadius.circular(AppRadius.lg),
+                      ),
+                      child: Text(
+                        _error!,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.onErrorContainer,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
                     ),
                     const SizedBox(height: AppSpacing.md),
                   ],
                   Row(
                     children: [
-                      Expanded(child: Text('Hoje', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900))),
-                      IconButton(onPressed: _load, icon: Icon(Icons.refresh, color: theme.colorScheme.primary)),
+                      Expanded(
+                        child: Text(
+                          'Hoje',
+                          style: theme.textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: _load,
+                        icon: Icon(
+                          Icons.refresh,
+                          color: theme.colorScheme.primary,
+                        ),
+                      ),
                     ],
                   ),
+                  if (_fromCache) ...[
+                    const SizedBox(height: AppSpacing.sm),
+                    const OfflineIndicator(pendingCount: 0),
+                  ],
                   const SizedBox(height: AppSpacing.sm),
                   if (_items.isEmpty)
                     Expanded(
@@ -128,14 +193,32 @@ class _ApiTodayPageState extends State<ApiTodayPage> {
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.check_circle_outline, size: 54, color: theme.colorScheme.primary),
+                            Icon(
+                              Icons.check_circle_outline,
+                              size: 54,
+                              color: theme.colorScheme.primary,
+                            ),
                             const SizedBox(height: AppSpacing.md),
-                            Text('Nenhum checklist para hoje', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900)),
+                            Text(
+                              'Nenhum checklist para hoje',
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
                             const SizedBox(height: AppSpacing.sm),
                             FilledButton.icon(
                               onPressed: _load,
-                              icon: Icon(Icons.refresh, color: theme.colorScheme.onPrimary),
-                              label: Text('Atualizar', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900, color: theme.colorScheme.onPrimary)),
+                              icon: Icon(
+                                Icons.refresh,
+                                color: theme.colorScheme.onPrimary,
+                              ),
+                              label: Text(
+                                'Atualizar',
+                                style: theme.textTheme.titleSmall?.copyWith(
+                                  fontWeight: FontWeight.w900,
+                                  color: theme.colorScheme.onPrimary,
+                                ),
+                              ),
                             ),
                           ],
                         ),
@@ -145,13 +228,16 @@ class _ApiTodayPageState extends State<ApiTodayPage> {
                     Expanded(
                       child: ListView.separated(
                         itemCount: _items.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.md),
+                        separatorBuilder: (_, __) =>
+                            const SizedBox(height: AppSpacing.md),
                         itemBuilder: (context, i) {
                           final it = _items[i];
                           return _ExecutionCard(
                             item: it,
                             onTap: () async {
-                              final res = await context.push('/api/executions/${it.executionId}');
+                              final res = await context.push(
+                                '/api/executions/${it.executionId}',
+                              );
                               if (res == true) await _load();
                             },
                           );
@@ -174,7 +260,9 @@ class _ExecutionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final due = item.dueAt;
-    final dueText = due == null ? '' : DateFormat('dd/MM HH:mm').format(due.toLocal());
+    final dueText = due == null
+        ? ''
+        : DateFormat('dd/MM HH:mm').format(due.toLocal());
 
     final status = item.status;
     final statusLabel = switch (status) {
@@ -186,10 +274,22 @@ class _ExecutionCard extends StatelessWidget {
     };
 
     final (Color pillBg, Color pillFg, IconData icon) = switch (status) {
-      'completed' => (AppColors.successLight, AppColors.success, Icons.check_circle),
-      'overdue' => (AppColors.errorLight, AppColors.error, Icons.warning_rounded),
+      'completed' => (
+        AppColors.successLight,
+        AppColors.success,
+        Icons.check_circle,
+      ),
+      'overdue' => (
+        AppColors.errorLight,
+        AppColors.error,
+        Icons.warning_rounded,
+      ),
       'in_progress' => (AppColors.infoLight, AppColors.info, Icons.play_circle),
-      _ => (theme.colorScheme.surfaceContainerHighest, theme.colorScheme.onSurfaceVariant, Icons.pending_actions),
+      _ => (
+        theme.colorScheme.surfaceContainerHighest,
+        theme.colorScheme.onSurfaceVariant,
+        Icons.pending_actions,
+      ),
     };
 
     final cta = switch (status) {
@@ -206,14 +306,20 @@ class _ExecutionCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: theme.colorScheme.primary.withValues(alpha: 0.06),
           borderRadius: BorderRadius.circular(AppRadius.xl),
-          border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.22), width: 2),
+          border: Border.all(
+            color: theme.colorScheme.primary.withValues(alpha: 0.22),
+            width: 2,
+          ),
         ),
         child: Row(
           children: [
             Container(
               width: 56,
               height: 56,
-              decoration: BoxDecoration(color: theme.colorScheme.primary, borderRadius: BorderRadius.circular(AppRadius.xl)),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primary,
+                borderRadius: BorderRadius.circular(AppRadius.xl),
+              ),
               child: Icon(icon, color: theme.colorScheme.onPrimary, size: 30),
             ),
             const SizedBox(width: AppSpacing.lg),
@@ -221,25 +327,67 @@ class _ExecutionCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(item.title, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900)),
+                  Text(
+                    item.title,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
                   const SizedBox(height: AppSpacing.xs),
                   if ((item.location ?? '').trim().isNotEmpty)
-                    Text(item.location!, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+                    Text(
+                      item.location!,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
                   const SizedBox(height: AppSpacing.sm),
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                        decoration: BoxDecoration(color: pillBg, borderRadius: BorderRadius.circular(99), border: Border.all(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.6))),
-                        child: Text(statusLabel, style: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w900, color: pillFg)),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: pillBg,
+                          borderRadius: BorderRadius.circular(99),
+                          border: Border.all(
+                            color: theme.colorScheme.outlineVariant.withValues(
+                              alpha: 0.6,
+                            ),
+                          ),
+                        ),
+                        child: Text(
+                          statusLabel,
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            fontWeight: FontWeight.w900,
+                            color: pillFg,
+                          ),
+                        ),
                       ),
                       if (dueText.isNotEmpty)
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                          decoration: BoxDecoration(color: theme.colorScheme.surfaceContainerHighest, borderRadius: BorderRadius.circular(99), border: Border.all(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.6))),
-                          child: Text('Até: $dueText', style: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w900)),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.surfaceContainerHighest,
+                            borderRadius: BorderRadius.circular(99),
+                            border: Border.all(
+                              color: theme.colorScheme.outlineVariant
+                                  .withValues(alpha: 0.6),
+                            ),
+                          ),
+                          child: Text(
+                            'Até: $dueText',
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
                         ),
                     ],
                   ),
@@ -250,9 +398,19 @@ class _ExecutionCard extends StatelessWidget {
             Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(cta, style: theme.textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w900, color: theme.colorScheme.primary)),
+                Text(
+                  cta,
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    fontWeight: FontWeight.w900,
+                    color: theme.colorScheme.primary,
+                  ),
+                ),
                 const SizedBox(height: 6),
-                Icon(Icons.arrow_forward_ios, color: theme.colorScheme.primary, size: 18),
+                Icon(
+                  Icons.arrow_forward_ios,
+                  color: theme.colorScheme.primary,
+                  size: 18,
+                ),
               ],
             ),
           ],

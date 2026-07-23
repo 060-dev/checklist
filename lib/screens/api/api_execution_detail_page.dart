@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' as http;
@@ -7,7 +9,9 @@ import 'package:uuid/uuid.dart';
 
 import 'package:morro_do_peo/components/inline_audio_recorder.dart';
 import 'package:morro_do_peo/components/responsive_body.dart';
+import 'package:morro_do_peo/components/sync_indicator.dart';
 import 'package:morro_do_peo/models/mobile_api_models.dart';
+import 'package:morro_do_peo/services/local_cache_service.dart';
 import 'package:morro_do_peo/services/mobile_api_client.dart';
 import 'package:morro_do_peo/services/mobile_api_services.dart';
 import 'package:morro_do_peo/services/private_audio_player.dart';
@@ -28,6 +32,7 @@ class _ApiExecutionDetailPageState extends State<ApiExecutionDetailPage> {
   bool _mutating = false;
   String? _error;
   ApiExecutionDetail? _detail;
+  bool _fromCache = false;
 
   // Simple checklist state.
   bool? _simpleBoolean;
@@ -142,24 +147,50 @@ class _ApiExecutionDetailPageState extends State<ApiExecutionDetailPage> {
         employeeId: employeeId,
         executionId: widget.executionId,
       );
+      unawaited(
+        LocalCacheService.instance.saveExecutionDetail(
+          employeeId,
+          widget.executionId,
+          detail.raw,
+        ),
+      );
       setState(() {
         _detail = detail;
+        _fromCache = false;
         _bootstrapForm(detail);
         _loading = false;
       });
     } on MobileApiException catch (e) {
-      setState(() {
-        _error = e.message;
-        _loading = false;
-      });
+      await _fallBackToCache(employeeId, e.message);
     } catch (e) {
-      setState(() {
-        _error = 'Falha ao carregar execução.';
-        _loading = false;
-      });
+      await _fallBackToCache(employeeId, 'Falha ao carregar execução.');
     } finally {
       client.dispose();
     }
+  }
+
+  Future<void> _fallBackToCache(String employeeId, String errorMessage) async {
+    final cached = await LocalCacheService.instance.getExecutionDetail(
+      employeeId,
+      widget.executionId,
+    );
+    if (cached == null) {
+      setState(() {
+        _error = errorMessage;
+        _fromCache = false;
+        _loading = false;
+      });
+      return;
+    }
+    final (_, raw) = cached;
+    final detail = ApiExecutionDetail(raw);
+    setState(() {
+      _detail = detail;
+      _fromCache = true;
+      _error = null;
+      _bootstrapForm(detail);
+      _loading = false;
+    });
   }
 
   void _bootstrapForm(ApiExecutionDetail d) {
@@ -668,6 +699,10 @@ class _ApiExecutionDetailPageState extends State<ApiExecutionDetailPage> {
                           ),
                         ),
                       ),
+                      const SizedBox(height: AppSpacing.md),
+                    ],
+                    if (_fromCache) ...[
+                      const OfflineIndicator(pendingCount: 0),
                       const SizedBox(height: AppSpacing.md),
                     ],
                     if (d != null) ...[

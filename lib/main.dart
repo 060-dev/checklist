@@ -9,9 +9,9 @@ import 'package:provider/provider.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Connectivity.instance.init();
-  await OfflineQueueService.instance.init(sendAttempt: (_, __) async {});
   // Note: `sendApiMutation` isn't wired yet — Mobile API v1 mutation sending
   // is a follow-up step (see OfflineQueueService.enqueueApiMutation).
+  await OfflineQueueService.instance.init();
   runApp(const MorroDoPeaoApp());
 }
 

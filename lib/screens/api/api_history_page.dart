@@ -1,10 +1,14 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import 'package:morro_do_peo/components/responsive_body.dart';
+import 'package:morro_do_peo/components/sync_indicator.dart';
 import 'package:morro_do_peo/models/mobile_api_models.dart';
+import 'package:morro_do_peo/services/local_cache_service.dart';
 import 'package:morro_do_peo/services/mobile_api_client.dart';
 import 'package:morro_do_peo/services/mobile_api_services.dart';
 import 'package:morro_do_peo/state/app_session.dart';
@@ -18,9 +22,12 @@ class ApiHistoryPage extends StatefulWidget {
 }
 
 class _ApiHistoryPageState extends State<ApiHistoryPage> {
+  static const String _scope = 'history';
+
   bool _loading = true;
   String? _error;
   List<ApiExecutionSummary> _items = const [];
+  bool _fromCache = false;
 
   @override
   void initState() {
@@ -58,27 +65,56 @@ class _ApiHistoryPageState extends State<ApiHistoryPage> {
       final dateFrom = DateFormat('yyyy-MM-dd').format(from);
       final dateTo = DateFormat('yyyy-MM-dd').format(now);
 
-      final res = await api.listExecutions(employeeId: employeeId, status: 'completed', dateFrom: dateFrom, dateTo: dateTo, order: 'due_desc', pageSize: 100);
+      final res = await api.listExecutions(
+        employeeId: employeeId,
+        status: 'completed',
+        dateFrom: dateFrom,
+        dateTo: dateTo,
+        order: 'due_desc',
+        pageSize: 100,
+      );
+      unawaited(
+        LocalCacheService.instance.saveExecutions(
+          employeeId,
+          res.items,
+          scope: _scope,
+        ),
+      );
 
       setState(() {
         _items = res.items;
+        _fromCache = false;
         _loading = false;
       });
     } on MobileApiException catch (e) {
-      setState(() {
-        _error = e.message;
-        _items = const [];
-        _loading = false;
-      });
+      await _fallBackToCache(employeeId, e.message);
     } catch (_) {
-      setState(() {
-        _error = 'Falha ao carregar.';
-        _items = const [];
-        _loading = false;
-      });
+      await _fallBackToCache(employeeId, 'Falha ao carregar.');
     } finally {
       client.dispose();
     }
+  }
+
+  Future<void> _fallBackToCache(String employeeId, String errorMessage) async {
+    final cached = await LocalCacheService.instance.getExecutions(
+      employeeId,
+      scope: _scope,
+    );
+    if (cached == null) {
+      setState(() {
+        _error = errorMessage;
+        _items = const [];
+        _fromCache = false;
+        _loading = false;
+      });
+      return;
+    }
+    setState(() {
+      _items = cached.items;
+      _fromCache = true;
+      _error = null;
+      _loading = false;
+    });
   }
 
   @override
@@ -95,17 +131,43 @@ class _ApiHistoryPageState extends State<ApiHistoryPage> {
                   if ((_error ?? '').trim().isNotEmpty) ...[
                     Container(
                       padding: const EdgeInsets.all(AppSpacing.md),
-                      decoration: BoxDecoration(color: theme.colorScheme.errorContainer, borderRadius: BorderRadius.circular(AppRadius.lg)),
-                      child: Text(_error!, style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onErrorContainer, fontWeight: FontWeight.w800)),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.errorContainer,
+                        borderRadius: BorderRadius.circular(AppRadius.lg),
+                      ),
+                      child: Text(
+                        _error!,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.onErrorContainer,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
                     ),
                     const SizedBox(height: AppSpacing.md),
                   ],
                   Row(
                     children: [
-                      Expanded(child: Text('Histórico', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900))),
-                      IconButton(onPressed: _load, icon: Icon(Icons.refresh, color: theme.colorScheme.primary)),
+                      Expanded(
+                        child: Text(
+                          'Histórico',
+                          style: theme.textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: _load,
+                        icon: Icon(
+                          Icons.refresh,
+                          color: theme.colorScheme.primary,
+                        ),
+                      ),
                     ],
                   ),
+                  if (_fromCache) ...[
+                    const SizedBox(height: AppSpacing.sm),
+                    const OfflineIndicator(pendingCount: 0),
+                  ],
                   const SizedBox(height: AppSpacing.sm),
                   if (_items.isEmpty)
                     Expanded(
@@ -113,11 +175,25 @@ class _ApiHistoryPageState extends State<ApiHistoryPage> {
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.history, size: 54, color: theme.colorScheme.primary),
+                            Icon(
+                              Icons.history,
+                              size: 54,
+                              color: theme.colorScheme.primary,
+                            ),
                             const SizedBox(height: AppSpacing.md),
-                            Text('Nada enviado ainda', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900)),
+                            Text(
+                              'Nada enviado ainda',
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
                             const SizedBox(height: AppSpacing.sm),
-                            Text('Os checklists concluídos aparecem aqui.', style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+                            Text(
+                              'Os checklists concluídos aparecem aqui.',
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -126,10 +202,16 @@ class _ApiHistoryPageState extends State<ApiHistoryPage> {
                     Expanded(
                       child: ListView.separated(
                         itemCount: _items.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.md),
+                        separatorBuilder: (_, __) =>
+                            const SizedBox(height: AppSpacing.md),
                         itemBuilder: (context, i) {
                           final it = _items[i];
-                          return _HistoryCard(item: it, onTap: () => context.push('/api/executions/${it.executionId}'));
+                          return _HistoryCard(
+                            item: it,
+                            onTap: () => context.push(
+                              '/api/executions/${it.executionId}',
+                            ),
+                          );
                         },
                       ),
                     ),
@@ -149,7 +231,9 @@ class _HistoryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final due = item.dueAt;
-    final dueText = due == null ? '' : DateFormat('dd/MM HH:mm').format(due.toLocal());
+    final dueText = due == null
+        ? ''
+        : DateFormat('dd/MM HH:mm').format(due.toLocal());
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
@@ -158,14 +242,20 @@ class _HistoryCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppColors.successLight,
           borderRadius: BorderRadius.circular(AppRadius.xl),
-          border: Border.all(color: AppColors.success.withValues(alpha: 0.25), width: 2),
+          border: Border.all(
+            color: AppColors.success.withValues(alpha: 0.25),
+            width: 2,
+          ),
         ),
         child: Row(
           children: [
             Container(
               width: 56,
               height: 56,
-              decoration: BoxDecoration(color: AppColors.success, borderRadius: BorderRadius.circular(AppRadius.xl)),
+              decoration: BoxDecoration(
+                color: AppColors.success,
+                borderRadius: BorderRadius.circular(AppRadius.xl),
+              ),
               child: const Icon(Icons.check, color: Colors.white, size: 30),
             ),
             const SizedBox(width: AppSpacing.lg),
@@ -173,20 +263,33 @@ class _HistoryCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(item.title, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900, color: AppColors.textPrimary)),
+                  Text(
+                    item.title,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w900,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
                   const SizedBox(height: AppSpacing.xs),
                   Text(
                     [
-                      if ((item.location ?? '').trim().isNotEmpty) item.location!.trim(),
+                      if ((item.location ?? '').trim().isNotEmpty)
+                        item.location!.trim(),
                       if (dueText.isNotEmpty) 'Data: $dueText',
                     ].join(' · '),
-                    style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
                   ),
                 ],
               ),
             ),
             const SizedBox(width: AppSpacing.md),
-            Icon(Icons.arrow_forward_ios, color: theme.colorScheme.primary, size: 20),
+            Icon(
+              Icons.arrow_forward_ios,
+              color: theme.colorScheme.primary,
+              size: 20,
+            ),
           ],
         ),
       ),
