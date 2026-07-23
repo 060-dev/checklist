@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:morro_do_peo/screens/home_page.dart';
+import 'package:morro_do_peo/screens/welcome_page.dart';
 import 'package:morro_do_peo/screens/operator_selection_page.dart';
-import 'package:morro_do_peo/screens/api/api_checklists_page.dart';
-import 'package:morro_do_peo/screens/api/api_home_page.dart';
-import 'package:morro_do_peo/screens/api/api_execution_detail_page.dart';
-import 'package:morro_do_peo/screens/api/api_occurrence_detail_page.dart';
-import 'package:morro_do_peo/screens/api/api_create_occurrence_page.dart';
+import 'package:morro_do_peo/screens/checklists_page.dart';
+import 'package:morro_do_peo/screens/home_page.dart';
+import 'package:morro_do_peo/screens/execution_detail_page.dart';
+import 'package:morro_do_peo/screens/occurrence_detail_page.dart';
+import 'package:morro_do_peo/screens/create_occurrence_page.dart';
 import 'package:morro_do_peo/state/app_session.dart';
 
 class AppRouter {
