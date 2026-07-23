@@ -13,14 +13,14 @@ import 'package:morro_do_peo/services/mobile_api_services.dart';
 import 'package:morro_do_peo/state/app_session.dart';
 import 'package:morro_do_peo/theme.dart';
 
-class ApiOccurrencesPage extends StatefulWidget {
-  const ApiOccurrencesPage({super.key});
+class OccurrencesPage extends StatefulWidget {
+  const OccurrencesPage({super.key});
 
   @override
-  State<ApiOccurrencesPage> createState() => _ApiOccurrencesPageState();
+  State<OccurrencesPage> createState() => _OccurrencesPageState();
 }
 
-class _ApiOccurrencesPageState extends State<ApiOccurrencesPage> {
+class _OccurrencesPageState extends State<OccurrencesPage> {
   bool _loading = true;
   String? _error;
   List<ApiOccurrenceSummary> _items = const [];
@@ -133,14 +133,6 @@ class _ApiOccurrencesPageState extends State<ApiOccurrencesPage> {
                   ],
                   Row(
                     children: [
-                      Expanded(
-                        child: Text(
-                          'Ocorrências',
-                          style: theme.textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                      ),
                       DropdownButton<String>(
                         value: _statusFilter,
                         items: const [

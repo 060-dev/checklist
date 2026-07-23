@@ -22,15 +22,15 @@ import 'package:morro_do_peo/services/tts_service.dart';
 import 'package:morro_do_peo/state/app_session.dart';
 import 'package:morro_do_peo/theme.dart';
 
-class ApiExecutionDetailPage extends StatefulWidget {
+class ExecutionDetailPage extends StatefulWidget {
   final String executionId;
-  const ApiExecutionDetailPage({super.key, required this.executionId});
+  const ExecutionDetailPage({super.key, required this.executionId});
 
   @override
-  State<ApiExecutionDetailPage> createState() => _ApiExecutionDetailPageState();
+  State<ExecutionDetailPage> createState() => _ExecutionDetailPageState();
 }
 
-class _ApiExecutionDetailPageState extends State<ApiExecutionDetailPage> {
+class _ExecutionDetailPageState extends State<ExecutionDetailPage> {
   bool _loading = true;
   bool _mutating = false;
   String? _error;

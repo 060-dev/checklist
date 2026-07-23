@@ -14,14 +14,14 @@ import 'package:morro_do_peo/services/mobile_api_services.dart';
 import 'package:morro_do_peo/state/app_session.dart';
 import 'package:morro_do_peo/theme.dart';
 
-class ApiHistoryPage extends StatefulWidget {
-  const ApiHistoryPage({super.key});
+class HistoryPage extends StatefulWidget {
+  const HistoryPage({super.key});
 
   @override
-  State<ApiHistoryPage> createState() => _ApiHistoryPageState();
+  State<HistoryPage> createState() => _HistoryPageState();
 }
 
-class _ApiHistoryPageState extends State<ApiHistoryPage> {
+class _HistoryPageState extends State<HistoryPage> {
   static const String _scope = 'history';
 
   bool _loading = true;

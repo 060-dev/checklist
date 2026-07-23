@@ -14,15 +14,15 @@ import 'package:morro_do_peo/services/private_audio_player.dart';
 import 'package:morro_do_peo/state/app_session.dart';
 import 'package:morro_do_peo/theme.dart';
 
-class ApiOccurrenceDetailPage extends StatefulWidget {
+class OccurrenceDetailPage extends StatefulWidget {
   final String occurrenceId;
-  const ApiOccurrenceDetailPage({super.key, required this.occurrenceId});
+  const OccurrenceDetailPage({super.key, required this.occurrenceId});
 
   @override
-  State<ApiOccurrenceDetailPage> createState() => _ApiOccurrenceDetailPageState();
+  State<OccurrenceDetailPage> createState() => _OccurrenceDetailPageState();
 }
 
-class _ApiOccurrenceDetailPageState extends State<ApiOccurrenceDetailPage> {
+class _OccurrenceDetailPageState extends State<OccurrenceDetailPage> {
   bool _loading = true;
   bool _mutating = false;
   String? _error;

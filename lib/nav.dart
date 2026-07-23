@@ -25,7 +25,7 @@ class AppRouter {
           GoRoute(
             path: AppRoutes.home,
             name: 'home',
-            pageBuilder: (context, state) => const NoTransitionPage(child: HomePage()),
+            pageBuilder: (context, state) => const NoTransitionPage(child: WelcomePage()),
           ),
           GoRoute(
             path: AppRoutes.collaborators,
@@ -41,7 +41,7 @@ class AppRouter {
             path: AppRoutes.apiHome,
             name: 'apiHome',
             pageBuilder: (context, state) => CustomTransitionPage(
-              child: const ApiHomePage(),
+              child: const HomePage(),
               transitionsBuilder: _slideTransition,
             ),
           ),
@@ -50,7 +50,7 @@ class AppRouter {
             name: 'apiAssignmentDetail',
             pageBuilder: (context, state) {
               final id = state.pathParameters['assignmentId'] ?? '';
-              return CustomTransitionPage(child: ApiAssignmentDetailPage(assignmentId: id), transitionsBuilder: _slideTransition);
+              return CustomTransitionPage(child: AssignmentDetailPage(assignmentId: id), transitionsBuilder: _slideTransition);
             },
           ),
           GoRoute(
@@ -58,7 +58,7 @@ class AppRouter {
             name: 'apiExecutionDetail',
             pageBuilder: (context, state) {
               final id = state.pathParameters['executionId'] ?? '';
-              return CustomTransitionPage(child: ApiExecutionDetailPage(executionId: id), transitionsBuilder: _slideTransition);
+              return CustomTransitionPage(child: ExecutionDetailPage(executionId: id), transitionsBuilder: _slideTransition);
             },
           ),
           GoRoute(
@@ -66,13 +66,13 @@ class AppRouter {
             name: 'apiOccurrenceDetail',
             pageBuilder: (context, state) {
               final id = state.pathParameters['occurrenceId'] ?? '';
-              return CustomTransitionPage(child: ApiOccurrenceDetailPage(occurrenceId: id), transitionsBuilder: _slideTransition);
+              return CustomTransitionPage(child: OccurrenceDetailPage(occurrenceId: id), transitionsBuilder: _slideTransition);
             },
           ),
           GoRoute(
             path: AppRoutes.apiOccurrenceNew,
             name: 'apiOccurrenceNew',
-            pageBuilder: (context, state) => CustomTransitionPage(child: const ApiCreateOccurrencePage(), transitionsBuilder: _slideTransition),
+            pageBuilder: (context, state) => CustomTransitionPage(child: const CreateOccurrencePage(), transitionsBuilder: _slideTransition),
           ),
         ],
       );

@@ -14,14 +14,14 @@ import 'package:morro_do_peo/services/mobile_api_services.dart';
 import 'package:morro_do_peo/state/app_session.dart';
 import 'package:morro_do_peo/theme.dart';
 
-class ApiTodayPage extends StatefulWidget {
-  const ApiTodayPage({super.key});
+class TodayPage extends StatefulWidget {
+  const TodayPage({super.key});
 
   @override
-  State<ApiTodayPage> createState() => _ApiTodayPageState();
+  State<TodayPage> createState() => _TodayPageState();
 }
 
-class _ApiTodayPageState extends State<ApiTodayPage> {
+class _TodayPageState extends State<TodayPage> {
   static const String _scope = 'today';
 
   bool _loading = true;

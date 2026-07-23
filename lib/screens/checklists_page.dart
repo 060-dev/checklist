@@ -13,14 +13,14 @@ import 'package:morro_do_peo/services/mobile_api_services.dart';
 import 'package:morro_do_peo/state/app_session.dart';
 import 'package:morro_do_peo/theme.dart';
 
-class ApiChecklistsPage extends StatefulWidget {
-  const ApiChecklistsPage({super.key});
+class ChecklistsPage extends StatefulWidget {
+  const ChecklistsPage({super.key});
 
   @override
-  State<ApiChecklistsPage> createState() => _ApiChecklistsPageState();
+  State<ChecklistsPage> createState() => _ChecklistsPageState();
 }
 
-class _ApiChecklistsPageState extends State<ApiChecklistsPage> {
+class _ChecklistsPageState extends State<ChecklistsPage> {
   bool _loading = true;
   String? _error;
   List<ApiChecklistAssignment> _items = const [];
@@ -314,16 +314,16 @@ class _Pill extends StatelessWidget {
   }
 }
 
-class ApiAssignmentDetailPage extends StatefulWidget {
+class AssignmentDetailPage extends StatefulWidget {
   final String assignmentId;
-  const ApiAssignmentDetailPage({super.key, required this.assignmentId});
+  const AssignmentDetailPage({super.key, required this.assignmentId});
 
   @override
-  State<ApiAssignmentDetailPage> createState() =>
-      _ApiAssignmentDetailPageState();
+  State<AssignmentDetailPage> createState() =>
+      _AssignmentDetailPageState();
 }
 
-class _ApiAssignmentDetailPageState extends State<ApiAssignmentDetailPage> {
+class _AssignmentDetailPageState extends State<AssignmentDetailPage> {
   bool _loading = true;
   String? _error;
   Map<String, dynamic>? _data;

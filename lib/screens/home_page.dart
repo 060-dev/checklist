@@ -7,14 +7,14 @@ import 'package:morro_do_peo/screens/occurrences_page.dart';
 import 'package:morro_do_peo/screens/today_page.dart';
 import 'package:morro_do_peo/state/app_session.dart';
 
-class ApiHomePage extends StatefulWidget {
-  const ApiHomePage({super.key});
+class HomePage extends StatefulWidget {
+  const HomePage({super.key});
 
   @override
-  State<ApiHomePage> createState() => _ApiHomePageState();
+  State<HomePage> createState() => _HomePageState();
 }
 
-class _ApiHomePageState extends State<ApiHomePage> {
+class _HomePageState extends State<HomePage> {
   int _index = 0;
 
   @override
@@ -23,7 +23,7 @@ class _ApiHomePageState extends State<ApiHomePage> {
     final session = context.watch<AppSession>();
     final op = session.selectedOperator;
 
-    final pages = const [ApiTodayPage(), ApiHistoryPage(), ApiOccurrencesPage()];
+    final pages = const [TodayPage(), HistoryPage(), OccurrencesPage()];
     final titles = const ['Hoje', 'Histórico', 'Ocorrências'];
 
     Future<void> confirmChangePerson() async {

@@ -9,14 +9,15 @@ import 'package:morro_do_peo/services/mobile_api_services.dart';
 import 'package:morro_do_peo/state/app_session.dart';
 import 'package:morro_do_peo/theme.dart';
 
-class ApiCreateOccurrencePage extends StatefulWidget {
-  const ApiCreateOccurrencePage({super.key});
+class CreateOccurrencePage extends StatefulWidget {
+  const CreateOccurrencePage({super.key});
 
   @override
-  State<ApiCreateOccurrencePage> createState() => _ApiCreateOccurrencePageState();
+  State<CreateOccurrencePage> createState() =>
+      _CreateOccurrencePageState();
 }
 
-class _ApiCreateOccurrencePageState extends State<ApiCreateOccurrencePage> {
+class _CreateOccurrencePageState extends State<CreateOccurrencePage> {
   bool _submitting = false;
   String? _error;
 
@@ -36,13 +37,27 @@ class _ApiCreateOccurrencePageState extends State<ApiCreateOccurrencePage> {
 
   Future<void> _pickDueAt() async {
     final now = DateTime.now();
-    final date = await showDatePicker(context: context, firstDate: now, lastDate: now.add(const Duration(days: 365)), initialDate: _dueAt ?? now);
+    final date = await showDatePicker(
+      context: context,
+      firstDate: now,
+      lastDate: now.add(const Duration(days: 365)),
+      initialDate: _dueAt ?? now,
+    );
     if (date == null) return;
     if (!mounted) return;
-    final time = await showTimePicker(context: context, initialTime: TimeOfDay.fromDateTime(_dueAt ?? now));
+    final time = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(_dueAt ?? now),
+    );
     if (time == null) return;
     setState(() {
-      _dueAt = DateTime(date.year, date.month, date.day, time.hour, time.minute);
+      _dueAt = DateTime(
+        date.year,
+        date.month,
+        date.day,
+        time.hour,
+        time.minute,
+      );
     });
   }
 
@@ -105,9 +120,16 @@ class _ApiCreateOccurrencePageState extends State<ApiCreateOccurrencePage> {
     );
     final api = MobileApiServices(client: client);
     try {
-      final created = await api.createOccurrence(employeeId: employeeId, idempotencyKey: const Uuid().v4(), payload: payload);
+      final created = await api.createOccurrence(
+        employeeId: employeeId,
+        idempotencyKey: const Uuid().v4(),
+        payload: payload,
+      );
       if (!mounted) return;
-      final newId = (created['occurrence_id'] as num?)?.toString() ?? (created['id'] as num?)?.toString() ?? '';
+      final newId =
+          (created['occurrence_id'] as num?)?.toString() ??
+          (created['id'] as num?)?.toString() ??
+          '';
       context.pop(newId.isNotEmpty ? newId : true);
     } on MobileApiException catch (e) {
       setState(() => _error = e.message);
@@ -123,11 +145,16 @@ class _ApiCreateOccurrencePageState extends State<ApiCreateOccurrencePage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final dueLabel = _dueAt == null ? 'Selecionar prazo' : _dueAt!.toLocal().toIso8601String();
+    final dueLabel = _dueAt == null
+        ? 'Selecionar prazo'
+        : _dueAt!.toLocal().toIso8601String();
 
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(icon: const Icon(Icons.arrow_back, size: 28), onPressed: () => context.pop()),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, size: 28),
+          onPressed: () => context.pop(),
+        ),
         title: const Text('Nova ocorrência'),
       ),
       body: SafeArea(
@@ -139,16 +166,39 @@ class _ApiCreateOccurrencePageState extends State<ApiCreateOccurrencePage> {
               if ((_error ?? '').trim().isNotEmpty) ...[
                 Container(
                   padding: const EdgeInsets.all(AppSpacing.md),
-                  decoration: BoxDecoration(color: theme.colorScheme.errorContainer, borderRadius: BorderRadius.circular(AppRadius.lg)),
-                  child: Text(_error!, style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onErrorContainer, fontWeight: FontWeight.w700)),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.errorContainer,
+                    borderRadius: BorderRadius.circular(AppRadius.lg),
+                  ),
+                  child: Text(
+                    _error!,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.onErrorContainer,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                 ),
                 const SizedBox(height: AppSpacing.md),
               ],
-              TextField(controller: _title, textInputAction: TextInputAction.next, decoration: const InputDecoration(labelText: 'Título')),
+              TextField(
+                controller: _title,
+                textInputAction: TextInputAction.next,
+                decoration: const InputDecoration(labelText: 'Título'),
+              ),
               const SizedBox(height: AppSpacing.md),
-              TextField(controller: _description, textInputAction: TextInputAction.next, minLines: 2, maxLines: 4, decoration: const InputDecoration(labelText: 'Descrição')),
+              TextField(
+                controller: _description,
+                textInputAction: TextInputAction.next,
+                minLines: 2,
+                maxLines: 4,
+                decoration: const InputDecoration(labelText: 'Descrição'),
+              ),
               const SizedBox(height: AppSpacing.md),
-              TextField(controller: _location, textInputAction: TextInputAction.next, decoration: const InputDecoration(labelText: 'Local')),
+              TextField(
+                controller: _location,
+                textInputAction: TextInputAction.next,
+                decoration: const InputDecoration(labelText: 'Local'),
+              ),
               const SizedBox(height: AppSpacing.md),
               DropdownButtonFormField<String>(
                 initialValue: _priority,
@@ -172,9 +222,29 @@ class _ApiCreateOccurrencePageState extends State<ApiCreateOccurrencePage> {
                 height: 60,
                 child: FilledButton.icon(
                   onPressed: _submitting ? null : _submit,
-                  style: FilledButton.styleFrom(backgroundColor: theme.colorScheme.primary, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.xl))),
-                  icon: _submitting ? SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: theme.colorScheme.onPrimary)) : Icon(Icons.send, color: theme.colorScheme.onPrimary),
-                  label: Text('Criar ocorrência', style: theme.textTheme.titleMedium?.copyWith(color: theme.colorScheme.onPrimary, fontWeight: FontWeight.w900)),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: theme.colorScheme.primary,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppRadius.xl),
+                    ),
+                  ),
+                  icon: _submitting
+                      ? SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: theme.colorScheme.onPrimary,
+                          ),
+                        )
+                      : Icon(Icons.send, color: theme.colorScheme.onPrimary),
+                  label: Text(
+                    'Criar ocorrência',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      color: theme.colorScheme.onPrimary,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
                 ),
               ),
             ],
