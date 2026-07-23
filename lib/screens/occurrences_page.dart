@@ -132,6 +132,7 @@ class _OccurrencesPageState extends State<OccurrencesPage> {
                     const SizedBox(height: AppSpacing.md),
                   ],
                   Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       DropdownButton<String>(
                         value: _statusFilter,
@@ -159,30 +160,37 @@ class _OccurrencesPageState extends State<OccurrencesPage> {
                           await _load();
                         },
                       ),
-                      IconButton(
-                        onPressed: _load,
-                        icon: Icon(
-                          Icons.refresh,
-                          color: theme.colorScheme.primary,
-                        ),
-                      ),
-                      IconButton(
-                        onPressed: () async {
-                          final res = await context.push(
-                            '/api/occurrences/new',
-                          );
-                          if (res is String && res.isNotEmpty) {
-                            await _load();
-                            if (mounted) {
-                              await context.push('/api/occurrences/$res');
-                            }
-                          } else if (res == true) {
-                            await _load();
-                          }
-                        },
-                        icon: Icon(
-                          Icons.add_circle_outline,
-                          color: theme.colorScheme.primary,
+                      Expanded(
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            IconButton(
+                              onPressed: _load,
+                              icon: Icon(
+                                Icons.refresh,
+                                color: theme.colorScheme.primary,
+                              ),
+                            ),
+                            IconButton(
+                              onPressed: () async {
+                                final res = await context.push(
+                                  '/api/occurrences/new',
+                                );
+                                if (res is String && res.isNotEmpty) {
+                                  await _load();
+                                  if (mounted) {
+                                    await context.push('/api/occurrences/$res');
+                                  }
+                                } else if (res == true) {
+                                  await _load();
+                                }
+                              },
+                              icon: Icon(
+                                Icons.add_circle_outline,
+                                color: theme.colorScheme.primary,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],

@@ -253,7 +253,7 @@ class MobileApiServices {
     return env.data ?? const <String, dynamic>{};
   }
 
-  Future<Map<String, dynamic>> attachOccurrenceImage({required String employeeId, required String occurrenceId, required String idempotencyKey, required http.MultipartFile file}) async {
+  Future<Map<String, dynamic>> attachOccurrenceFile({required String employeeId, required String occurrenceId, required String idempotencyKey, required http.MultipartFile file}) async {
     final env = await client.postMultipart<Map<String, dynamic>>(
       path: '/employees/$employeeId/occurrences/$occurrenceId/attachments',
       idempotencyKey: idempotencyKey,

@@ -7,9 +7,9 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
-import 'package:video_player/video_player.dart';
 
 import 'package:morro_do_peo/components/inline_audio_recorder.dart';
+import 'package:morro_do_peo/components/media_preview.dart';
 import 'package:morro_do_peo/components/media_source_sheet.dart';
 import 'package:morro_do_peo/components/responsive_body.dart';
 import 'package:morro_do_peo/components/sync_indicator.dart';
@@ -1710,48 +1710,6 @@ class _QuestionCard extends StatelessWidget {
   }
 }
 
-String _absoluteMediaUrl({required String origin, required String url}) {
-  final u = url.trim();
-  if (u.startsWith('http://') || u.startsWith('https://')) return u;
-  final o = origin.trim();
-  if (o.isEmpty) return u;
-  return o.endsWith('/') ? '${o.substring(0, o.length - 1)}${u.startsWith('/') ? u : '/$u'}' : '$o${u.startsWith('/') ? u : '/$u'}';
-}
-
-void _showFullscreenImage(BuildContext context, {required String url, required Map<String, String> headers}) {
-  showDialog<void>(
-    context: context,
-    barrierColor: Colors.black87,
-    builder: (context) => Dialog(
-      insetPadding: EdgeInsets.zero,
-      backgroundColor: Colors.transparent,
-      child: Stack(
-        children: [
-          Positioned.fill(
-            child: InteractiveViewer(
-              child: Center(
-                child: Image.network(
-                  url,
-                  headers: headers,
-                  errorBuilder: (context, error, stack) => const Icon(Icons.broken_image, color: Colors.white, size: 64),
-                ),
-              ),
-            ),
-          ),
-          Positioned(
-            top: AppSpacing.lg,
-            right: AppSpacing.lg,
-            child: IconButton(
-              onPressed: () => Navigator.of(context).pop(),
-              icon: const Icon(Icons.close, color: Colors.white, size: 32),
-            ),
-          ),
-        ],
-      ),
-    ),
-  );
-}
-
 /// Read-only summary shown once an execution's status is `completed` — no
 /// inputs, no evidence pickers, just what was actually submitted.
 class _CompletedExecutionView extends StatelessWidget {
@@ -2084,12 +2042,12 @@ class _EvidenceThumb extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final absUrl = _absoluteMediaUrl(origin: origin, url: evidence.url);
+    final absUrl = absoluteMediaUrl(origin: origin, url: evidence.url);
 
     switch (evidence.kind) {
       case 'photo':
         return GestureDetector(
-          onTap: () => _showFullscreenImage(context, url: absUrl, headers: authHeaders),
+          onTap: () => showFullscreenImage(context, url: absUrl, headers: authHeaders),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(AppRadius.lg),
             child: Image.network(
@@ -2117,7 +2075,7 @@ class _EvidenceThumb extends StatelessWidget {
           label: Text('Reproduzir áudio', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800)),
         );
       case 'video':
-        return _EvidenceVideoPlayer(url: absUrl, headers: authHeaders);
+        return EvidenceVideoPlayer(url: absUrl, headers: authHeaders);
       default:
         return Container(
           padding: const EdgeInsets.all(AppSpacing.md),
@@ -2134,94 +2092,3 @@ class _EvidenceThumb extends StatelessWidget {
   }
 }
 
-class _EvidenceVideoPlayer extends StatefulWidget {
-  final String url;
-  final Map<String, String> headers;
-  const _EvidenceVideoPlayer({required this.url, required this.headers});
-
-  @override
-  State<_EvidenceVideoPlayer> createState() => _EvidenceVideoPlayerState();
-}
-
-class _EvidenceVideoPlayerState extends State<_EvidenceVideoPlayer> {
-  VideoPlayerController? _controller;
-  bool _initializing = true;
-  bool _failed = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _init();
-  }
-
-  Future<void> _init() async {
-    try {
-      final controller = VideoPlayerController.networkUrl(Uri.parse(widget.url), httpHeaders: widget.headers);
-      await controller.initialize();
-      if (!mounted) {
-        controller.dispose();
-        return;
-      }
-      setState(() {
-        _controller = controller;
-        _initializing = false;
-      });
-    } catch (e) {
-      debugPrint('Video init failed: $e');
-      if (!mounted) return;
-      setState(() {
-        _failed = true;
-        _initializing = false;
-      });
-    }
-  }
-
-  @override
-  void dispose() {
-    _controller?.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    if (_initializing) {
-      return Container(height: 160, alignment: Alignment.center, child: const CircularProgressIndicator());
-    }
-    final controller = _controller;
-    if (_failed || controller == null) {
-      return Container(
-        height: 80,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(color: theme.colorScheme.surfaceContainerHighest, borderRadius: BorderRadius.circular(AppRadius.lg)),
-        child: Text('Não foi possível carregar o vídeo.', style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
-      );
-    }
-
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(AppRadius.lg),
-      child: AspectRatio(
-        aspectRatio: controller.value.aspectRatio == 0 ? 16 / 9 : controller.value.aspectRatio,
-        child: GestureDetector(
-          onTap: () => setState(() => controller.value.isPlaying ? controller.pause() : controller.play()),
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              VideoPlayer(controller),
-              ValueListenableBuilder<VideoPlayerValue>(
-                valueListenable: controller,
-                builder: (context, value, _) => value.isPlaying
-                    ? const SizedBox.shrink()
-                    : Container(
-                        decoration: const BoxDecoration(color: Colors.black45, shape: BoxShape.circle),
-                        child: const Icon(Icons.play_arrow, color: Colors.white, size: 48),
-                      ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}

@@ -63,9 +63,9 @@ class AppColors {
 
   // Backward-compatible aliases (old prototype screens/components still compile).
   // These can be removed when the legacy screens are deleted.
-  static const Color primaryGreen = brandRed;
-  static const Color primaryGreenLight = Color(0xFFB31212);
-  static const Color primaryGreenDark = brandRedDeep;
+  static const Color primaryRed = brandRed;
+  static const Color primaryRedLight = Color(0xFFB31212);
+  static const Color primaryRedDark = brandRedDeep;
   static const Color secondaryOrange = brandRedDeep;
   static const Color secondaryOrangeLight = Color(0xFFB31212);
   static const Color secondaryOrangeDark = brandRedDeep;
@@ -172,7 +172,10 @@ ThemeData get lightTheme => ThemeData(
   brightness: Brightness.light,
   scaffoldBackgroundColor: AppColors.background,
   // Ensure readable defaults across the app (Dropdowns, Chips, TextFields, etc.).
-  textTheme: _buildTextTheme().apply(bodyColor: AppColors.textPrimary, displayColor: AppColors.textPrimary),
+  textTheme: _buildTextTheme().apply(
+    bodyColor: AppColors.textPrimary,
+    displayColor: AppColors.textPrimary,
+  ),
   appBarTheme: AppBarTheme(
     backgroundColor: AppColors.background,
     foregroundColor: AppColors.textPrimary,
@@ -188,19 +191,44 @@ ThemeData get lightTheme => ThemeData(
   inputDecorationTheme: InputDecorationTheme(
     filled: true,
     fillColor: AppColors.surface,
-    labelStyle: GoogleFonts.inter(color: AppColors.textSecondary, fontWeight: FontWeight.w600),
-    hintStyle: GoogleFonts.inter(color: AppColors.textSecondary.withValues(alpha: 0.85)),
-    floatingLabelStyle: GoogleFonts.inter(color: AppColors.brandRedDeep, fontWeight: FontWeight.w700),
-    border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.lg), borderSide: BorderSide(color: AppColors.divider)),
-    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.lg), borderSide: BorderSide(color: AppColors.divider.withValues(alpha: 0.8))),
-    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.lg), borderSide: const BorderSide(color: AppColors.brandRed, width: 1.6)),
+    labelStyle: GoogleFonts.inter(
+      color: AppColors.textSecondary,
+      fontWeight: FontWeight.w600,
+    ),
+    hintStyle: GoogleFonts.inter(
+      color: AppColors.textSecondary.withValues(alpha: 0.85),
+    ),
+    floatingLabelStyle: GoogleFonts.inter(
+      color: AppColors.brandRedDeep,
+      fontWeight: FontWeight.w700,
+    ),
+    border: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(AppRadius.lg),
+      borderSide: BorderSide(color: AppColors.divider),
+    ),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(AppRadius.lg),
+      borderSide: BorderSide(color: AppColors.divider.withValues(alpha: 0.8)),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(AppRadius.lg),
+      borderSide: const BorderSide(color: AppColors.brandRed, width: 1.6),
+    ),
   ),
   dropdownMenuTheme: DropdownMenuThemeData(
-    textStyle: GoogleFonts.inter(color: AppColors.textPrimary, fontWeight: FontWeight.w600),
+    textStyle: GoogleFonts.inter(
+      color: AppColors.textPrimary,
+      fontWeight: FontWeight.w600,
+    ),
     menuStyle: MenuStyle(
       backgroundColor: WidgetStatePropertyAll(AppColors.surface),
       surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
-      shape: WidgetStatePropertyAll(RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg), side: BorderSide(color: AppColors.divider.withValues(alpha: 0.7)))),
+      shape: WidgetStatePropertyAll(
+        RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          side: BorderSide(color: AppColors.divider.withValues(alpha: 0.7)),
+        ),
+      ),
     ),
   ),
   chipTheme: ChipThemeData(
@@ -209,8 +237,14 @@ ThemeData get lightTheme => ThemeData(
     side: BorderSide(color: AppColors.divider.withValues(alpha: 0.8)),
     selectedShadowColor: Colors.transparent,
     showCheckmark: false,
-    labelStyle: GoogleFonts.montserrat(color: AppColors.textPrimary, fontWeight: FontWeight.w700),
-    secondaryLabelStyle: GoogleFonts.montserrat(color: AppColors.brandRedDeep, fontWeight: FontWeight.w800),
+    labelStyle: GoogleFonts.montserrat(
+      color: AppColors.textPrimary,
+      fontWeight: FontWeight.w700,
+    ),
+    secondaryLabelStyle: GoogleFonts.montserrat(
+      color: AppColors.brandRedDeep,
+      fontWeight: FontWeight.w800,
+    ),
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(99)),
     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
   ),
@@ -240,16 +274,24 @@ ThemeData get lightTheme => ThemeData(
     style: OutlinedButton.styleFrom(
       foregroundColor: AppColors.brandRedDeep,
       side: BorderSide(color: AppColors.divider.withValues(alpha: 0.9)),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+      ),
       textStyle: GoogleFonts.montserrat(fontWeight: FontWeight.w800),
     ),
   ),
   snackBarTheme: SnackBarThemeData(
     backgroundColor: AppColors.surface,
-    contentTextStyle: GoogleFonts.inter(color: AppColors.textPrimary, fontWeight: FontWeight.w600),
+    contentTextStyle: GoogleFonts.inter(
+      color: AppColors.textPrimary,
+      fontWeight: FontWeight.w600,
+    ),
     actionTextColor: AppColors.brandRedDeep,
     behavior: SnackBarBehavior.floating,
-    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg), side: BorderSide(color: AppColors.divider.withValues(alpha: 0.7))),
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(AppRadius.lg),
+      side: BorderSide(color: AppColors.divider.withValues(alpha: 0.7)),
+    ),
   ),
 );
 
@@ -277,7 +319,10 @@ ThemeData get darkTheme => ThemeData(
   ),
   brightness: Brightness.dark,
   scaffoldBackgroundColor: AppColors.darkBackground,
-  textTheme: _buildTextTheme().apply(bodyColor: AppColors.darkTextPrimary, displayColor: AppColors.darkTextPrimary),
+  textTheme: _buildTextTheme().apply(
+    bodyColor: AppColors.darkTextPrimary,
+    displayColor: AppColors.darkTextPrimary,
+  ),
   appBarTheme: AppBarTheme(
     backgroundColor: AppColors.darkBackground,
     foregroundColor: AppColors.darkTextPrimary,
@@ -293,29 +338,66 @@ ThemeData get darkTheme => ThemeData(
   inputDecorationTheme: InputDecorationTheme(
     filled: true,
     fillColor: AppColors.darkSurface,
-    labelStyle: GoogleFonts.inter(color: AppColors.darkTextSecondary, fontWeight: FontWeight.w600),
-    hintStyle: GoogleFonts.inter(color: AppColors.darkTextSecondary.withValues(alpha: 0.85)),
-    floatingLabelStyle: GoogleFonts.inter(color: AppColors.darkTextPrimary, fontWeight: FontWeight.w700),
-    border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.lg), borderSide: BorderSide(color: AppColors.darkSurfaceVariant)),
-    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.lg), borderSide: BorderSide(color: AppColors.darkSurfaceVariant.withValues(alpha: 0.9))),
-    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.lg), borderSide: const BorderSide(color: AppColors.brandRed, width: 1.6)),
+    labelStyle: GoogleFonts.inter(
+      color: AppColors.darkTextSecondary,
+      fontWeight: FontWeight.w600,
+    ),
+    hintStyle: GoogleFonts.inter(
+      color: AppColors.darkTextSecondary.withValues(alpha: 0.85),
+    ),
+    floatingLabelStyle: GoogleFonts.inter(
+      color: AppColors.darkTextPrimary,
+      fontWeight: FontWeight.w700,
+    ),
+    border: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(AppRadius.lg),
+      borderSide: BorderSide(color: AppColors.darkSurfaceVariant),
+    ),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(AppRadius.lg),
+      borderSide: BorderSide(
+        color: AppColors.darkSurfaceVariant.withValues(alpha: 0.9),
+      ),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(AppRadius.lg),
+      borderSide: const BorderSide(color: AppColors.brandRed, width: 1.6),
+    ),
   ),
   dropdownMenuTheme: DropdownMenuThemeData(
-    textStyle: GoogleFonts.inter(color: AppColors.darkTextPrimary, fontWeight: FontWeight.w600),
+    textStyle: GoogleFonts.inter(
+      color: AppColors.darkTextPrimary,
+      fontWeight: FontWeight.w600,
+    ),
     menuStyle: MenuStyle(
       backgroundColor: WidgetStatePropertyAll(AppColors.darkSurface),
       surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
-      shape: WidgetStatePropertyAll(RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg), side: BorderSide(color: AppColors.darkSurfaceVariant.withValues(alpha: 0.8)))),
+      shape: WidgetStatePropertyAll(
+        RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          side: BorderSide(
+            color: AppColors.darkSurfaceVariant.withValues(alpha: 0.8),
+          ),
+        ),
+      ),
     ),
   ),
   chipTheme: ChipThemeData(
     backgroundColor: AppColors.darkSurfaceVariant,
     selectedColor: AppColors.brandRed.withValues(alpha: 0.22),
-    side: BorderSide(color: AppColors.darkSurfaceVariant.withValues(alpha: 0.9)),
+    side: BorderSide(
+      color: AppColors.darkSurfaceVariant.withValues(alpha: 0.9),
+    ),
     selectedShadowColor: Colors.transparent,
     showCheckmark: false,
-    labelStyle: GoogleFonts.montserrat(color: AppColors.darkTextPrimary, fontWeight: FontWeight.w700),
-    secondaryLabelStyle: GoogleFonts.montserrat(color: AppColors.darkTextPrimary, fontWeight: FontWeight.w800),
+    labelStyle: GoogleFonts.montserrat(
+      color: AppColors.darkTextPrimary,
+      fontWeight: FontWeight.w700,
+    ),
+    secondaryLabelStyle: GoogleFonts.montserrat(
+      color: AppColors.darkTextPrimary,
+      fontWeight: FontWeight.w800,
+    ),
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(99)),
     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
   ),
@@ -344,17 +426,29 @@ ThemeData get darkTheme => ThemeData(
   outlinedButtonTheme: OutlinedButtonThemeData(
     style: OutlinedButton.styleFrom(
       foregroundColor: AppColors.darkTextPrimary,
-      side: BorderSide(color: AppColors.darkSurfaceVariant.withValues(alpha: 0.9)),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
+      side: BorderSide(
+        color: AppColors.darkSurfaceVariant.withValues(alpha: 0.9),
+      ),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+      ),
       textStyle: GoogleFonts.montserrat(fontWeight: FontWeight.w800),
     ),
   ),
   snackBarTheme: SnackBarThemeData(
     backgroundColor: AppColors.darkSurface,
-    contentTextStyle: GoogleFonts.inter(color: AppColors.darkTextPrimary, fontWeight: FontWeight.w600),
+    contentTextStyle: GoogleFonts.inter(
+      color: AppColors.darkTextPrimary,
+      fontWeight: FontWeight.w600,
+    ),
     actionTextColor: AppColors.brandRed,
     behavior: SnackBarBehavior.floating,
-    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg), side: BorderSide(color: AppColors.darkSurfaceVariant.withValues(alpha: 0.8))),
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(AppRadius.lg),
+      side: BorderSide(
+        color: AppColors.darkSurfaceVariant.withValues(alpha: 0.8),
+      ),
+    ),
   ),
 );
 

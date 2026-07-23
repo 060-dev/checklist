@@ -220,9 +220,21 @@ class MobileEvidenceRef {
 
   const MobileEvidenceRef({required this.id, required this.kind, required this.questionId, required this.originalName, required this.url, required this.sha256});
 
+  /// Checklist evidence (`MobileEvidence`) carries an explicit `kind`.
+  /// Occurrence attachments (`MobileOccurrenceAttachment`) don't have a
+  /// `kind` field at all, only `content_type` (e.g. `image/jpeg`,
+  /// `audio/mp4`, `video/mp4`) — derive it from that instead when missing.
+  static String kindFromContentType(String contentType) {
+    final ct = contentType.trim().toLowerCase();
+    if (ct.startsWith('image/')) return 'photo';
+    if (ct.startsWith('audio/')) return 'audio';
+    if (ct.startsWith('video/')) return 'video';
+    return '';
+  }
+
   factory MobileEvidenceRef.fromJson(Map<String, dynamic> json) => MobileEvidenceRef(
     id: (json['id'] as num?)?.toString() ?? (json['id']?.toString() ?? ''),
-    kind: (json['kind'] as String?) ?? '',
+    kind: (json['kind'] as String?) ?? kindFromContentType((json['content_type'] as String?) ?? ''),
     questionId: json['question_id']?.toString(),
     originalName: (json['original_name'] as String?) ?? '',
     url: (json['url'] as String?) ?? '',
@@ -290,4 +302,11 @@ class ApiOccurrenceDetail {
   DateTime? get dueAt => (raw['due_at'] is String)
       ? DateTime.tryParse(raw['due_at'] as String)
       : null;
+  DateTime? get createdAt => (raw['created_at'] is String)
+      ? DateTime.tryParse(raw['created_at'] as String)
+      : null;
+
+  List<Map<String, dynamic>> get attachments => (raw['attachments'] is List)
+      ? (raw['attachments'] as List).whereType<Map>().map((e) => e.cast<String, dynamic>()).toList()
+      : const <Map<String, dynamic>>[];
 }
