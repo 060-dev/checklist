@@ -259,49 +259,40 @@ class _ExecutionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final due = item.dueAt;
-    final dueText = due == null
-        ? ''
-        : DateFormat('dd/MM HH:mm').format(due.toLocal());
-
     final status = item.status;
-    final statusLabel = switch (status) {
-      'pending' => 'Para fazer',
-      'in_progress' => 'Em andamento',
-      'overdue' => 'Atrasado — fazer agora',
-      'completed' => 'Concluído e enviado',
-      _ => 'Situação: $status',
-    };
 
-    final (Color pillBg, Color pillFg, IconData icon) = switch (status) {
+    final timeText = (status != 'completed' && item.dueAt != null)
+        ? DateFormat('HH:mm').format(item.dueAt!.toLocal())
+        : null;
+
+    final (Color iconBg, Color iconFg, IconData statusIcon) = switch (status) {
       'completed' => (
         AppColors.successLight,
         AppColors.success,
-        Icons.check_circle,
+        Icons.check_circle_rounded,
       ),
       'overdue' => (
         AppColors.errorLight,
         AppColors.error,
         Icons.warning_rounded,
       ),
-      'in_progress' => (AppColors.infoLight, AppColors.info, Icons.play_circle),
-      _ => (
-        theme.colorScheme.surfaceContainerHighest,
-        theme.colorScheme.onSurfaceVariant,
-        Icons.pending_actions,
+      'in_progress' => (
+        AppColors.infoLight,
+        AppColors.info,
+        Icons.play_circle_filled_rounded,
       ),
-    };
-
-    final cta = switch (status) {
-      'completed' => 'Ver respostas',
-      'in_progress' => 'Continuar',
-      _ => 'Começar',
+      _ => (
+        theme.colorScheme.primary.withValues(alpha: 0.12),
+        theme.colorScheme.primary,
+        Icons.assignment_outlined,
+      ),
     };
 
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 160),
+        constraints: const BoxConstraints(minHeight: 64),
         padding: const EdgeInsets.all(AppSpacing.lg),
         decoration: BoxDecoration(
           color: theme.colorScheme.primary.withValues(alpha: 0.06),
@@ -314,13 +305,13 @@ class _ExecutionCard extends StatelessWidget {
         child: Row(
           children: [
             Container(
-              width: 56,
-              height: 56,
+              width: 44,
+              height: 44,
               decoration: BoxDecoration(
-                color: theme.colorScheme.primary,
-                borderRadius: BorderRadius.circular(AppRadius.xl),
+                color: iconBg,
+                borderRadius: BorderRadius.circular(AppRadius.lg),
               ),
-              child: Icon(icon, color: theme.colorScheme.onPrimary, size: 30),
+              child: Icon(statusIcon, color: iconFg, size: 24),
             ),
             const SizedBox(width: AppSpacing.lg),
             Expanded(
@@ -333,85 +324,57 @@ class _ExecutionCard extends StatelessWidget {
                       fontWeight: FontWeight.w900,
                     ),
                   ),
-                  const SizedBox(height: AppSpacing.xs),
-                  if ((item.location ?? '').trim().isNotEmpty)
+                  if ((item.location ?? '').trim().isNotEmpty) ...[
+                    const SizedBox(height: AppSpacing.xs),
                     Text(
                       item.location!,
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
                     ),
-                  const SizedBox(height: AppSpacing.sm),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: pillBg,
-                          borderRadius: BorderRadius.circular(99),
-                          border: Border.all(
-                            color: theme.colorScheme.outlineVariant.withValues(
-                              alpha: 0.6,
-                            ),
-                          ),
-                        ),
-                        child: Text(
-                          statusLabel,
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            fontWeight: FontWeight.w900,
-                            color: pillFg,
-                          ),
-                        ),
+                  ],
+                  if (timeText != null) ...[
+                    const SizedBox(height: AppSpacing.sm),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
                       ),
-                      if (dueText.isNotEmpty)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 6,
+                      decoration: BoxDecoration(
+                        color: status == 'overdue'
+                            ? AppColors.errorLight
+                            : theme.colorScheme.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(99),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.access_time_rounded,
+                            size: 14,
+                            color: status == 'overdue'
+                                ? AppColors.error
+                                : theme.colorScheme.onSurfaceVariant,
                           ),
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.surfaceContainerHighest,
-                            borderRadius: BorderRadius.circular(99),
-                            border: Border.all(
-                              color: theme.colorScheme.outlineVariant
-                                  .withValues(alpha: 0.6),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Até $timeText',
+                            style: theme.textTheme.labelMedium?.copyWith(
+                              fontWeight: FontWeight.w800,
                             ),
                           ),
-                          child: Text(
-                            'Até: $dueText',
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              fontWeight: FontWeight.w900,
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
             const SizedBox(width: AppSpacing.md),
-            Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  cta,
-                  style: theme.textTheme.labelMedium?.copyWith(
-                    fontWeight: FontWeight.w900,
-                    color: theme.colorScheme.primary,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Icon(
-                  Icons.arrow_forward_ios,
-                  color: theme.colorScheme.primary,
-                  size: 18,
-                ),
-              ],
+            Icon(
+              Icons.arrow_forward_ios,
+              color: theme.colorScheme.primary,
+              size: 20,
             ),
           ],
         ),
