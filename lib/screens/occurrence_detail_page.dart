@@ -433,12 +433,10 @@ class _OccurrenceDetailPageState extends State<OccurrenceDetailPage> {
         currentDetail: d,
         resolutionNotes: _resolutionNotesController.text,
       );
-      // NOTE: since resolveOccurrence is currently a local-only stub (see its
-      // doc comment), we set state directly instead of calling `_load()` —
-      // reloading would just re-fetch the real, still-unresolved backend
-      // record and wipe this out. Once the real endpoint is wired in, switch
-      // this back to `await _load();` so the authoritative server state wins.
+      // Optimistic update from the PATCH response, then reload so the
+      // authoritative server state wins if it differs.
       setState(() => _detail = updated);
+      await _load();
     } on MobileApiException catch (e) {
       setState(() => _error = e.message);
     } catch (e) {

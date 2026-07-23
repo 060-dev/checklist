@@ -341,25 +341,12 @@ class MobileApiServices {
     return env.data ?? const <String, dynamic>{};
   }
 
-  /// STUB — there is currently no Mobile API v1 endpoint for resolving an
-  /// occurrence (only `/api/checklists/occurrences/{id}` exists, which is the
-  /// web admin API using cookie/CSRF auth, not this app's Bearer-token auth).
-  /// The backend team is adding a proper mobile-scoped endpoint; once it
-  /// exists, replace the body below with a real call, e.g.:
-  ///
-  /// ```dart
-  /// final env = await client.patchJson<Map<String, dynamic>>(
-  ///   path: '/employees/$employeeId/occurrences/$occurrenceId/resolve',
-  ///   idempotencyKey: idempotencyKey,
-  ///   body: {if ((resolutionNotes ?? '').trim().isNotEmpty) 'resolution_notes': resolutionNotes!.trim()},
-  ///   decodeData: (json) => (json is Map) ? json.cast<String, dynamic>() : <String, dynamic>{},
-  /// );
-  /// return ApiOccurrenceDetail(env.data ?? const <String, dynamic>{});
-  /// ```
-  /// Until then this only simulates success locally (nothing is persisted
-  /// server-side) so the UI can be built/tested without depending on the
-  /// backend — [currentDetail] is only needed for that simulation and should
-  /// be dropped once the real call returns the updated detail itself.
+  /// Not documented in the OpenAPI spec yet — mirrors the same path pattern
+  /// as [getOccurrenceDetail] (`/employees/{employeeId}/occurrences/{occurrenceId}`)
+  /// with PATCH and the `OccurrenceUpdate`-shaped body used by the (admin-only)
+  /// web endpoint, sent here against the mobile-scoped path instead. Since
+  /// `assigned_to_user_id` isn't part of the mobile occurrence schema at all,
+  /// it's omitted rather than guessed.
   Future<OccurrenceDetail> resolveOccurrence({
     required String employeeId,
     required String occurrenceId,
@@ -367,12 +354,26 @@ class MobileApiServices {
     required OccurrenceDetail currentDetail,
     String? resolutionNotes,
   }) async {
-    await Future<void>.delayed(const Duration(milliseconds: 400));
-    final updated = Map<String, dynamic>.from(currentDetail.raw);
-    updated['status'] = 'resolved';
-    updated['resolved_at'] = DateTime.now().toUtc().toIso8601String();
     final notes = (resolutionNotes ?? '').trim();
-    if (notes.isNotEmpty) updated['resolution_notes'] = notes;
-    return OccurrenceDetail(updated);
+    final payload = <String, dynamic>{
+      'title': currentDetail.raw['title'],
+      'description': currentDetail.raw['description'],
+      'location': currentDetail.raw['location'],
+      'priority': currentDetail.raw['priority'],
+      'checklist_id': currentDetail.raw['checklist_id'],
+      'due_at': currentDetail.raw['due_at'],
+      'status': 'resolved',
+      'resolution_notes': notes.isNotEmpty
+          ? notes
+          : currentDetail.raw['resolution_notes'],
+    };
+    final env = await client.patchJson<Map<String, dynamic>>(
+      path: '/employees/$employeeId/occurrences/$occurrenceId',
+      body: payload,
+      idempotencyKey: idempotencyKey,
+      decodeData: (json) =>
+          (json is Map) ? json.cast<String, dynamic>() : <String, dynamic>{},
+    );
+    return OccurrenceDetail(env.data ?? const <String, dynamic>{});
   }
 }
