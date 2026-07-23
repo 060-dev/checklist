@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -15,12 +16,17 @@ import 'package:morro_do_peo/components/media_preview.dart';
 import 'package:morro_do_peo/components/media_source_sheet.dart';
 import 'package:morro_do_peo/components/responsive_body.dart';
 import 'package:morro_do_peo/models/mobile_api_models.dart';
+import 'package:morro_do_peo/models/pending_queue_item.dart';
+import 'package:morro_do_peo/models/queued_media_item.dart';
 import 'package:morro_do_peo/services/mobile_api_client.dart';
 import 'package:morro_do_peo/services/mobile_api_services.dart';
+import 'package:morro_do_peo/services/offline_queue_service.dart';
 import 'package:morro_do_peo/services/private_audio_player.dart';
 import 'package:morro_do_peo/services/tts_service.dart';
 import 'package:morro_do_peo/state/app_session.dart';
 import 'package:morro_do_peo/theme.dart';
+import 'package:morro_do_peo/utils/connectivity.dart';
+import 'package:morro_do_peo/utils/file_staging.dart';
 
 class OccurrenceDetailPage extends StatefulWidget {
   final String occurrenceId;
@@ -43,10 +49,16 @@ class _OccurrenceDetailPageState extends State<OccurrenceDetailPage> {
 
   final _resolutionNotesController = TextEditingController();
 
+  StreamSubscription<PendingQueueItem>? _queueFailureSub;
+  String? _pendingResolveItemId;
+
   @override
   void initState() {
     super.initState();
     _load();
+    _queueFailureSub = OfflineQueueService.instance.onItemFailed.listen(
+      _onQueueItemFailed,
+    );
   }
 
   @override
@@ -54,7 +66,26 @@ class _OccurrenceDetailPageState extends State<OccurrenceDetailPage> {
     PrivateAudioPlayer.instance.stop();
     TtsService.instance.stop();
     _resolutionNotesController.dispose();
+    _queueFailureSub?.cancel();
     super.dispose();
+  }
+
+  /// Reverts the optimistic "resolved" state if the queued resolve mutation
+  /// this page enqueued eventually gives up (max retries / non-retryable
+  /// error) instead of ever reaching the server.
+  void _onQueueItemFailed(PendingQueueItem item) {
+    if (item.id != _pendingResolveItemId) return;
+    _pendingResolveItemId = null;
+    if (!mounted) return;
+    final d = _detail;
+    if (d == null) return;
+    final reverted = Map<String, dynamic>.from(d.raw);
+    reverted['status'] = 'open';
+    reverted.remove('resolved_at');
+    setState(() {
+      _detail = OccurrenceDetail(reverted);
+      _error = 'Não foi possível resolver a ocorrência. Tente novamente.';
+    });
   }
 
   PrivateAudioRef? _narrationRef(OccurrenceDetail d) {
@@ -233,40 +264,69 @@ class _OccurrenceDetailPageState extends State<OccurrenceDetailPage> {
       return;
     }
 
-    final client = MobileApiClient(
-      apiBaseUrl: session.apiBaseUrl.trim(),
-      apiKey: session.apiKey.trim(),
-      requestTimeout: Duration(seconds: session.requestTimeoutSeconds),
-      uploadTimeout: Duration(seconds: session.uploadTimeoutSeconds),
-    );
-    final api = MobileApiServices(client: client);
-    try {
-      final mp = await _multipartFromXFile('file', file, kind);
-      if (mp == null) {
-        setState(() => _error = 'Falha ao ler o arquivo selecionado.');
-        return;
-      }
-      await api.attachOccurrenceFile(
-        employeeId: employeeId,
-        occurrenceId: widget.occurrenceId,
-        idempotencyKey: const Uuid().v4(),
-        file: mp,
+    var networkFailure = !Connectivity.instance.isOnline;
+    if (!networkFailure) {
+      final client = MobileApiClient(
+        apiBaseUrl: session.apiBaseUrl.trim(),
+        apiKey: session.apiKey.trim(),
+        requestTimeout: Duration(seconds: session.requestTimeoutSeconds),
+        uploadTimeout: Duration(seconds: session.uploadTimeoutSeconds),
       );
-      setState(() {
-        _pickedMedia = null;
-        _pickedMediaKind = null;
-        _recordingAudio = false;
-      });
-      await _load();
-    } on MobileApiException catch (e) {
-      setState(() => _error = e.message);
-    } catch (e) {
-      debugPrint('Attach failed: $e');
-      setState(() => _error = 'Falha ao anexar.');
-    } finally {
-      client.dispose();
-      if (mounted) setState(() => _mutating = false);
+      final api = MobileApiServices(client: client);
+      try {
+        final mp = await _multipartFromXFile('file', file, kind);
+        if (mp == null) {
+          setState(() => _error = 'Falha ao ler o arquivo selecionado.');
+        } else {
+          await api.attachOccurrenceFile(
+            employeeId: employeeId,
+            occurrenceId: widget.occurrenceId,
+            idempotencyKey: const Uuid().v4(),
+            file: mp,
+          );
+          setState(() {
+            _pickedMedia = null;
+            _pickedMediaKind = null;
+            _recordingAudio = false;
+          });
+          await _load();
+        }
+      } on SocketException {
+        networkFailure = true;
+      } on TimeoutException {
+        networkFailure = true;
+      } on MobileApiException catch (e) {
+        setState(() => _error = e.message);
+      } catch (e) {
+        debugPrint('Attach failed: $e');
+        setState(() => _error = 'Falha ao anexar.');
+      } finally {
+        client.dispose();
+      }
     }
+
+    if (!networkFailure) {
+      if (mounted) setState(() => _mutating = false);
+      return;
+    }
+
+    // Offline, or a transient network error above — stage the file and let
+    // the queue send it once connectivity returns.
+    final stagedPath = await stageFileForQueue(file.path);
+    await OfflineQueueService.instance.enqueueApiMutation(
+      method: 'POST',
+      path:
+          '/employees/$employeeId/occurrences/${widget.occurrenceId}/attachments',
+      jsonBody: const {},
+      mediaItems: [QueuedMediaItem(stagedPath: stagedPath, fieldName: 'file')],
+    );
+    if (!mounted) return;
+    setState(() {
+      _pickedMedia = null;
+      _pickedMediaKind = null;
+      _recordingAudio = false;
+      _mutating = false;
+    });
   }
 
   /// Guesses a MIME type from the draft's kind + file extension, since
@@ -418,34 +478,74 @@ class _OccurrenceDetailPageState extends State<OccurrenceDetailPage> {
       return;
     }
 
-    final client = MobileApiClient(
-      apiBaseUrl: session.apiBaseUrl.trim(),
-      apiKey: session.apiKey.trim(),
-      requestTimeout: Duration(seconds: session.requestTimeoutSeconds),
-      uploadTimeout: Duration(seconds: session.uploadTimeoutSeconds),
-    );
-    final api = MobileApiServices(client: client);
-    try {
-      final updated = await api.resolveOccurrence(
+    final notes = _resolutionNotesController.text;
+    var networkFailure = !Connectivity.instance.isOnline;
+    if (!networkFailure) {
+      final client = MobileApiClient(
+        apiBaseUrl: session.apiBaseUrl.trim(),
+        apiKey: session.apiKey.trim(),
+        requestTimeout: Duration(seconds: session.requestTimeoutSeconds),
+        uploadTimeout: Duration(seconds: session.uploadTimeoutSeconds),
+      );
+      final api = MobileApiServices(client: client);
+      try {
+        final updated = await api.resolveOccurrence(
+          employeeId: employeeId,
+          occurrenceId: widget.occurrenceId,
+          idempotencyKey: const Uuid().v4(),
+          currentDetail: d,
+          resolutionNotes: notes,
+        );
+        // Optimistic update from the PATCH response, then reload so the
+        // authoritative server state wins if it differs.
+        setState(() => _detail = updated);
+        await _load();
+      } on SocketException {
+        networkFailure = true;
+      } on TimeoutException {
+        networkFailure = true;
+      } on MobileApiException catch (e) {
+        setState(() => _error = e.message);
+      } catch (e) {
+        debugPrint('Resolve occurrence failed: $e');
+        setState(() => _error = 'Falha ao resolver ocorrência.');
+      } finally {
+        client.dispose();
+      }
+    }
+
+    if (!networkFailure) {
+      if (mounted) setState(() => _mutating = false);
+      return;
+    }
+
+    // Offline, or a transient network error above — queue it with an
+    // optimistic local update; `_onQueueItemFailed` reverts this if the
+    // queued send later gives up for good.
+    final enqueued = await OfflineQueueService.instance.enqueueApiMutation(
+      method: 'PATCH',
+      path: MobileApiServices.resolveOccurrencePath(
         employeeId: employeeId,
         occurrenceId: widget.occurrenceId,
-        idempotencyKey: const Uuid().v4(),
+      ),
+      jsonBody: MobileApiServices.resolveOccurrencePayload(
         currentDetail: d,
-        resolutionNotes: _resolutionNotesController.text,
-      );
-      // Optimistic update from the PATCH response, then reload so the
-      // authoritative server state wins if it differs.
-      setState(() => _detail = updated);
-      await _load();
-    } on MobileApiException catch (e) {
-      setState(() => _error = e.message);
-    } catch (e) {
-      debugPrint('Resolve occurrence failed: $e');
-      setState(() => _error = 'Falha ao resolver ocorrência.');
-    } finally {
-      client.dispose();
-      if (mounted) setState(() => _mutating = false);
-    }
+        resolutionNotes: notes,
+      ),
+    );
+    _pendingResolveItemId = enqueued.id;
+
+    final optimistic = Map<String, dynamic>.from(d.raw);
+    optimistic['status'] = 'resolved';
+    optimistic['resolved_at'] = DateTime.now().toUtc().toIso8601String();
+    final trimmedNotes = notes.trim();
+    if (trimmedNotes.isNotEmpty) optimistic['resolution_notes'] = trimmedNotes;
+
+    if (!mounted) return;
+    setState(() {
+      _detail = OccurrenceDetail(optimistic);
+      _mutating = false;
+    });
   }
 
   @override

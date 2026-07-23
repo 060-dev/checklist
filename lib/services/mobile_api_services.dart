@@ -347,15 +347,23 @@ class MobileApiServices {
   /// web endpoint, sent here against the mobile-scoped path instead. Since
   /// `assigned_to_user_id` isn't part of the mobile occurrence schema at all,
   /// it's omitted rather than guessed.
-  Future<OccurrenceDetail> resolveOccurrence({
+  ///
+  /// [resolveOccurrencePath]/[resolveOccurrencePayload] are exposed as the
+  /// single source of truth for this guessed shape so the offline queue can
+  /// build an identical request when this call is deferred — if this path
+  /// turns out to be wrong once the backend team confirms the real one,
+  /// there's exactly one place to change it.
+  static String resolveOccurrencePath({
     required String employeeId,
     required String occurrenceId,
-    required String idempotencyKey,
+  }) => '/employees/$employeeId/occurrences/$occurrenceId';
+
+  static Map<String, dynamic> resolveOccurrencePayload({
     required OccurrenceDetail currentDetail,
     String? resolutionNotes,
-  }) async {
+  }) {
     final notes = (resolutionNotes ?? '').trim();
-    final payload = <String, dynamic>{
+    return <String, dynamic>{
       'title': currentDetail.raw['title'],
       'description': currentDetail.raw['description'],
       'location': currentDetail.raw['location'],
@@ -367,9 +375,24 @@ class MobileApiServices {
           ? notes
           : currentDetail.raw['resolution_notes'],
     };
+  }
+
+  Future<OccurrenceDetail> resolveOccurrence({
+    required String employeeId,
+    required String occurrenceId,
+    required String idempotencyKey,
+    required OccurrenceDetail currentDetail,
+    String? resolutionNotes,
+  }) async {
     final env = await client.patchJson<Map<String, dynamic>>(
-      path: '/employees/$employeeId/occurrences/$occurrenceId',
-      body: payload,
+      path: resolveOccurrencePath(
+        employeeId: employeeId,
+        occurrenceId: occurrenceId,
+      ),
+      body: resolveOccurrencePayload(
+        currentDetail: currentDetail,
+        resolutionNotes: resolutionNotes,
+      ),
       idempotencyKey: idempotencyKey,
       decodeData: (json) =>
           (json is Map) ? json.cast<String, dynamic>() : <String, dynamic>{},

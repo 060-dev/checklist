@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -15,13 +16,17 @@ import 'package:morro_do_peo/components/media_source_sheet.dart';
 import 'package:morro_do_peo/components/responsive_body.dart';
 import 'package:morro_do_peo/components/sync_indicator.dart';
 import 'package:morro_do_peo/models/mobile_api_models.dart';
+import 'package:morro_do_peo/models/queued_media_item.dart';
 import 'package:morro_do_peo/services/local_cache_service.dart';
 import 'package:morro_do_peo/services/mobile_api_client.dart';
 import 'package:morro_do_peo/services/mobile_api_services.dart';
+import 'package:morro_do_peo/services/offline_queue_service.dart';
 import 'package:morro_do_peo/services/private_audio_player.dart';
 import 'package:morro_do_peo/services/tts_service.dart';
 import 'package:morro_do_peo/state/app_session.dart';
 import 'package:morro_do_peo/theme.dart';
+import 'package:morro_do_peo/utils/connectivity.dart';
+import 'package:morro_do_peo/utils/file_staging.dart';
 
 class ExecutionDetailPage extends StatefulWidget {
   final String executionId;
@@ -235,6 +240,7 @@ class _ExecutionDetailPageState extends State<ExecutionDetailPage> {
   Future<void> _complete() async {
     final d = _detail;
     if (d == null) return;
+    if (_mutating) return;
 
     final payload = _buildCompletionPayload(d);
     if (payload == null) return;
@@ -242,40 +248,178 @@ class _ExecutionDetailPageState extends State<ExecutionDetailPage> {
     final evidence = await _buildEvidenceParts(d);
     if (evidence == null) return;
 
-    // Prefer the evidence endpoint (production path). If the backend rejects a
-    // request without multipart files, fall back to JSON completion.
-    await _mutate((api, employeeId, key) async {
-      try {
-        await api.completeExecutionWithEvidence(
-          employeeId: employeeId,
-          executionId: widget.executionId,
-          idempotencyKey: key,
-          payload: payload,
-          photo: evidence.photo,
-          audio: evidence.audio,
-          photos: evidence.photos,
-          photoQuestionIds: evidence.photoQuestionIds,
-          audios: evidence.audios,
-          audioQuestionIds: evidence.audioQuestionIds,
-          videos: evidence.videos,
-          videoQuestionIds: evidence.videoQuestionIds,
-        );
-      } on MobileApiException {
-        await api.completeExecutionJson(
-          employeeId: employeeId,
-          executionId: widget.executionId,
-          idempotencyKey: key,
-          payload: payload,
-        );
-      }
+    setState(() {
+      _mutating = true;
+      _error = null;
     });
 
-    // If completion succeeded, go back to the list so it can refresh.
+    final session = context.read<AppSession>();
+    final employeeId = session.selectedOperator?.id ?? '';
+    if (!session.hasApiConfig || employeeId.isEmpty) {
+      setState(() {
+        _mutating = false;
+        _error = 'Sem configuração da API ou funcionário não selecionado.';
+      });
+      return;
+    }
+
+    var networkFailure = !Connectivity.instance.isOnline;
+    if (!networkFailure) {
+      final client = MobileApiClient(
+        apiBaseUrl: session.apiBaseUrl.trim(),
+        apiKey: session.apiKey.trim(),
+        requestTimeout: Duration(seconds: session.requestTimeoutSeconds),
+        uploadTimeout: Duration(seconds: session.uploadTimeoutSeconds),
+      );
+      final api = MobileApiServices(client: client);
+      try {
+        final key = const Uuid().v4();
+        // Prefer the evidence endpoint (production path). If the backend
+        // rejects a request without multipart files, fall back to JSON.
+        try {
+          await api.completeExecutionWithEvidence(
+            employeeId: employeeId,
+            executionId: widget.executionId,
+            idempotencyKey: key,
+            payload: payload,
+            photo: evidence.photo,
+            audio: evidence.audio,
+            photos: evidence.photos,
+            photoQuestionIds: evidence.photoQuestionIds,
+            audios: evidence.audios,
+            audioQuestionIds: evidence.audioQuestionIds,
+            videos: evidence.videos,
+            videoQuestionIds: evidence.videoQuestionIds,
+          );
+        } on MobileApiException {
+          await api.completeExecutionJson(
+            employeeId: employeeId,
+            executionId: widget.executionId,
+            idempotencyKey: key,
+            payload: payload,
+          );
+        }
+      } on SocketException {
+        networkFailure = true;
+      } on TimeoutException {
+        networkFailure = true;
+      } on MobileApiException catch (e) {
+        setState(() => _error = e.message);
+      } catch (e) {
+        setState(() => _error = 'Falha na operação.');
+        debugPrint('Complete failed: $e');
+      } finally {
+        client.dispose();
+      }
+    }
+
+    if (networkFailure) {
+      await _enqueueCompletion(
+        payload: payload,
+        detail: d,
+        employeeId: employeeId,
+      );
+      if (!mounted) return;
+      setState(() => _mutating = false);
+      context.pop(true);
+      return;
+    }
+
+    if ((_error ?? '').trim().isEmpty) {
+      await _load();
+    }
     if (!mounted) return;
+    setState(() => _mutating = false);
     if ((_error ?? '').trim().isEmpty &&
         (_detail?.status ?? '') == 'completed') {
       context.pop(true);
     }
+  }
+
+  /// Stages any picked evidence files to disk and enqueues the completion
+  /// call for the offline queue to send once connectivity returns (or the
+  /// backend accepts it — a transient failure above also lands here).
+  Future<void> _enqueueCompletion({
+    required Map<String, dynamic> payload,
+    required ExecutionDetail detail,
+    required String employeeId,
+  }) async {
+    final mediaItems = await _buildQueuedMediaItems(detail);
+    final basePath = '/employees/$employeeId/executions/${widget.executionId}';
+    await OfflineQueueService.instance.enqueueApiMutation(
+      method: 'POST',
+      path: mediaItems.isEmpty
+          ? '$basePath/complete'
+          : '$basePath/complete-with-evidence',
+      jsonBody: payload,
+      mediaItems: mediaItems,
+    );
+  }
+
+  Future<List<QueuedMediaItem>> _buildQueuedMediaItems(
+    ExecutionDetail d,
+  ) async {
+    final items = <QueuedMediaItem>[];
+    if (d.isSimpleBoolean) {
+      if (_simplePhoto != null) {
+        items.add(
+          QueuedMediaItem(
+            stagedPath: await stageFileForQueue(_simplePhoto!.path),
+            fieldName: 'photo',
+          ),
+        );
+      }
+      if (_simpleAudio != null) {
+        items.add(
+          QueuedMediaItem(
+            stagedPath: await stageFileForQueue(_simpleAudio!.path),
+            fieldName: 'audio',
+          ),
+        );
+      }
+      if (_simpleVideo != null) {
+        items.add(
+          QueuedMediaItem(
+            stagedPath: await stageFileForQueue(_simpleVideo!.path),
+            fieldName: 'videos',
+            questionId: '',
+          ),
+        );
+      }
+    } else {
+      for (final entry in _answers.entries) {
+        final qid = entry.key;
+        final st = entry.value;
+        if (st.photo != null) {
+          items.add(
+            QueuedMediaItem(
+              stagedPath: await stageFileForQueue(st.photo!.path),
+              fieldName: 'photos',
+              questionId: qid,
+            ),
+          );
+        }
+        if (st.additionalAudio != null) {
+          items.add(
+            QueuedMediaItem(
+              stagedPath: await stageFileForQueue(st.additionalAudio!.path),
+              fieldName: 'audios',
+              questionId: qid,
+            ),
+          );
+        }
+        if (st.video != null) {
+          items.add(
+            QueuedMediaItem(
+              stagedPath: await stageFileForQueue(st.video!.path),
+              fieldName: 'videos',
+              questionId: qid,
+            ),
+          );
+        }
+      }
+    }
+    return items;
   }
 
   Map<String, dynamic>? _buildCompletionPayload(ExecutionDetail d) {
@@ -535,52 +679,6 @@ class _ExecutionDetailPageState extends State<ExecutionDetailPage> {
     } catch (e) {
       debugPrint('Failed to build multipart file ($fieldName): $e');
       return null;
-    }
-  }
-
-  Future<void> _mutate(
-    Future<void> Function(
-      MobileApiServices api,
-      String employeeId,
-      String idempotencyKey,
-    )
-    fn,
-  ) async {
-    if (_mutating) return;
-    setState(() {
-      _mutating = true;
-      _error = null;
-    });
-
-    final session = context.read<AppSession>();
-    final employeeId = session.selectedOperator?.id ?? '';
-    if (!session.hasApiConfig || employeeId.isEmpty) {
-      setState(() {
-        _mutating = false;
-        _error = 'Sem configuração da API ou funcionário não selecionado.';
-      });
-      return;
-    }
-
-    final client = MobileApiClient(
-      apiBaseUrl: session.apiBaseUrl.trim(),
-      apiKey: session.apiKey.trim(),
-      requestTimeout: Duration(seconds: session.requestTimeoutSeconds),
-      uploadTimeout: Duration(seconds: session.uploadTimeoutSeconds),
-    );
-    final api = MobileApiServices(client: client);
-    try {
-      final key = const Uuid().v4();
-      await fn(api, employeeId, key);
-      await _load();
-    } on MobileApiException catch (e) {
-      setState(() => _error = e.message);
-    } catch (e) {
-      setState(() => _error = 'Falha na operação.');
-      debugPrint('Mutation error: $e');
-    } finally {
-      client.dispose();
-      if (mounted) setState(() => _mutating = false);
     }
   }
 

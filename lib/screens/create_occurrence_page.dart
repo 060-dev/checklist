@@ -9,6 +9,7 @@ import 'package:morro_do_peo/services/mobile_api_client.dart';
 import 'package:morro_do_peo/services/mobile_api_services.dart';
 import 'package:morro_do_peo/state/app_session.dart';
 import 'package:morro_do_peo/theme.dart';
+import 'package:morro_do_peo/utils/connectivity.dart';
 
 class CreateOccurrencePage extends StatefulWidget {
   const CreateOccurrencePage({super.key});
@@ -91,6 +92,18 @@ class _CreateOccurrencePageState extends State<CreateOccurrencePage> {
       setState(() {
         _submitting = false;
         _error = 'Sem configuração da API ou funcionário não selecionado.';
+      });
+      return;
+    }
+
+    // Creating requires a server-generated occurrence_id before attachments
+    // can be linked to it, so — unlike completion/resolve/attachments —
+    // this can't be deferred to the offline queue.
+    if (!Connectivity.instance.isOnline) {
+      setState(() {
+        _submitting = false;
+        _error =
+            'Sem conexão. Conecte-se à internet para criar uma ocorrência.';
       });
       return;
     }
