@@ -191,6 +191,43 @@ class ApiExecutionDetail {
       raw['requirements'] is Map &&
       ((raw['requirements'] as Map)['boolean'] == true) &&
       ((raw['questions'] is List) ? (raw['questions'] as List).isEmpty : true);
+
+  // --- Completed-execution result fields (MobileExecution schema) ----------
+
+  String? get completedNotes => raw['notes'] as String?;
+
+  bool? get completedBooleanAnswer => raw['boolean_answer'] as bool?;
+
+  Map<String, dynamic> get completedAnswers =>
+      (raw['answers'] is Map) ? (raw['answers'] as Map).cast<String, dynamic>() : const <String, dynamic>{};
+
+  List<Map<String, dynamic>> get completedEvidence => (raw['evidence'] is List)
+      ? (raw['evidence'] as List).whereType<Map>().map((e) => e.cast<String, dynamic>()).toList()
+      : const <Map<String, dynamic>>[];
+
+  DateTime? get completedAt =>
+      (raw['completed_at'] is String) ? DateTime.tryParse(raw['completed_at'] as String) : null;
+}
+
+@immutable
+class MobileEvidenceRef {
+  final String id;
+  final String kind;
+  final String? questionId;
+  final String originalName;
+  final String url;
+  final String sha256;
+
+  const MobileEvidenceRef({required this.id, required this.kind, required this.questionId, required this.originalName, required this.url, required this.sha256});
+
+  factory MobileEvidenceRef.fromJson(Map<String, dynamic> json) => MobileEvidenceRef(
+    id: (json['id'] as num?)?.toString() ?? (json['id']?.toString() ?? ''),
+    kind: (json['kind'] as String?) ?? '',
+    questionId: json['question_id']?.toString(),
+    originalName: (json['original_name'] as String?) ?? '',
+    url: (json['url'] as String?) ?? '',
+    sha256: (json['sha256'] as String?) ?? '',
+  );
 }
 
 @immutable

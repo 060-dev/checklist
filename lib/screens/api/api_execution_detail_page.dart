@@ -4,8 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
+import 'package:video_player/video_player.dart';
 
 import 'package:morro_do_peo/components/inline_audio_recorder.dart';
 import 'package:morro_do_peo/components/media_source_sheet.dart';
@@ -614,7 +616,7 @@ class _ApiExecutionDetailPageState extends State<ApiExecutionDetailPage> {
           ),
         ],
       ),
-      bottomNavigationBar: d == null
+      bottomNavigationBar: (d == null || d.status == 'completed')
           ? null
           : SafeArea(
               top: false,
@@ -744,7 +746,15 @@ class _ApiExecutionDetailPageState extends State<ApiExecutionDetailPage> {
                     Expanded(
                       child: d == null
                           ? const SizedBox.shrink()
-                          : _ExecutionForm(
+                          : (d.status == 'completed'
+                              ? _CompletedExecutionView(
+                                  detail: d,
+                                  questions: _questionsFrom(d),
+                                  origin: context.read<AppSession>().origin,
+                                  authHeaders: {'Authorization': 'Bearer ${context.read<AppSession>().apiKey}'},
+                                  onPlayAudio: _playAudioRef,
+                                )
+                              : _ExecutionForm(
                               detail: d,
                               notesController: _notesController,
                               onPlayQuestionNarration: _playAudioRef,
@@ -818,7 +828,7 @@ class _ApiExecutionDetailPageState extends State<ApiExecutionDetailPage> {
                                     },
                               onAnswerChanged: (questionId, next) =>
                                   setState(() => _answers[questionId] = next),
-                            ),
+                            )),
                     ),
                   ],
                 ),
@@ -1695,6 +1705,522 @@ class _QuestionCard extends StatelessWidget {
             ),
           ],
         ],
+      ),
+    );
+  }
+}
+
+String _absoluteMediaUrl({required String origin, required String url}) {
+  final u = url.trim();
+  if (u.startsWith('http://') || u.startsWith('https://')) return u;
+  final o = origin.trim();
+  if (o.isEmpty) return u;
+  return o.endsWith('/') ? '${o.substring(0, o.length - 1)}${u.startsWith('/') ? u : '/$u'}' : '$o${u.startsWith('/') ? u : '/$u'}';
+}
+
+void _showFullscreenImage(BuildContext context, {required String url, required Map<String, String> headers}) {
+  showDialog<void>(
+    context: context,
+    barrierColor: Colors.black87,
+    builder: (context) => Dialog(
+      insetPadding: EdgeInsets.zero,
+      backgroundColor: Colors.transparent,
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: InteractiveViewer(
+              child: Center(
+                child: Image.network(
+                  url,
+                  headers: headers,
+                  errorBuilder: (context, error, stack) => const Icon(Icons.broken_image, color: Colors.white, size: 64),
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            top: AppSpacing.lg,
+            right: AppSpacing.lg,
+            child: IconButton(
+              onPressed: () => Navigator.of(context).pop(),
+              icon: const Icon(Icons.close, color: Colors.white, size: 32),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+/// Read-only summary shown once an execution's status is `completed` — no
+/// inputs, no evidence pickers, just what was actually submitted.
+class _CompletedExecutionView extends StatelessWidget {
+  final ApiExecutionDetail detail;
+  final List<_ApiQuestion> questions;
+  final String origin;
+  final Map<String, String> authHeaders;
+  final void Function(PrivateAudioRef ref) onPlayAudio;
+
+  const _CompletedExecutionView({
+    required this.detail,
+    required this.questions,
+    required this.origin,
+    required this.authHeaders,
+    required this.onPlayAudio,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final evidence = detail.completedEvidence.map(MobileEvidenceRef.fromJson).toList();
+    final generalEvidence = evidence.where((e) => (e.questionId ?? '').trim().isEmpty).toList();
+
+    return ListView(
+      padding: const EdgeInsets.only(bottom: AppSpacing.xl),
+      children: [
+        _CompletedHeaderCard(detail: detail),
+        const SizedBox(height: AppSpacing.lg),
+        if (detail.isSimpleBoolean) ...[
+          _SimpleAnswerCard(
+            booleanAnswer: detail.completedBooleanAnswer,
+            evidence: generalEvidence,
+            origin: origin,
+            authHeaders: authHeaders,
+            onPlayAudio: onPlayAudio,
+          ),
+          const SizedBox(height: AppSpacing.lg),
+        ] else ...[
+          for (final q in questions) ...[
+            _CompletedQuestionCard(
+              question: q,
+              answer: (detail.completedAnswers[q.id] is Map) ? (detail.completedAnswers[q.id] as Map).cast<String, dynamic>() : const <String, dynamic>{},
+              evidence: evidence.where((e) => e.questionId == q.id).toList(),
+              origin: origin,
+              authHeaders: authHeaders,
+              onPlayAudio: onPlayAudio,
+            ),
+            const SizedBox(height: AppSpacing.md),
+          ],
+          if (generalEvidence.isNotEmpty) ...[
+            _GeneralEvidenceCard(evidence: generalEvidence, origin: origin, authHeaders: authHeaders, onPlayAudio: onPlayAudio),
+            const SizedBox(height: AppSpacing.lg),
+          ],
+        ],
+        _CompletedNotesCard(notes: detail.completedNotes),
+      ],
+    );
+  }
+}
+
+class _CompletedHeaderCard extends StatelessWidget {
+  final ApiExecutionDetail detail;
+  const _CompletedHeaderCard({required this.detail});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final completedAt = detail.completedAt;
+    final dateText = completedAt == null ? null : DateFormat('dd/MM/yyyy HH:mm').format(completedAt.toLocal());
+
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: AppColors.successLight,
+        borderRadius: BorderRadius.circular(AppRadius.xl),
+        border: Border.all(color: AppColors.success.withValues(alpha: 0.3), width: 2),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.check_circle_rounded, color: AppColors.success, size: 40),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Checklist Concluído', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900, color: AppColors.success)),
+                if (dateText != null) ...[
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(dateText, style: theme.textTheme.bodyMedium?.copyWith(color: AppColors.success)),
+                ],
+                if ((detail.location ?? '').trim().isNotEmpty) ...[
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(detail.location!, style: theme.textTheme.bodySmall?.copyWith(color: AppColors.success)),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AnswerBadge extends StatelessWidget {
+  final String answer;
+  const _AnswerBadge({required this.answer});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final normalized = answer.trim().toLowerCase();
+    const positive = {'sim', 'conforme', 'ok', 'yes', 'true'};
+    const negative = {'nao', 'não', 'inconforme', 'no', 'false'};
+
+    final Color bg;
+    final Color fg;
+    if (positive.contains(normalized)) {
+      bg = AppColors.successLight;
+      fg = AppColors.success;
+    } else if (negative.contains(normalized)) {
+      bg = AppColors.errorLight;
+      fg = AppColors.error;
+    } else {
+      bg = theme.colorScheme.surfaceContainerHighest;
+      fg = theme.colorScheme.onSurfaceVariant;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(99)),
+      child: Text(answer.toUpperCase(), style: theme.textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w900, color: fg)),
+    );
+  }
+}
+
+class _SimpleAnswerCard extends StatelessWidget {
+  final bool? booleanAnswer;
+  final List<MobileEvidenceRef> evidence;
+  final String origin;
+  final Map<String, String> authHeaders;
+  final void Function(PrivateAudioRef ref) onPlayAudio;
+
+  const _SimpleAnswerCard({required this.booleanAnswer, required this.evidence, required this.origin, required this.authHeaders, required this.onPlayAudio});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.primary.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(AppRadius.xl),
+        border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.18), width: 1.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Resposta', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900)),
+          const SizedBox(height: AppSpacing.sm),
+          _AnswerBadge(answer: booleanAnswer == null ? '—' : (booleanAnswer! ? 'Sim' : 'Não')),
+          if (evidence.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.md),
+            _EvidenceGrid(evidence: evidence, origin: origin, authHeaders: authHeaders, onPlayAudio: onPlayAudio),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _CompletedQuestionCard extends StatelessWidget {
+  final _ApiQuestion question;
+  final Map<String, dynamic> answer;
+  final List<MobileEvidenceRef> evidence;
+  final String origin;
+  final Map<String, String> authHeaders;
+  final void Function(PrivateAudioRef ref) onPlayAudio;
+
+  const _CompletedQuestionCard({
+    required this.question,
+    required this.answer,
+    required this.evidence,
+    required this.origin,
+    required this.authHeaders,
+    required this.onPlayAudio,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final answerText = (answer['answer'] as String?) ?? '';
+    final additionalText = (answer['additional_text'] as String?) ?? '';
+    final level = answer['level'];
+
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.primary.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(AppRadius.xl),
+        border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.18), width: 1.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(question.text, style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900)),
+          const SizedBox(height: AppSpacing.sm),
+          Wrap(
+            spacing: AppSpacing.sm,
+            runSpacing: AppSpacing.sm,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              if (answerText.isNotEmpty) _AnswerBadge(answer: answerText),
+              if (level != null)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+                  decoration: BoxDecoration(color: theme.colorScheme.surfaceContainerHighest, borderRadius: BorderRadius.circular(99)),
+                  child: Text('Nível $level', style: theme.textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w900)),
+                ),
+            ],
+          ),
+          if (additionalText.trim().isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.md),
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              decoration: BoxDecoration(color: theme.colorScheme.surfaceContainerHighest, borderRadius: BorderRadius.circular(AppRadius.lg)),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.chat_bubble_outline, size: 20, color: theme.colorScheme.onSurfaceVariant),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(child: Text(additionalText, style: theme.textTheme.bodyMedium)),
+                ],
+              ),
+            ),
+          ],
+          if (evidence.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.md),
+            _EvidenceGrid(evidence: evidence, origin: origin, authHeaders: authHeaders, onPlayAudio: onPlayAudio),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _GeneralEvidenceCard extends StatelessWidget {
+  final List<MobileEvidenceRef> evidence;
+  final String origin;
+  final Map<String, String> authHeaders;
+  final void Function(PrivateAudioRef ref) onPlayAudio;
+
+  const _GeneralEvidenceCard({required this.evidence, required this.origin, required this.authHeaders, required this.onPlayAudio});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(color: theme.colorScheme.surfaceContainerHighest, borderRadius: BorderRadius.circular(AppRadius.xl)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Evidências gerais', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900)),
+          const SizedBox(height: AppSpacing.md),
+          _EvidenceGrid(evidence: evidence, origin: origin, authHeaders: authHeaders, onPlayAudio: onPlayAudio),
+        ],
+      ),
+    );
+  }
+}
+
+class _CompletedNotesCard extends StatelessWidget {
+  final String? notes;
+  const _CompletedNotesCard({required this.notes});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final text = (notes ?? '').trim();
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(AppRadius.xl),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Observações gerais', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900)),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            text.isEmpty ? 'Nenhuma observação adicional informada.' : text,
+            style: theme.textTheme.bodyMedium?.copyWith(color: text.isEmpty ? theme.colorScheme.onSurfaceVariant : null),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EvidenceGrid extends StatelessWidget {
+  final List<MobileEvidenceRef> evidence;
+  final String origin;
+  final Map<String, String> authHeaders;
+  final void Function(PrivateAudioRef ref) onPlayAudio;
+
+  const _EvidenceGrid({required this.evidence, required this.origin, required this.authHeaders, required this.onPlayAudio});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (final e in evidence) ...[
+          _EvidenceThumb(evidence: e, origin: origin, authHeaders: authHeaders, onPlayAudio: onPlayAudio),
+          const SizedBox(height: AppSpacing.sm),
+        ],
+      ],
+    );
+  }
+}
+
+class _EvidenceThumb extends StatelessWidget {
+  final MobileEvidenceRef evidence;
+  final String origin;
+  final Map<String, String> authHeaders;
+  final void Function(PrivateAudioRef ref) onPlayAudio;
+
+  const _EvidenceThumb({required this.evidence, required this.origin, required this.authHeaders, required this.onPlayAudio});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final absUrl = _absoluteMediaUrl(origin: origin, url: evidence.url);
+
+    switch (evidence.kind) {
+      case 'photo':
+        return GestureDetector(
+          onTap: () => _showFullscreenImage(context, url: absUrl, headers: authHeaders),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+            child: Image.network(
+              absUrl,
+              headers: authHeaders,
+              height: 160,
+              width: double.infinity,
+              fit: BoxFit.cover,
+              loadingBuilder: (context, child, progress) => progress == null
+                  ? child
+                  : Container(height: 160, alignment: Alignment.center, child: const CircularProgressIndicator()),
+              errorBuilder: (context, error, stack) => Container(
+                height: 160,
+                color: theme.colorScheme.surfaceContainerHighest,
+                alignment: Alignment.center,
+                child: Icon(Icons.broken_image, color: theme.colorScheme.onSurfaceVariant),
+              ),
+            ),
+          ),
+        );
+      case 'audio':
+        return OutlinedButton.icon(
+          onPressed: () => onPlayAudio(PrivateAudioRef(sha256: evidence.sha256, url: evidence.url)),
+          icon: Icon(Icons.play_circle, color: theme.colorScheme.primary),
+          label: Text('Reproduzir áudio', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800)),
+        );
+      case 'video':
+        return _EvidenceVideoPlayer(url: absUrl, headers: authHeaders);
+      default:
+        return Container(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          decoration: BoxDecoration(color: theme.colorScheme.surfaceContainerHighest, borderRadius: BorderRadius.circular(AppRadius.lg)),
+          child: Row(
+            children: [
+              Icon(Icons.insert_drive_file, color: theme.colorScheme.onSurfaceVariant),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(child: Text(evidence.originalName, overflow: TextOverflow.ellipsis)),
+            ],
+          ),
+        );
+    }
+  }
+}
+
+class _EvidenceVideoPlayer extends StatefulWidget {
+  final String url;
+  final Map<String, String> headers;
+  const _EvidenceVideoPlayer({required this.url, required this.headers});
+
+  @override
+  State<_EvidenceVideoPlayer> createState() => _EvidenceVideoPlayerState();
+}
+
+class _EvidenceVideoPlayerState extends State<_EvidenceVideoPlayer> {
+  VideoPlayerController? _controller;
+  bool _initializing = true;
+  bool _failed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _init();
+  }
+
+  Future<void> _init() async {
+    try {
+      final controller = VideoPlayerController.networkUrl(Uri.parse(widget.url), httpHeaders: widget.headers);
+      await controller.initialize();
+      if (!mounted) {
+        controller.dispose();
+        return;
+      }
+      setState(() {
+        _controller = controller;
+        _initializing = false;
+      });
+    } catch (e) {
+      debugPrint('Video init failed: $e');
+      if (!mounted) return;
+      setState(() {
+        _failed = true;
+        _initializing = false;
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    if (_initializing) {
+      return Container(height: 160, alignment: Alignment.center, child: const CircularProgressIndicator());
+    }
+    final controller = _controller;
+    if (_failed || controller == null) {
+      return Container(
+        height: 80,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(color: theme.colorScheme.surfaceContainerHighest, borderRadius: BorderRadius.circular(AppRadius.lg)),
+        child: Text('Não foi possível carregar o vídeo.', style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+      );
+    }
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(AppRadius.lg),
+      child: AspectRatio(
+        aspectRatio: controller.value.aspectRatio == 0 ? 16 / 9 : controller.value.aspectRatio,
+        child: GestureDetector(
+          onTap: () => setState(() => controller.value.isPlaying ? controller.pause() : controller.play()),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              VideoPlayer(controller),
+              ValueListenableBuilder<VideoPlayerValue>(
+                valueListenable: controller,
+                builder: (context, value, _) => value.isPlaying
+                    ? const SizedBox.shrink()
+                    : Container(
+                        decoration: const BoxDecoration(color: Colors.black45, shape: BoxShape.circle),
+                        child: const Icon(Icons.play_arrow, color: Colors.white, size: 48),
+                      ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
