@@ -710,6 +710,21 @@ class _OccurrenceDetailPageState extends State<OccurrenceDetailPage> {
                       const SizedBox(height: AppSpacing.md),
                       Row(
                         children: [
+                          TextButton.icon(
+                            onPressed: _mutating ? null : _cancelDraft,
+                            icon: Icon(
+                              Icons.close,
+                              color: theme.colorScheme.error,
+                            ),
+                            label: Text(
+                              'Cancelar',
+                              style: TextStyle(
+                                color: theme.colorScheme.error,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.md),
                           Expanded(
                             child: FilledButton.icon(
                               onPressed: (_mutating || _pickedMedia == null)
@@ -742,21 +757,6 @@ class _OccurrenceDetailPageState extends State<OccurrenceDetailPage> {
                                   color: theme.colorScheme.onPrimary,
                                   fontWeight: FontWeight.w900,
                                 ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: AppSpacing.md),
-                          TextButton.icon(
-                            onPressed: _mutating ? null : _cancelDraft,
-                            icon: Icon(
-                              Icons.close,
-                              color: theme.colorScheme.error,
-                            ),
-                            label: Text(
-                              'Cancelar',
-                              style: TextStyle(
-                                color: theme.colorScheme.error,
-                                fontWeight: FontWeight.w800,
                               ),
                             ),
                           ),

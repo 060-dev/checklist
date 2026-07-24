@@ -230,18 +230,45 @@ class _OccurrenceCard extends StatelessWidget {
     if (dueText != null) subtitleBits.add('Até: $dueText');
     final subtitle = subtitleBits.join(' · ');
 
+    final isResolved =
+        item.status == 'resolved' ||
+        item.status == 'solucionada' ||
+        item.status == 'concluida';
+
+    final (
+      Color iconBg,
+      Color iconFg,
+      IconData iconData,
+      Color borderColor,
+      Color cardBg,
+      Color arrowColor,
+    ) = isResolved
+        ? (
+            AppColors.successLight,
+            AppColors.success,
+            Icons.check_circle_rounded,
+            AppColors.success.withValues(alpha: 0.35),
+            AppColors.successLight.withValues(alpha: 0.2),
+            AppColors.success,
+          )
+        : (
+            theme.colorScheme.primary.withValues(alpha: 0.12),
+            theme.colorScheme.primary,
+            Icons.warning_rounded,
+            theme.colorScheme.primary.withValues(alpha: 0.22),
+            theme.colorScheme.primary.withValues(alpha: 0.06),
+            theme.colorScheme.primary,
+          );
+
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 160),
         padding: const EdgeInsets.all(AppSpacing.lg),
         decoration: BoxDecoration(
-          color: theme.colorScheme.primary.withValues(alpha: 0.06),
+          color: cardBg,
           borderRadius: BorderRadius.circular(AppRadius.xl),
-          border: Border.all(
-            color: theme.colorScheme.primary.withValues(alpha: 0.22),
-            width: 2,
-          ),
+          border: Border.all(color: borderColor, width: 2),
         ),
         child: Row(
           children: [
@@ -249,14 +276,10 @@ class _OccurrenceCard extends StatelessWidget {
               width: 56,
               height: 56,
               decoration: BoxDecoration(
-                color: theme.colorScheme.primary,
+                color: iconBg,
                 borderRadius: BorderRadius.circular(AppRadius.xl),
               ),
-              child: Icon(
-                Icons.warning_rounded,
-                color: theme.colorScheme.onPrimary,
-                size: 30,
-              ),
+              child: Icon(iconData, color: iconFg, size: 30),
             ),
             const SizedBox(width: AppSpacing.lg),
             Expanded(
@@ -277,15 +300,34 @@ class _OccurrenceCard extends StatelessWidget {
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
                     ),
+                  if (isResolved) ...[
+                    const SizedBox(height: AppSpacing.xs),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.successLight,
+                        borderRadius: BorderRadius.circular(99),
+                        border: Border.all(
+                          color: AppColors.success.withValues(alpha: 0.3),
+                        ),
+                      ),
+                      child: Text(
+                        'Resolvida',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: AppColors.success,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
             const SizedBox(width: AppSpacing.md),
-            Icon(
-              Icons.arrow_forward_ios,
-              color: theme.colorScheme.primary,
-              size: 20,
-            ),
+            Icon(Icons.arrow_forward_ios, color: arrowColor, size: 20),
           ],
         ),
       ),
