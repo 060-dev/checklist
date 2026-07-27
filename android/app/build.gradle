@@ -8,6 +8,9 @@ plugins {
 
 def keystoreProperties = new Properties()
 def keystorePropertiesFile = rootProject.file('key.properties')
+if (!keystorePropertiesFile.exists()) {
+    keystorePropertiesFile = file('key.properties')
+}
 if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
 }
@@ -28,9 +31,16 @@ android {
 
     signingConfigs {
        release {
+           def keyPath = keystoreProperties['storeFile']
+           if (keyPath) {
+               def keyFile = rootProject.file(keyPath)
+               if (!keyFile.exists()) {
+                   keyFile = file(keyPath)
+               }
+               storeFile keyFile
+           }
            keyAlias keystoreProperties['keyAlias']
            keyPassword keystoreProperties['keyPassword']
-           storeFile keystoreProperties['storeFile'] ? file(keystoreProperties['storeFile']) : null
            storePassword keystoreProperties['storePassword']
        }
     }
@@ -47,8 +57,7 @@ android {
 
     buildTypes {
         release {
-            // Use release signing if key.properties exists, otherwise fall back to debug
-            signingConfig = keystorePropertiesFile.exists() ? signingConfigs.release : signingConfigs.debug
+            signingConfig signingConfigs.release
         }
     }
 }
