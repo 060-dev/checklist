@@ -1,4 +1,4 @@
-package com.mycompany.CounterApp
+package br.com.yplanejamento.morropeao
 
 import io.flutter.embedding.android.FlutterActivity
 

@@ -47,6 +47,7 @@ app.*.map.json
 **/android/gen/
 **/android/out/
 **/android/app/key.properties
+**/android/key.properties
 **/android/app/src/main/res/values/strings.xml
 **/*.jks
 **/*.keystore

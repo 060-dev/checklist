@@ -12,16 +12,12 @@ class AppSession extends ChangeNotifier {
   ApiConfig? _apiConfig;
   bool _loaded = false;
 
-  static const String defaultOrigin = 'https://morropeao.yplanejamento.com.br';
-  static const String defaultApiBaseUrl =
+  static const String _origin = 'https://morropeao.yplanejamento.com.br';
+  static const String _apiBaseUrl =
       'https://morropeao.yplanejamento.com.br/api/mobile/v1';
 
   /// Environment injection (build-time), e.g.:
-  /// `--dart-define=MORROPEAO_ORIGIN=...`
-  /// `--dart-define=MORROPEAO_BASE_URL=...`
   /// `--dart-define=MORROPEAO_API_KEY=...`
-  static const String envOrigin = String.fromEnvironment('MORROPEAO_ORIGIN');
-  static const String envBaseUrl = String.fromEnvironment('MORROPEAO_BASE_URL');
   static const String envApiKey = String.fromEnvironment('MORROPEAO_API_KEY');
 
   static const String _kLastEmployeeId = 'last_employee_id_v1';
@@ -30,15 +26,8 @@ class AppSession extends ChangeNotifier {
   Operator? get selectedOperator => _selectedOperator;
 
   /// For audio URLs (which are relative to origin, not the API base URL).
-  String get origin {
-    final env = envOrigin.trim();
-    if (env.isNotEmpty) return env;
-    return defaultOrigin;
-  }
-
-  String get apiBaseUrl =>
-      _apiConfig?.apiBaseUrl ??
-      (envBaseUrl.trim().isNotEmpty ? envBaseUrl.trim() : defaultApiBaseUrl);
+  String get origin => _origin;
+  String get apiBaseUrl => _apiBaseUrl;
 
   /// Resolution order: secure storage -> `--dart-define` -> empty (no
   /// hardcoded fallback key). An empty key means the API-driven screens are
@@ -70,12 +59,9 @@ class AppSession extends ChangeNotifier {
       _apiConfig = await ApiConfigStore.instance.load();
 
       final injectedKey = envApiKey.trim();
-      final injectedBase = envBaseUrl.trim();
       if (_apiConfig == null && injectedKey.isNotEmpty) {
         final cfg = ApiConfig(
-          apiBaseUrl: injectedBase.isNotEmpty
-              ? injectedBase
-              : defaultApiBaseUrl,
+          apiBaseUrl: _apiBaseUrl,
           apiKey: injectedKey,
           requestTimeoutSeconds: 30,
           uploadTimeoutSeconds: 120,
