@@ -20,8 +20,27 @@ class AppSession extends ChangeNotifier {
   /// `--dart-define=MORROPEAO_API_KEY=...`
   static const String envApiKey = String.fromEnvironment('MORROPEAO_API_KEY');
 
+  /// Environment injection (build-time), e.g.:
+  /// `--dart-define=MORROPEAO_ACTIVATION_CODE=...`
+  static const String envActivationCode = String.fromEnvironment(
+    'MORROPEAO_ACTIVATION_CODE',
+  );
+
   static const String _kLastEmployeeId = 'last_employee_id_v1';
   static const String _kLastEmployeeName = 'last_employee_name_v1';
+
+  // --- First-time app activation (QR code / manual PIN) --------------------
+  static const String _kIsActivated = 'is_activated_v1';
+
+  /// Activation code printed on the farm's QR code and usable as a manual
+  /// PIN (e.g. by Google Play reviewers). No hardcoded fallback: if
+  /// `--dart-define=MORROPEAO_ACTIVATION_CODE=...` isn't supplied at build
+  /// time, this is empty and `activateWithCode` can never succeed.
+  static String get activationCode => envActivationCode.trim();
+
+  bool _isActivated = false;
+
+  bool get isActivated => _isActivated;
 
   Operator? get selectedOperator => _selectedOperator;
 
@@ -71,6 +90,8 @@ class AppSession extends ChangeNotifier {
       }
 
       final prefs = await SharedPreferences.getInstance();
+      _isActivated = prefs.getBool(_kIsActivated) ?? false;
+
       final id = (prefs.getString(_kLastEmployeeId) ?? '').trim();
       final name = (prefs.getString(_kLastEmployeeName) ?? '').trim();
       if (id.isNotEmpty && name.isNotEmpty && _selectedOperator == null) {
@@ -120,5 +141,22 @@ class AppSession extends ChangeNotifier {
     _selectedOperator = null;
     unawaited(_clearSelectedOperator());
     notifyListeners();
+  }
+
+  /// Validates [rawInput] (scanned QR text or manually typed PIN) against
+  /// [activationCode]. On success, persists activation so the gate never
+  /// shows again on this device.
+  Future<bool> activateWithCode(String rawInput) async {
+    if (rawInput.trim() != activationCode) return false;
+
+    _isActivated = true;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_kIsActivated, true);
+    } catch (e) {
+      debugPrint('Failed to persist activation: $e');
+    }
+    notifyListeners();
+    return true;
   }
 }

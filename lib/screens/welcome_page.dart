@@ -1,9 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+import 'package:morro_do_peo/state/app_session.dart';
 import 'package:morro_do_peo/theme.dart';
 
 class WelcomePage extends StatelessWidget {
   const WelcomePage({super.key});
+
+  Future<void> _handleBegin(BuildContext context) async {
+    final session = context.read<AppSession>();
+    await session.ensureLoaded();
+    if (!context.mounted) return;
+    context.go(session.isActivated ? '/collaborators' : '/activate');
+  }
 
   /// Home background image.
   static const String _backgroundAsset = 'assets/images/background.png';
@@ -65,7 +74,7 @@ class WelcomePage extends StatelessWidget {
                   const _HomeWelcomeText(title: _welcomeTitle, subtitle: _welcomeSubtitle),
                   const Spacer(flex: 3),
                   HomePrimaryCta(
-                    onPressed: () => context.go('/collaborators'),
+                    onPressed: () => _handleBegin(context),
                   ),
                 ],
               ),

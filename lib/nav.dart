@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:morro_do_peo/screens/welcome_page.dart';
+import 'package:morro_do_peo/screens/activation_page.dart';
 import 'package:morro_do_peo/screens/operator_selection_page.dart';
 import 'package:morro_do_peo/screens/checklists_page.dart';
 import 'package:morro_do_peo/screens/home_page.dart';
@@ -32,6 +33,14 @@ class AppRouter {
             name: 'collaborators',
             pageBuilder: (context, state) => CustomTransitionPage(
               child: const OperatorSelectionPage(),
+              transitionsBuilder: _slideTransition,
+            ),
+          ),
+          GoRoute(
+            path: AppRoutes.activate,
+            name: 'activate',
+            pageBuilder: (context, state) => CustomTransitionPage(
+              child: const ActivationPage(),
               transitionsBuilder: _slideTransition,
             ),
           ),
@@ -99,6 +108,7 @@ class AppRouter {
 class AppRoutes {
   static const String home = '/';
   static const String collaborators = '/collaborators';
+  static const String activate = '/activate';
 
   // API v1 flow (backend-driven).
   static const String apiHome = '/api';
