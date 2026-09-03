@@ -235,6 +235,8 @@ class _OccurrenceCard extends StatelessWidget {
         item.status == 'solucionada' ||
         item.status == 'concluida';
 
+    final isOverdue = item.isOverdue;
+
     final (
       Color iconBg,
       Color iconFg,
@@ -251,10 +253,19 @@ class _OccurrenceCard extends StatelessWidget {
             AppColors.successLight.withValues(alpha: 0.2),
             AppColors.success,
           )
+        : isOverdue
+        ? (
+            AppColors.errorLight,
+            AppColors.error,
+            Icons.warning_rounded,
+            AppColors.error.withValues(alpha: 0.35),
+            AppColors.errorLight.withValues(alpha: 0.2),
+            AppColors.error,
+          )
         : (
             theme.colorScheme.primary.withValues(alpha: 0.12),
             theme.colorScheme.primary,
-            Icons.warning_rounded,
+            Icons.warning_amber_rounded,
             theme.colorScheme.primary.withValues(alpha: 0.22),
             theme.colorScheme.primary.withValues(alpha: 0.06),
             theme.colorScheme.primary,
@@ -318,6 +329,28 @@ class _OccurrenceCard extends StatelessWidget {
                         'Resolvida',
                         style: theme.textTheme.labelSmall?.copyWith(
                           color: AppColors.success,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                  ] else if (isOverdue) ...[
+                    const SizedBox(height: AppSpacing.xs),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.errorLight,
+                        borderRadius: BorderRadius.circular(99),
+                        border: Border.all(
+                          color: AppColors.error.withValues(alpha: 0.3),
+                        ),
+                      ),
+                      child: Text(
+                        'Atrasada',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: AppColors.error,
                           fontWeight: FontWeight.w800,
                         ),
                       ),

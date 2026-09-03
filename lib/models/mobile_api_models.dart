@@ -274,6 +274,7 @@ class OccurrenceSummary {
   final String status;
   final String? priority;
   final DateTime? dueAt;
+  final bool isOverdue;
 
   const OccurrenceSummary({
     required this.occurrenceId,
@@ -282,6 +283,7 @@ class OccurrenceSummary {
     required this.status,
     required this.priority,
     required this.dueAt,
+    required this.isOverdue,
   });
 
   factory OccurrenceSummary.fromJson(Map<String, dynamic> json) =>
@@ -298,6 +300,7 @@ class OccurrenceSummary {
         dueAt: (json['due_at'] is String)
             ? DateTime.tryParse(json['due_at'] as String)
             : null,
+        isOverdue: json['is_overdue'] == true,
       );
 
   Map<String, dynamic> toJson() => {
@@ -307,6 +310,7 @@ class OccurrenceSummary {
     'status': status,
     'priority': priority,
     'due_at': dueAt?.toIso8601String(),
+    'is_overdue': isOverdue,
   };
 }
 
@@ -326,6 +330,7 @@ class OccurrenceDetail {
   DateTime? get dueAt => (raw['due_at'] is String)
       ? DateTime.tryParse(raw['due_at'] as String)
       : null;
+  bool get isOverdue => raw['is_overdue'] == true;
   DateTime? get createdAt => (raw['created_at'] is String)
       ? DateTime.tryParse(raw['created_at'] as String)
       : null;

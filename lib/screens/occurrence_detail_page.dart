@@ -917,6 +917,27 @@ class _OccurrenceHeader extends StatelessWidget {
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [
             _StatusBadge(status: detail.status),
+            if (detail.isOverdue &&
+                detail.status != 'resolved' &&
+                detail.status != 'solucionada' &&
+                detail.status != 'concluida')
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.md,
+                  vertical: AppSpacing.xs,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.errorLight,
+                  borderRadius: BorderRadius.circular(99),
+                ),
+                child: Text(
+                  'Atrasada',
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    fontWeight: FontWeight.w900,
+                    color: AppColors.error,
+                  ),
+                ),
+              ),
             if (priority.isNotEmpty) _PriorityBadge(priority: priority),
             if (location.isNotEmpty)
               Row(
