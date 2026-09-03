@@ -1,7 +1,7 @@
 name: morro_do_peo
 description: "Simplifique as operações da Fazenda Morro do Peão com um aplicativo intuitivo, guiando trabalhadores rurais através de checklists diários de agricultura e pecuária com ícones grandes, áudio e fotos, e oferecendo aos gestores"
 publish_to: "none"
-version: 0.0.3+2
+version: 0.1.0+3
 
 environment:
   sdk: ^3.12.2
