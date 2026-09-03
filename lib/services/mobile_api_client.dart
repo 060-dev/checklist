@@ -166,7 +166,7 @@ class MobileApiClient {
 
     req.files.addAll(files);
     final streamed = await req.send().timeout(uploadTimeout);
-    final res = await http.Response.fromStream(streamed);
+    final res = await http.Response.fromStream(streamed).timeout(requestTimeout);
     return _decodeEnvelope<T>(res, decodeData: decodeData);
   }
 
