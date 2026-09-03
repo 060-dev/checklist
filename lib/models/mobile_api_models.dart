@@ -114,6 +114,7 @@ class ExecutionSummary {
   final String? location;
   final DateTime? dueAt;
   final String status;
+  final DateTime? scheduledFor;
 
   const ExecutionSummary({
     required this.executionId,
@@ -124,6 +125,7 @@ class ExecutionSummary {
     required this.location,
     required this.dueAt,
     required this.status,
+    this.scheduledFor,
   });
 
   factory ExecutionSummary.fromJson(Map<String, dynamic> json) =>
@@ -146,6 +148,9 @@ class ExecutionSummary {
             ? DateTime.tryParse(json['due_at'] as String)
             : null,
         status: (json['status'] as String?) ?? 'pending',
+        scheduledFor: (json['scheduled_for'] is String)
+            ? DateTime.tryParse(json['scheduled_for'] as String)
+            : null,
       );
 
   Map<String, dynamic> toJson() => {
@@ -157,6 +162,7 @@ class ExecutionSummary {
     'location': location,
     'due_at': dueAt?.toIso8601String(),
     'status': status,
+    'scheduled_for': scheduledFor?.toIso8601String(),
   };
 }
 
@@ -185,6 +191,9 @@ class ExecutionDetail {
   String get status => (raw['status'] as String?) ?? 'pending';
   DateTime? get dueAt => (raw['due_at'] is String)
       ? DateTime.tryParse(raw['due_at'] as String)
+      : null;
+  DateTime? get scheduledFor => (raw['scheduled_for'] is String)
+      ? DateTime.tryParse(raw['scheduled_for'] as String)
       : null;
 
   bool get isSimpleBoolean =>
