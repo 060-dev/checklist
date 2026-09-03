@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:morro_do_peo/models/alert_models.dart';
 import 'package:morro_do_peo/models/mobile_api_models.dart';
 import 'package:morro_do_peo/services/mobile_api_client.dart';
 
@@ -390,5 +391,57 @@ class MobileApiServices {
           (json is Map) ? json.cast<String, dynamic>() : <String, dynamic>{},
     );
     return OccurrenceDetail(env.data ?? const <String, dynamic>{});
+  }
+
+  // ---------------------------------------------------------------------------
+  // Alerts
+  // ---------------------------------------------------------------------------
+
+  /// Returns the list of alerts for [employeeId].
+  /// Optionally filter by [status] (pending | sent | viewed | handled).
+  /// The API returns a plain array wrapped in the standard envelope (not paginated).
+  Future<List<MobileAlert>> listAlerts({
+    required String employeeId,
+    String? status,
+  }) async {
+    final query = <String, String>{};
+    if ((status ?? '').trim().isNotEmpty) query['status'] = status!.trim();
+
+    final env = await client.getJson<List<dynamic>>(
+      path: '/employees/$employeeId/alerts',
+      query: query.isEmpty ? null : query,
+      decodeData: (json) => (json is List) ? json : const <dynamic>[],
+    );
+
+    final items = <MobileAlert>[];
+    for (final it in env.data ?? const <dynamic>[]) {
+      try {
+        if (it is Map<String, dynamic>) {
+          items.add(MobileAlert.fromJson(it));
+        } else if (it is Map) {
+          items.add(MobileAlert.fromJson(it.cast<String, dynamic>()));
+        }
+      } catch (e) {
+        debugPrint('Skipping invalid alert item: \$e');
+      }
+    }
+    return items;
+  }
+
+  /// Updates an alert's status to [status] (`viewed` or `handled`).
+  Future<MobileAlert> updateAlert({
+    required String employeeId,
+    required String alertId,
+    required String status,
+    required String idempotencyKey,
+  }) async {
+    final env = await client.patchJson<Map<String, dynamic>>(
+      path: '/employees/$employeeId/alerts/$alertId',
+      body: <String, dynamic>{'status': status},
+      idempotencyKey: idempotencyKey,
+      decodeData: (json) =>
+          (json is Map) ? json.cast<String, dynamic>() : <String, dynamic>{},
+    );
+    return MobileAlert.fromJson(env.data ?? const <String, dynamic>{});
   }
 }

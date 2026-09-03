@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
+import 'package:morro_do_peo/screens/alerts_page.dart';
 import 'package:morro_do_peo/screens/history_page.dart';
 import 'package:morro_do_peo/screens/occurrences_page.dart';
 import 'package:morro_do_peo/screens/today_page.dart';
@@ -16,6 +17,13 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   int _index = 0;
+  int _unhandledAlertCount = 0;
+
+  void _onAlertCountChanged(int count) {
+    if (mounted && count != _unhandledAlertCount) {
+      setState(() => _unhandledAlertCount = count);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -23,8 +31,13 @@ class _HomePageState extends State<HomePage> {
     final session = context.watch<AppSession>();
     final op = session.selectedOperator;
 
-    final pages = const [TodayPage(), HistoryPage(), OccurrencesPage()];
-    final titles = const ['Hoje', 'Histórico', 'Ocorrências'];
+    final pages = [
+      const TodayPage(),
+      const HistoryPage(),
+      const OccurrencesPage(),
+      AlertsPage(onCountChanged: _onAlertCountChanged),
+    ];
+    final titles = const ['Hoje', 'Histórico', 'Ocorrências', 'Avisos'];
 
     Future<void> confirmChangePerson() async {
       final ok = await showDialog<bool>(
@@ -53,10 +66,31 @@ class _HomePageState extends State<HomePage> {
           selectedIndex: _index,
           onDestinationSelected: (i) => setState(() => _index = i),
           indicatorColor: theme.colorScheme.primary.withValues(alpha: 0.14),
-          destinations: const [
-            NavigationDestination(icon: Icon(Icons.today_rounded), label: 'Hoje'),
-            NavigationDestination(icon: Icon(Icons.history_rounded), label: 'Histórico'),
-            NavigationDestination(icon: Icon(Icons.warning_rounded), label: 'Ocorrências'),
+          destinations: [
+            const NavigationDestination(
+              icon: Icon(Icons.today_rounded),
+              label: 'Hoje',
+            ),
+            const NavigationDestination(
+              icon: Icon(Icons.history_rounded),
+              label: 'Histórico',
+            ),
+            const NavigationDestination(
+              icon: Icon(Icons.warning_rounded),
+              label: 'Ocorrências',
+            ),
+            NavigationDestination(
+              icon: Badge(
+                isLabelVisible: _unhandledAlertCount > 0,
+                label: Text(
+                  _unhandledAlertCount > 9
+                      ? '9+'
+                      : '$_unhandledAlertCount',
+                ),
+                child: const Icon(Icons.notifications_rounded),
+              ),
+              label: 'Avisos',
+            ),
           ],
         ),
       ),
