@@ -195,6 +195,10 @@ class ExecutionDetail {
   DateTime? get scheduledFor => (raw['scheduled_for'] is String)
       ? DateTime.tryParse(raw['scheduled_for'] as String)
       : null;
+  Map<String, dynamic>? get narrationAudio =>
+      (raw['narration_audio'] is Map)
+          ? (raw['narration_audio'] as Map).cast<String, dynamic>()
+          : null;
 
   bool get isSimpleBoolean =>
       raw['requirements'] is Map &&
@@ -231,6 +235,8 @@ class MobileEvidenceRef {
   final String originalName;
   final String url;
   final String sha256;
+  final String? transcription;
+  final DateTime? transcribedAt;
 
   const MobileEvidenceRef({
     required this.id,
@@ -239,6 +245,8 @@ class MobileEvidenceRef {
     required this.originalName,
     required this.url,
     required this.sha256,
+    this.transcription,
+    this.transcribedAt,
   });
 
   /// Checklist evidence (`MobileEvidence`) carries an explicit `kind`.
@@ -263,6 +271,10 @@ class MobileEvidenceRef {
         originalName: (json['original_name'] as String?) ?? '',
         url: (json['url'] as String?) ?? '',
         sha256: (json['sha256'] as String?) ?? '',
+        transcription: json['transcription'] as String?,
+        transcribedAt: (json['transcribed_at'] is String)
+            ? DateTime.tryParse(json['transcribed_at'] as String)
+            : null,
       );
 }
 
@@ -338,6 +350,10 @@ class OccurrenceDetail {
       ? DateTime.tryParse(raw['resolved_at'] as String)
       : null;
   String? get resolutionNotes => raw['resolution_notes'] as String?;
+  Map<String, dynamic>? get narrationAudio =>
+      (raw['narration_audio'] is Map)
+          ? (raw['narration_audio'] as Map).cast<String, dynamic>()
+          : null;
 
   List<Map<String, dynamic>> get attachments => (raw['attachments'] is List)
       ? (raw['attachments'] as List)

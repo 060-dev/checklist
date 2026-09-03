@@ -89,9 +89,8 @@ class _OccurrenceDetailPageState extends State<OccurrenceDetailPage> {
   }
 
   PrivateAudioRef? _narrationRef(OccurrenceDetail d) {
-    final raw = d.raw['narration_audio'];
-    if (raw is! Map) return null;
-    final map = raw.cast<String, dynamic>();
+    final map = d.narrationAudio;
+    if (map == null) return null;
     final sha = (map['sha256'] as String?) ?? '';
     final url = (map['url'] as String?) ?? '';
     if (sha.trim().isEmpty || url.trim().isEmpty) return null;
@@ -104,7 +103,10 @@ class _OccurrenceDetailPageState extends State<OccurrenceDetailPage> {
 
     final ref = _narrationRef(d);
     if (ref == null) {
-      setState(() => _error = 'Áudio não disponível.');
+      // Fallback to local TTS
+      final desc = (d.description ?? '').trim();
+      final descText = desc.isEmpty ? '' : '. $desc';
+      await TtsService.instance.speak('${d.title}$descText');
       return;
     }
 
@@ -396,6 +398,55 @@ class _OccurrenceDetailPageState extends State<OccurrenceDetailPage> {
       }
     } finally {
       client.dispose();
+    }
+  }
+
+  Future<void> _transcribeAttachment(MobileEvidenceRef ref) async {
+    final d = _detail;
+    if (d == null) return;
+    final session = context.read<AppSession>();
+    final employeeId = session.selectedOperator?.id ?? '';
+    if (!session.hasApiConfig || employeeId.isEmpty) return;
+
+    if (mounted) setState(() => _mutating = true);
+    
+    final client = MobileApiClient(
+      apiBaseUrl: session.apiBaseUrl.trim(),
+      apiKey: session.apiKey.trim(),
+      requestTimeout: Duration(seconds: session.requestTimeoutSeconds),
+      uploadTimeout: Duration(seconds: session.uploadTimeoutSeconds),
+    );
+    final api = MobileApiServices(client: client);
+    try {
+      final updatedRef = await api.transcribeAttachment(
+        employeeId: employeeId,
+        occurrenceId: d.occurrenceId,
+        attachmentId: ref.id,
+        idempotencyKey: const Uuid().v4(),
+      );
+      if (!mounted) return;
+      // We need to update this attachment inside the detail object locally
+      // so it shows the transcription instantly.
+      final reverted = Map<String, dynamic>.from(d.raw);
+      final attachmentsList = List.from(reverted['attachments'] ?? []);
+      final index = attachmentsList.indexWhere((a) => a['id']?.toString() == ref.id);
+      if (index >= 0) {
+        final newAttachment = Map<String, dynamic>.from(attachmentsList[index]);
+        newAttachment['transcription'] = updatedRef.transcription;
+        newAttachment['transcribed_at'] = updatedRef.transcribedAt?.toIso8601String();
+        attachmentsList[index] = newAttachment;
+        reverted['attachments'] = attachmentsList;
+        setState(() => _detail = OccurrenceDetail(reverted));
+      } else {
+        // Fallback: just reload
+        await _load();
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _error = 'Erro ao transcrever o áudio.');
+    } finally {
+      client.dispose();
+      if (mounted) setState(() => _mutating = false);
     }
   }
 
@@ -779,6 +830,7 @@ class _OccurrenceDetailPageState extends State<OccurrenceDetailPage> {
                         origin: session.origin,
                         authHeaders: authHeaders,
                         onPlayAudio: _playAttachmentAudio,
+                        onTranscribeAudio: _transcribeAttachment,
                       ),
                     ],
                     const SizedBox(height: AppSpacing.lg),
@@ -795,12 +847,14 @@ class _UploadedAttachments extends StatelessWidget {
   final String origin;
   final Map<String, String> authHeaders;
   final void Function(PrivateAudioRef ref) onPlayAudio;
+  final void Function(MobileEvidenceRef ref) onTranscribeAudio;
 
   const _UploadedAttachments({
     required this.attachments,
     required this.origin,
     required this.authHeaders,
     required this.onPlayAudio,
+    required this.onTranscribeAudio,
   });
 
   @override
@@ -833,15 +887,63 @@ class _UploadedAttachments extends StatelessWidget {
         for (final a in audios) ...[
           if (photos.isNotEmpty || audios.first != a)
             const SizedBox(height: AppSpacing.sm),
-          OutlinedButton.icon(
-            onPressed: () =>
-                onPlayAudio(PrivateAudioRef(sha256: a.sha256, url: a.url)),
-            icon: Icon(Icons.play_circle, color: theme.colorScheme.primary),
-            label: Text(
-              'Reproduzir áudio',
-              style: theme.textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w800,
-              ),
+          Container(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(AppRadius.lg),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: FilledButton.icon(
+                        onPressed: () => onPlayAudio(
+                            PrivateAudioRef(sha256: a.sha256, url: a.url)),
+                        icon: const Icon(Icons.play_circle),
+                        label: Text(
+                          'Ouvir',
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                    ),
+                    if (a.transcription == null) ...[
+                      const SizedBox(width: AppSpacing.sm),
+                      OutlinedButton.icon(
+                        onPressed: () => onTranscribeAudio(a),
+                        icon: Icon(Icons.notes,
+                            color: theme.colorScheme.primary),
+                        label: Text(
+                          'Transcrever',
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                if (a.transcription != null) ...[
+                  const SizedBox(height: AppSpacing.md),
+                  Container(
+                    padding: const EdgeInsets.all(AppSpacing.sm),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surface,
+                      borderRadius: BorderRadius.circular(AppRadius.md),
+                    ),
+                    child: Text(
+                      a.transcription!,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
         ],

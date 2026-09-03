@@ -69,9 +69,8 @@ class _ExecutionDetailPageState extends State<ExecutionDetailPage> {
   }
 
   PrivateAudioRef? _narrationRef(ExecutionDetail d) {
-    final raw = d.raw['narration_audio'];
-    if (raw is! Map) return null;
-    final map = raw.cast<String, dynamic>();
+    final map = d.narrationAudio;
+    if (map == null) return null;
     final sha = (map['sha256'] as String?) ?? '';
     final url = (map['url'] as String?) ?? '';
     if (sha.trim().isEmpty || url.trim().isEmpty) return null;
@@ -107,11 +106,37 @@ class _ExecutionDetailPageState extends State<ExecutionDetailPage> {
     }
   }
 
-  Future<void> _speakQuestion(String text) async {
-    // If the backend didn't provide a narration file for this question, we still
-    // guarantee an "ouvir" action using TTS.
+  Future<void> _playQuestionAudio(_ApiQuestion q) async {
     await PrivateAudioPlayer.instance.stop();
-    await TtsService.instance.speak(text);
+    if (q.narrationAudio != null) {
+      final session = context.read<AppSession>();
+      final employeeId = session.selectedOperator?.id ?? '';
+      if (!session.hasApiConfig || employeeId.isEmpty) {
+        if (mounted) setState(() => _error = 'Sem acesso configurado.');
+        return;
+      }
+      final client = MobileApiClient(
+        apiBaseUrl: session.apiBaseUrl.trim(),
+        apiKey: session.apiKey.trim(),
+        requestTimeout: Duration(seconds: session.requestTimeoutSeconds),
+        uploadTimeout: Duration(seconds: session.uploadTimeoutSeconds),
+      );
+      try {
+        final ok = await PrivateAudioPlayer.instance.play(
+          client: client,
+          origin: session.origin,
+          ref: q.narrationAudio!,
+        );
+        if (!ok && mounted) {
+          setState(() => _error = 'Não foi possível reproduzir o áudio.');
+        }
+      } finally {
+        client.dispose();
+      }
+    } else {
+      // Fallback to local TTS if no backend audio provided.
+      await TtsService.instance.speak(q.text);
+    }
   }
 
   Future<void> _playNarration() async {
@@ -120,7 +145,10 @@ class _ExecutionDetailPageState extends State<ExecutionDetailPage> {
 
     final ref = _narrationRef(d);
     if (ref == null) {
-      setState(() => _error = 'Áudio não disponível.');
+      // Fallback to local TTS
+      final loc = (d.location ?? '').trim();
+      final locText = loc.isEmpty ? '' : '. Local: $loc';
+      await TtsService.instance.speak('${d.title}$locText');
       return;
     }
 
@@ -846,9 +874,7 @@ class _ExecutionDetailPageState extends State<ExecutionDetailPage> {
                                 : _ExecutionForm(
                                     detail: d,
                                     notesController: _notesController,
-                                    onPlayQuestionNarration: _playAudioRef,
-                                    onSpeakQuestion: (text) =>
-                                        _speakQuestion(text),
+                                    onSpeakQuestion: _playQuestionAudio,
                                     simpleBoolean: _simpleBoolean,
                                     onSimpleBooleanChanged: (v) =>
                                         setState(() => _simpleBoolean = v),
@@ -1327,9 +1353,6 @@ class _ExecutionForm extends StatelessWidget {
   final ExecutionDetail detail;
   final TextEditingController notesController;
 
-  final void Function(PrivateAudioRef ref) onPlayQuestionNarration;
-  final void Function(String text) onSpeakQuestion;
-
   final bool? simpleBoolean;
   final ValueChanged<bool?> onSimpleBooleanChanged;
   final XFile? simplePhoto;
@@ -1345,11 +1368,11 @@ class _ExecutionForm extends StatelessWidget {
   final void Function(String questionId)? onPickQuestionPhoto;
   final void Function(String questionId, XFile? file)? onQuestionAudioChanged;
   final void Function(String questionId)? onPickQuestionVideo;
+  final void Function(_ApiQuestion q) onSpeakQuestion;
 
   const _ExecutionForm({
     required this.detail,
     required this.notesController,
-    required this.onPlayQuestionNarration,
     required this.onSpeakQuestion,
     required this.simpleBoolean,
     required this.onSimpleBooleanChanged,
@@ -1506,14 +1529,7 @@ class _ExecutionForm extends StatelessWidget {
             question: q,
             state: answers[q.id] ?? _QuestionAnswerState(questionId: q.id),
             onChanged: (next) => onAnswerChanged(q.id, next),
-            onPlayNarration: () {
-              final ref = q.narrationAudio;
-              if (ref != null) {
-                onPlayQuestionNarration(ref);
-              } else {
-                onSpeakQuestion(q.text);
-              }
-            },
+            onPlayNarration: () => onSpeakQuestion(q),
             onPickPhoto: onPickQuestionPhoto == null
                 ? null
                 : () => onPickQuestionPhoto!(q.id),

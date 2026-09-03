@@ -444,4 +444,22 @@ class MobileApiServices {
     );
     return MobileAlert.fromJson(env.data ?? const <String, dynamic>{});
   }
+
+  /// Transcribes an audio/video occurrence attachment.
+  Future<MobileEvidenceRef> transcribeAttachment({
+    required String employeeId,
+    required String occurrenceId,
+    required String attachmentId,
+    required String idempotencyKey,
+  }) async {
+    final env = await client.postJson<Map<String, dynamic>>(
+      path:
+          '/employees/$employeeId/occurrences/$occurrenceId/attachments/$attachmentId/transcribe',
+      body: const <String, dynamic>{},
+      idempotencyKey: idempotencyKey,
+      decodeData: (json) =>
+          (json is Map) ? json.cast<String, dynamic>() : <String, dynamic>{},
+    );
+    return MobileEvidenceRef.fromJson(env.data ?? const <String, dynamic>{});
+  }
 }
