@@ -1225,16 +1225,11 @@ class _PriorityBadge extends StatelessWidget {
     final theme = Theme.of(context);
     final (Color bg, Color fg, String label) = switch (priority) {
       'urgent' => (AppColors.primaryRedLight, Colors.white, 'Urgente'),
-      'high' => (AppColors.warningLight, AppColors.warning, 'Alta'),
-      'low' => (
-        theme.colorScheme.surfaceContainerHighest,
-        theme.colorScheme.onSurfaceVariant,
-        'Baixa',
-      ),
+      'high' => (AppColors.warningLight, AppColors.warning, 'Crítico'),
       _ => (
         theme.colorScheme.surfaceContainerHighest,
         theme.colorScheme.onSurfaceVariant,
-        'Normal',
+        'Padrão',
       ),
     };
     return Container(

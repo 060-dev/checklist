@@ -114,6 +114,7 @@ class ExecutionSummary {
   final String? location;
   final DateTime? dueAt;
   final String status;
+  final String? completionStatus;
   final DateTime? scheduledFor;
 
   const ExecutionSummary({
@@ -125,6 +126,7 @@ class ExecutionSummary {
     required this.location,
     required this.dueAt,
     required this.status,
+    this.completionStatus,
     this.scheduledFor,
   });
 
@@ -148,6 +150,7 @@ class ExecutionSummary {
             ? DateTime.tryParse(json['due_at'] as String)
             : null,
         status: (json['status'] as String?) ?? 'pending',
+        completionStatus: json['completion_status'] as String?,
         scheduledFor: (json['scheduled_for'] is String)
             ? DateTime.tryParse(json['scheduled_for'] as String)
             : null,
@@ -162,6 +165,7 @@ class ExecutionSummary {
     'location': location,
     'due_at': dueAt?.toIso8601String(),
     'status': status,
+    'completion_status': completionStatus,
     'scheduled_for': scheduledFor?.toIso8601String(),
   };
 }
@@ -189,6 +193,7 @@ class ExecutionDetail {
   String? get instructions => raw['instructions'] as String?;
   String? get location => raw['location'] as String?;
   String get status => (raw['status'] as String?) ?? 'pending';
+  String? get completionStatus => raw['completion_status'] as String?;
   DateTime? get dueAt => (raw['due_at'] is String)
       ? DateTime.tryParse(raw['due_at'] as String)
       : null;

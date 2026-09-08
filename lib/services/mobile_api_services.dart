@@ -255,6 +255,8 @@ class MobileApiServices {
     required String employeeId,
     String? status,
     String? search,
+    String? dateFrom,
+    String? dateTo,
     String order = 'due_desc',
     int page = 1,
     int pageSize = 25,
@@ -267,6 +269,8 @@ class MobileApiServices {
         'order': order,
         if ((status ?? '').trim().isNotEmpty) 'status': status!.trim(),
         if ((search ?? '').trim().isNotEmpty) 'search': search!.trim(),
+        if ((dateFrom ?? '').trim().isNotEmpty) 'date_from': dateFrom!.trim(),
+        if ((dateTo ?? '').trim().isNotEmpty) 'date_to': dateTo!.trim(),
       },
       decodeData: (json) =>
           (json is Map) ? json.cast<String, dynamic>() : <String, dynamic>{},

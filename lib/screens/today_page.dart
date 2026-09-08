@@ -258,6 +258,11 @@ class _ExecutionCard extends StatelessWidget {
         : null;
 
     final (Color iconBg, Color iconFg, IconData statusIcon) = switch (status) {
+      'completed' when item.completionStatus == 'completed_late' => (
+        AppColors.warningLight,
+        AppColors.warning,
+        Icons.timer_off_rounded,
+      ),
       'completed' => (
         AppColors.successLight,
         AppColors.success,
@@ -320,6 +325,8 @@ class _ExecutionCard extends StatelessWidget {
                     const SizedBox(height: AppSpacing.xs),
                     Text(
                       item.location!,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),

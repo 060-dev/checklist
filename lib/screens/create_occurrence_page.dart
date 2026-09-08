@@ -203,9 +203,8 @@ class _CreateOccurrencePageState extends State<CreateOccurrencePage> {
               DropdownButtonFormField<String>(
                 initialValue: _priority,
                 items: const [
-                  DropdownMenuItem(value: 'low', child: Text('Baixa')),
-                  DropdownMenuItem(value: 'normal', child: Text('Normal')),
-                  DropdownMenuItem(value: 'high', child: Text('Alta')),
+                  DropdownMenuItem(value: 'normal', child: Text('Padrão')),
+                  DropdownMenuItem(value: 'high', child: Text('Crítico')),
                   DropdownMenuItem(value: 'urgent', child: Text('Urgente')),
                 ],
                 onChanged: (v) => setState(() => _priority = v ?? 'normal'),

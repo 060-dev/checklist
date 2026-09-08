@@ -482,6 +482,15 @@ class _ExecutionDetailPageState extends State<ExecutionDetailPage> {
         return null;
       }
 
+      // Number validation: must parse to a finite number.
+      if (q.answerType == 'number' && (st.answer ?? '').trim().isNotEmpty) {
+        final parsed = num.tryParse((st.answer ?? '').trim());
+        if (parsed == null || !parsed.isFinite) {
+          setState(() => _error = 'Informe um número válido: ${q.text}');
+          return null;
+        }
+      }
+
       // Additional field required?
       if (q.additionalRequiredWhenAnswer != null &&
           st.answer == q.additionalRequiredWhenAnswer) {
@@ -544,8 +553,17 @@ class _ExecutionDetailPageState extends State<ExecutionDetailPage> {
       }
 
       if ((st.answer ?? '').trim().isEmpty) continue;
+
+      // Send numeric answers as JSON numbers.
+      final Object answerValue;
+      if (q.answerType == 'number') {
+        answerValue = num.parse((st.answer ?? '').trim());
+      } else {
+        answerValue = st.answer!;
+      }
+
       final answerMap = <String, dynamic>{
-        'answer': st.answer,
+        'answer': answerValue,
         'additional_text': (st.additionalText ?? '').trim().isEmpty
             ? null
             : st.additionalText!.trim(),
@@ -1711,29 +1729,59 @@ class _QuestionCard extends StatelessWidget {
               ],
             ],
           ),
-          const SizedBox(height: AppSpacing.sm),
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: [
-              for (final opt in question.options)
-                ChoiceChip(
-                  label: Text(opt),
-                  selected: state.answer == opt,
-                  onSelected: (_) {
-                    // Clear stale level when the new answer doesn't request it.
-                    // This avoids sending `level` for answers that don't support it.
-                    final needsLevel = wantsLevelFor(opt);
-                    onChanged(
-                      state.copyWith(
-                        answer: opt,
-                        levelValue: needsLevel ? state.levelValue : null,
-                      ),
-                    );
-                  },
+          // ---------- answer input based on answerType ----------
+          if (question.answerType == 'number')
+            TextField(
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+                signed: true,
+              ),
+              decoration: const InputDecoration(
+                labelText: 'Número',
+                hintText: '0',
+              ),
+              controller: TextEditingController(text: state.answer ?? '')
+                ..selection = TextSelection.fromPosition(
+                  TextPosition(offset: (state.answer ?? '').length),
                 ),
-            ],
-          ),
+              onChanged: (v) => onChanged(state.copyWith(answer: v)),
+            )
+          else if (question.answerType == 'text' && question.options.isEmpty)
+            TextField(
+              minLines: 1,
+              maxLines: 3,
+              decoration: const InputDecoration(
+                labelText: 'Resposta',
+              ),
+              controller: TextEditingController(text: state.answer ?? '')
+                ..selection = TextSelection.fromPosition(
+                  TextPosition(offset: (state.answer ?? '').length),
+                ),
+              onChanged: (v) => onChanged(state.copyWith(answer: v)),
+            )
+          else
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: [
+                for (final opt in question.options)
+                  ChoiceChip(
+                    label: Text(opt),
+                    selected: state.answer == opt,
+                    onSelected: (_) {
+                      // Clear stale level when the new answer doesn't request it.
+                      // This avoids sending `level` for answers that don't support it.
+                      final needsLevel = wantsLevelFor(opt);
+                      onChanged(
+                        state.copyWith(
+                          answer: opt,
+                          levelValue: needsLevel ? state.levelValue : null,
+                        ),
+                      );
+                    },
+                  ),
+              ],
+            ),
           if (showAlert && (question.alertMessage ?? '').trim().isNotEmpty) ...[
             const SizedBox(height: AppSpacing.md),
             ErrorBanner(message: question.alertMessage!),
@@ -1903,21 +1951,29 @@ class _CompletedHeaderCard extends StatelessWidget {
         ? null
         : DateFormat('dd/MM/yyyy HH:mm').format(completedAt.toLocal());
 
+    final isLate = detail.completionStatus == 'completed_late';
+    final statusLabel = isLate ? 'Concluído com atraso' : 'Concluído no prazo';
+    final statusColor = isLate ? AppColors.warning : AppColors.success;
+    final statusBg = isLate ? AppColors.warningLight : AppColors.successLight;
+    final statusIcon = isLate
+        ? Icons.timer_off_rounded
+        : Icons.check_circle_rounded;
+
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
-        color: AppColors.successLight,
+        color: statusBg,
         borderRadius: BorderRadius.circular(AppRadius.xl),
         border: Border.all(
-          color: AppColors.success.withValues(alpha: 0.3),
+          color: statusColor.withValues(alpha: 0.3),
           width: 2,
         ),
       ),
       child: Row(
         children: [
-          const Icon(
-            Icons.check_circle_rounded,
-            color: AppColors.success,
+          Icon(
+            statusIcon,
+            color: statusColor,
             size: 40,
           ),
           const SizedBox(width: AppSpacing.md),
@@ -1926,10 +1982,10 @@ class _CompletedHeaderCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Checklist Concluído',
+                  statusLabel,
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w900,
-                    color: AppColors.success,
+                    color: statusColor,
                   ),
                 ),
                 if (dateText != null) ...[
@@ -1937,7 +1993,7 @@ class _CompletedHeaderCard extends StatelessWidget {
                   Text(
                     dateText,
                     style: theme.textTheme.bodyMedium?.copyWith(
-                      color: AppColors.success,
+                      color: statusColor,
                     ),
                   ),
                 ],
@@ -1945,8 +2001,10 @@ class _CompletedHeaderCard extends StatelessWidget {
                   const SizedBox(height: AppSpacing.xs),
                   Text(
                     detail.location!,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.bodySmall?.copyWith(
-                      color: AppColors.success,
+                      color: statusColor,
                     ),
                   ),
                 ],

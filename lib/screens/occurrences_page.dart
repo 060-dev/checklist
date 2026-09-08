@@ -22,22 +22,48 @@ class OccurrencesPage extends StatefulWidget {
 }
 
 class _OccurrencesPageState extends State<OccurrencesPage> {
+  static const int _pageSize = 10;
+
   bool _loading = true;
+  bool _loadingMore = false;
   String? _error;
   List<OccurrenceSummary> _items = const [];
   String _statusFilter = 'open';
   bool _fromCache = false;
+  int _currentPage = 1;
+  bool _hasMore = true;
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
+    _scrollController.addListener(_onScroll);
     _load();
   }
 
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_loadingMore || !_hasMore) return;
+    final pos = _scrollController.position;
+    if (pos.pixels >= pos.maxScrollExtent - 200) {
+      _loadMore();
+    }
+  }
+
+  /// Loads the first page (resets state).
   Future<void> _load() async {
     setState(() {
       _loading = true;
       _error = null;
+      _currentPage = 1;
+      _hasMore = true;
+      _items = const [];
     });
 
     final session = context.read<AppSession>();
@@ -62,8 +88,9 @@ class _OccurrencesPageState extends State<OccurrencesPage> {
       final res = await api.listOccurrences(
         employeeId: employeeId,
         status: _statusFilter,
+        page: 1,
+        pageSize: _pageSize,
       );
-      // Defensive de-duplication (some backends/proxies can return duplicated rows).
       final byId = <String, OccurrenceSummary>{};
       for (final it in res.items) {
         byId[it.occurrenceId] = it;
@@ -74,11 +101,59 @@ class _OccurrencesPageState extends State<OccurrencesPage> {
         _items = items;
         _fromCache = false;
         _loading = false;
+        _currentPage = 1;
+        _hasMore = res.page < res.pages;
       });
     } on MobileApiException catch (e) {
       await _fallBackToCache(employeeId, e.message);
     } catch (e) {
       await _fallBackToCache(employeeId, 'Falha ao carregar ocorrências.');
+    } finally {
+      client.dispose();
+    }
+  }
+
+  /// Appends the next page of results.
+  Future<void> _loadMore() async {
+    if (_loadingMore || !_hasMore) return;
+    setState(() => _loadingMore = true);
+
+    final session = context.read<AppSession>();
+    final employeeId = session.selectedOperator?.id ?? '';
+    if (!session.hasApiConfig || employeeId.isEmpty) {
+      setState(() => _loadingMore = false);
+      return;
+    }
+
+    final nextPage = _currentPage + 1;
+    final client = MobileApiClient(
+      apiBaseUrl: session.apiBaseUrl.trim(),
+      apiKey: session.apiKey.trim(),
+      requestTimeout: Duration(seconds: session.requestTimeoutSeconds),
+      uploadTimeout: Duration(seconds: session.uploadTimeoutSeconds),
+    );
+    final api = MobileApiServices(client: client);
+    try {
+      final res = await api.listOccurrences(
+        employeeId: employeeId,
+        status: _statusFilter,
+        page: nextPage,
+        pageSize: _pageSize,
+      );
+      // De-duplicate against already-loaded items.
+      final existingIds = _items.map((e) => e.occurrenceId).toSet();
+      final newItems = res.items
+          .where((it) => !existingIds.contains(it.occurrenceId))
+          .toList();
+      setState(() {
+        _items = [..._items, ...newItems];
+        _currentPage = nextPage;
+        _hasMore = res.page < res.pages;
+        _loadingMore = false;
+      });
+    } catch (e) {
+      debugPrint('Load more occurrences failed: $e');
+      setState(() => _loadingMore = false);
     } finally {
       client.dispose();
     }
@@ -100,6 +175,7 @@ class _OccurrencesPageState extends State<OccurrencesPage> {
       _fromCache = true;
       _error = null;
       _loading = false;
+      _hasMore = false;
     });
   }
 
@@ -190,10 +266,21 @@ class _OccurrencesPageState extends State<OccurrencesPage> {
                   const SizedBox(height: AppSpacing.sm),
                   Expanded(
                     child: ListView.separated(
-                      itemCount: _items.length,
+                      controller: _scrollController,
+                      itemCount: _items.length + (_loadingMore ? 1 : 0),
                       separatorBuilder: (_, __) =>
                           const SizedBox(height: AppSpacing.md),
                       itemBuilder: (context, i) {
+                        if (i >= _items.length) {
+                          return const Padding(
+                            padding: EdgeInsets.symmetric(
+                              vertical: AppSpacing.lg,
+                            ),
+                            child: Center(
+                              child: CircularProgressIndicator(),
+                            ),
+                          );
+                        }
                         final it = _items[i];
                         return _OccurrenceCard(
                           item: it,

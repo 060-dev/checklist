@@ -102,9 +102,36 @@ class _ChecklistsPageState extends State<ChecklistsPage> {
     });
   }
 
+  Widget _buildCard(BuildContext context, ChecklistAssignment it) {
+    final nextExecutionId = (it.nextExecutionId ?? '').trim();
+    return _AssignmentCard(
+      item: it,
+      onTap: () async {
+        if (nextExecutionId.isNotEmpty) {
+          final res = await context.push(
+            '/api/executions/$nextExecutionId',
+          );
+          if (res == true) await _load();
+        } else {
+          final res = await context.push(
+            '/api/checklists/${it.assignmentId}',
+          );
+          if (res == true) await _load();
+        }
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+
+    // Group items by checklistId
+    final grouped = <String, List<ChecklistAssignment>>{};
+    for (final it in _items) {
+      grouped.putIfAbsent(it.checklistId, () => []).add(it);
+    }
+    final groups = grouped.values.toList();
 
     return SafeArea(
       child: ResponsiveBody(
@@ -144,30 +171,46 @@ class _ChecklistsPageState extends State<ChecklistsPage> {
                   const SizedBox(height: AppSpacing.sm),
                   Expanded(
                     child: ListView.separated(
-                      itemCount: _items.length,
+                      itemCount: groups.length,
                       separatorBuilder: (_, __) =>
                           const SizedBox(height: AppSpacing.md),
                       itemBuilder: (context, i) {
-                        final it = _items[i];
-                        final nextExecutionId = (it.nextExecutionId ?? '')
-                            .trim();
-                        return _AssignmentCard(
-                          item: it,
-                          onTap: () async {
-                            // The mobile flow is execution-driven. If the assignment already
-                            // has a scheduled execution, jump straight into the checklist UI.
-                            if (nextExecutionId.isNotEmpty) {
-                              final res = await context.push(
-                                '/api/executions/$nextExecutionId',
-                              );
-                              if (res == true) await _load();
-                            } else {
-                              final res = await context.push(
-                                '/api/checklists/${it.assignmentId}',
-                              );
-                              if (res == true) await _load();
-                            }
-                          },
+                        final group = groups[i];
+                        if (group.length == 1) {
+                          return _buildCard(context, group.first);
+                        }
+
+                        // Render group
+                        return Theme(
+                          data: theme.copyWith(dividerColor: Colors.transparent),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                              borderRadius: BorderRadius.circular(AppRadius.xl),
+                            ),
+                            child: ExpansionTile(
+                              collapsedIconColor: theme.colorScheme.primary,
+                              iconColor: theme.colorScheme.primary,
+                              tilePadding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
+                              childrenPadding: const EdgeInsets.only(left: AppSpacing.md, right: AppSpacing.md, bottom: AppSpacing.md),
+                              title: Text(
+                                group.first.title,
+                                style: theme.textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                              subtitle: Text(
+                                '${group.length} locais de aplicação',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                              children: group.map((it) => Padding(
+                                padding: const EdgeInsets.only(top: AppSpacing.sm),
+                                child: _buildCard(context, it),
+                              )).toList(),
+                            ),
+                          ),
                         );
                       },
                     ),
