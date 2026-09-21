@@ -22,6 +22,8 @@ class PendingQueueItem {
   final Map<String, dynamic> jsonBody;
   final String idempotencyKey;
   final List<QueuedMediaItem> mediaItems;
+  final String? employeeId;
+  final String? employeeCode;
 
   const PendingQueueItem({
     required this.id,
@@ -36,6 +38,8 @@ class PendingQueueItem {
     required this.jsonBody,
     required this.idempotencyKey,
     this.mediaItems = const [],
+    this.employeeId,
+    this.employeeCode,
   });
 
   factory PendingQueueItem.fromJson(
@@ -64,6 +68,8 @@ class PendingQueueItem {
               .map((e) => QueuedMediaItem.fromJson(e.cast<String, dynamic>()))
               .toList()
         : const [],
+    employeeId: json['employeeId'] as String?,
+    employeeCode: json['employeeCode'] as String?,
   );
 
   Map<String, dynamic> toJson() => {
@@ -79,6 +85,8 @@ class PendingQueueItem {
     'jsonBody': jsonBody,
     'idempotencyKey': idempotencyKey,
     'mediaItems': mediaItems.map((e) => e.toJson()).toList(),
+    if (employeeId != null) 'employeeId': employeeId,
+    if (employeeCode != null) 'employeeCode': employeeCode,
   };
 
   PendingQueueItem copyWith({
@@ -94,6 +102,8 @@ class PendingQueueItem {
     Map<String, dynamic>? jsonBody,
     String? idempotencyKey,
     List<QueuedMediaItem>? mediaItems,
+    String? employeeId,
+    String? employeeCode,
   }) => PendingQueueItem(
     id: id ?? this.id,
     createdAt: createdAt ?? this.createdAt,
@@ -107,5 +117,7 @@ class PendingQueueItem {
     jsonBody: jsonBody ?? this.jsonBody,
     idempotencyKey: idempotencyKey ?? this.idempotencyKey,
     mediaItems: mediaItems ?? this.mediaItems,
+    employeeId: employeeId ?? this.employeeId,
+    employeeCode: employeeCode ?? this.employeeCode,
   );
 }

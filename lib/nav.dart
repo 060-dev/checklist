@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:morro_do_peo/screens/welcome_page.dart';
 import 'package:morro_do_peo/screens/activation_page.dart';
-import 'package:morro_do_peo/screens/operator_selection_page.dart';
 import 'package:morro_do_peo/screens/checklists_page.dart';
 import 'package:morro_do_peo/screens/home_page.dart';
 import 'package:morro_do_peo/screens/execution_detail_page.dart';
@@ -18,7 +17,7 @@ class AppRouter {
           final loc = state.matchedLocation;
 
           if (loc.startsWith('/api') && session.selectedOperator == null) {
-            return AppRoutes.collaborators;
+            return AppRoutes.activate;
           }
           return null;
         },
@@ -27,14 +26,6 @@ class AppRouter {
             path: AppRoutes.home,
             name: 'home',
             pageBuilder: (context, state) => const NoTransitionPage(child: WelcomePage()),
-          ),
-          GoRoute(
-            path: AppRoutes.collaborators,
-            name: 'collaborators',
-            pageBuilder: (context, state) => CustomTransitionPage(
-              child: const OperatorSelectionPage(),
-              transitionsBuilder: _slideTransition,
-            ),
           ),
           GoRoute(
             path: AppRoutes.activate,
@@ -107,7 +98,6 @@ class AppRouter {
 
 class AppRoutes {
   static const String home = '/';
-  static const String collaborators = '/collaborators';
   static const String activate = '/activate';
 
   // API v1 flow (backend-driven).

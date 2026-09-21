@@ -11,7 +11,7 @@ import 'package:morro_do_peo/state/app_session.dart';
 import 'package:morro_do_peo/theme.dart';
 
 /// First-time activation gate: scan the farm's printed QR code, or type the
-/// fallback 4-digit PIN (also used by Google Play reviewers).
+/// fallback 5-digit PIN (also used by Google Play reviewers).
 class ActivationPage extends StatefulWidget {
   const ActivationPage({super.key});
 
@@ -49,7 +49,7 @@ class _ActivationPageState extends State<ActivationPage> {
     if (ok) {
       HapticFeedback.mediumImpact();
       unawaited(TtsService.instance.speak('Aplicativo ativado com sucesso.'));
-      context.go('/collaborators');
+      context.go('/api');
       return;
     }
 
@@ -72,12 +72,12 @@ class _ActivationPageState extends State<ActivationPage> {
   }
 
   void _onDigit(String digit) {
-    if (_submitting || _pin.length >= 4) return;
+    if (_submitting || _pin.length >= 5) return;
     setState(() {
       _errorText = null;
       _pin += digit;
     });
-    if (_pin.length == 4) _submit(_pin);
+    if (_pin.length == 5) _submit(_pin);
   }
 
   void _onBackspace() {
@@ -113,7 +113,7 @@ class _ActivationPageState extends State<ActivationPage> {
             children: [
               Text(
                 _manualMode
-                    ? 'Digite o código de 4 dígitos'
+                    ? 'Digite o código de 5 dígitos'
                     : 'Aponte a câmera para o QR Code da fazenda',
                 textAlign: TextAlign.center,
                 style: theme.textTheme.headlineSmall?.copyWith(
@@ -121,7 +121,9 @@ class _ActivationPageState extends State<ActivationPage> {
                 ),
               ),
               const SizedBox(height: AppSpacing.lg),
-              Expanded(child: _manualMode ? _buildManualEntry() : _buildScanner()),
+              Expanded(
+                child: _manualMode ? _buildManualEntry() : _buildScanner(),
+              ),
               const SizedBox(height: AppSpacing.md),
               if (_errorText != null) ...[
                 _ErrorBanner(message: _errorText!),
@@ -186,7 +188,11 @@ class _ActivationPageState extends State<ActivationPage> {
       children: [
         _PinDots(length: _pin.length),
         const SizedBox(height: AppSpacing.xl),
-        _Keypad(enabled: !_submitting, onDigit: _onDigit, onBackspace: _onBackspace),
+        _Keypad(
+          enabled: !_submitting,
+          onDigit: _onDigit,
+          onBackspace: _onBackspace,
+        ),
       ],
     );
   }
@@ -202,7 +208,7 @@ class _PinDots extends StatelessWidget {
     final theme = Theme.of(context);
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(4, (i) {
+      children: List.generate(5, (i) {
         final filled = i < length;
         return Container(
           width: 22,
@@ -231,10 +237,18 @@ class _Keypad extends StatelessWidget {
   final VoidCallback onBackspace;
 
   static const List<String> _keys = [
-    '1', '2', '3',
-    '4', '5', '6',
-    '7', '8', '9',
-    '', '0', '⌫',
+    '1',
+    '2',
+    '3',
+    '4',
+    '5',
+    '6',
+    '7',
+    '8',
+    '9',
+    '',
+    '0',
+    '⌫',
   ];
 
   @override
@@ -341,12 +355,19 @@ class _ScannerError extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.camera_alt_outlined, color: Colors.white, size: 48),
+              const Icon(
+                Icons.camera_alt_outlined,
+                color: Colors.white,
+                size: 48,
+              ),
               const SizedBox(height: AppSpacing.md),
               const Text(
                 'Não foi possível acessar a câmera.',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
               const SizedBox(height: AppSpacing.md),
               FilledButton(

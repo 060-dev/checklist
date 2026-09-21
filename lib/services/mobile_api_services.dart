@@ -4,11 +4,47 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:morro_do_peo/models/alert_models.dart';
 import 'package:morro_do_peo/models/mobile_api_models.dart';
+import 'package:morro_do_peo/models/operator.dart';
 import 'package:morro_do_peo/services/mobile_api_client.dart';
 
 class MobileApiServices {
   final MobileApiClient client;
   const MobileApiServices({required this.client});
+
+  Future<Operator?> validateEmployeeCode(String code) async {
+    final tempClient = MobileApiClient(
+      apiBaseUrl: client.apiBaseUrl,
+      apiKey: client.apiKey,
+      employeeCode: code,
+      requestTimeout: client.requestTimeout,
+      uploadTimeout: client.uploadTimeout,
+    );
+
+    try {
+      final env = await tempClient.getJson<Map<String, dynamic>>(
+        path: '/employees',
+        decodeData: (json) =>
+            (json is Map) ? json.cast<String, dynamic>() : <String, dynamic>{},
+      );
+
+      final data = env.data ?? const <String, dynamic>{};
+      final itemsRaw = data['items'];
+      if (itemsRaw is List && itemsRaw.isNotEmpty) {
+        final first = itemsRaw.first;
+        if (first is Map) {
+          return Operator.fromMobileApiEmployee(
+            first.cast<String, dynamic>(),
+          );
+        }
+      }
+      return null;
+    } catch (e) {
+      debugPrint('Validation failed: $e');
+      return null;
+    } finally {
+      tempClient.dispose();
+    }
+  }
 
   Future<PaginatedResult<ChecklistAssignment>> listAssignments({
     required String employeeId,

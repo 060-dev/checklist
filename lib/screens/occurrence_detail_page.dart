@@ -120,6 +120,7 @@ class _OccurrenceDetailPageState extends State<OccurrenceDetailPage> {
     final client = MobileApiClient(
       apiBaseUrl: session.apiBaseUrl.trim(),
       apiKey: session.apiKey.trim(),
+      employeeCode: session.employeeCode,
       requestTimeout: Duration(seconds: session.requestTimeoutSeconds),
       uploadTimeout: Duration(seconds: session.uploadTimeoutSeconds),
     );
@@ -159,6 +160,7 @@ class _OccurrenceDetailPageState extends State<OccurrenceDetailPage> {
     final client = MobileApiClient(
       apiBaseUrl: session.apiBaseUrl.trim(),
       apiKey: session.apiKey.trim(),
+      employeeCode: session.employeeCode,
       requestTimeout: Duration(seconds: session.requestTimeoutSeconds),
       uploadTimeout: Duration(seconds: session.uploadTimeoutSeconds),
     );
@@ -271,6 +273,7 @@ class _OccurrenceDetailPageState extends State<OccurrenceDetailPage> {
       final client = MobileApiClient(
         apiBaseUrl: session.apiBaseUrl.trim(),
         apiKey: session.apiKey.trim(),
+      employeeCode: session.employeeCode,
         requestTimeout: Duration(seconds: session.requestTimeoutSeconds),
         uploadTimeout: Duration(seconds: session.uploadTimeoutSeconds),
       );
@@ -321,6 +324,8 @@ class _OccurrenceDetailPageState extends State<OccurrenceDetailPage> {
           '/employees/$employeeId/occurrences/${widget.occurrenceId}/attachments',
       jsonBody: const {},
       mediaItems: [QueuedMediaItem(stagedPath: stagedPath, fieldName: 'file')],
+      employeeId: employeeId,
+      employeeCode: session.employeeCode,
     );
     if (!mounted) return;
     setState(() {
@@ -384,6 +389,7 @@ class _OccurrenceDetailPageState extends State<OccurrenceDetailPage> {
     final client = MobileApiClient(
       apiBaseUrl: session.apiBaseUrl.trim(),
       apiKey: session.apiKey.trim(),
+      employeeCode: session.employeeCode,
       requestTimeout: Duration(seconds: session.requestTimeoutSeconds),
       uploadTimeout: Duration(seconds: session.uploadTimeoutSeconds),
     );
@@ -413,6 +419,7 @@ class _OccurrenceDetailPageState extends State<OccurrenceDetailPage> {
     final client = MobileApiClient(
       apiBaseUrl: session.apiBaseUrl.trim(),
       apiKey: session.apiKey.trim(),
+      employeeCode: session.employeeCode,
       requestTimeout: Duration(seconds: session.requestTimeoutSeconds),
       uploadTimeout: Duration(seconds: session.uploadTimeoutSeconds),
     );
@@ -535,6 +542,7 @@ class _OccurrenceDetailPageState extends State<OccurrenceDetailPage> {
       final client = MobileApiClient(
         apiBaseUrl: session.apiBaseUrl.trim(),
         apiKey: session.apiKey.trim(),
+      employeeCode: session.employeeCode,
         requestTimeout: Duration(seconds: session.requestTimeoutSeconds),
         uploadTimeout: Duration(seconds: session.uploadTimeoutSeconds),
       );
@@ -583,6 +591,8 @@ class _OccurrenceDetailPageState extends State<OccurrenceDetailPage> {
         currentDetail: d,
         resolutionNotes: notes,
       ),
+      employeeId: employeeId,
+      employeeCode: session.employeeCode,
     );
     _pendingResolveItemId = enqueued.id;
 

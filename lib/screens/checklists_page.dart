@@ -53,6 +53,7 @@ class _ChecklistsPageState extends State<ChecklistsPage> {
     final client = MobileApiClient(
       apiBaseUrl: session.apiBaseUrl.trim(),
       apiKey: session.apiKey.trim(),
+      employeeCode: session.employeeCode,
       requestTimeout: Duration(seconds: session.requestTimeoutSeconds),
       uploadTimeout: Duration(seconds: session.uploadTimeoutSeconds),
     );
@@ -385,6 +386,7 @@ class _AssignmentDetailPageState extends State<AssignmentDetailPage> {
     final client = MobileApiClient(
       apiBaseUrl: session.apiBaseUrl.trim(),
       apiKey: session.apiKey.trim(),
+      employeeCode: session.employeeCode,
       requestTimeout: Duration(seconds: session.requestTimeoutSeconds),
       uploadTimeout: Duration(seconds: session.uploadTimeoutSeconds),
     );

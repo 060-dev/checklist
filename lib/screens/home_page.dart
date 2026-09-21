@@ -39,25 +39,43 @@ class _HomePageState extends State<HomePage> {
     ];
     final titles = const ['Hoje', 'Histórico', 'Ocorrências', 'Avisos'];
 
-    Future<void> confirmChangePerson() async {
+    Future<void> confirmLogout() async {
       final ok = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('Trocar de pessoa?'),
-          content: const Text('As respostas não enviadas continuarão salvas neste aparelho.'),
+          title: const Text('Sair do aplicativo?'),
+          content: const Text(
+            'As respostas não enviadas continuarão salvas neste aparelho.',
+          ),
           actions: [
-            TextButton(onPressed: () => context.pop(false), child: const Text('Cancelar')),
-            FilledButton(onPressed: () => context.pop(true), child: const Text('Trocar')),
+            TextButton(
+              onPressed: () => context.pop(false),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () => context.pop(true),
+              child: const Text('Sair'),
+            ),
           ],
         ),
       );
-      if (ok == true && mounted) context.go('/collaborators');
+      if (ok == true && mounted) {
+        session.resetAll();
+        context.go('/');
+      }
     }
 
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(icon: const Icon(Icons.swap_horiz_rounded, size: 28), onPressed: confirmChangePerson),
-        title: Text(op == null ? titles[_index] : '${titles[_index]} · ${op.name}'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout_rounded, size: 26),
+            onPressed: confirmLogout,
+          ),
+        ],
+        title: Text(
+          op == null ? titles[_index] : '${titles[_index]} · ${op.name}',
+        ),
       ),
       body: pages[_index],
       bottomNavigationBar: SafeArea(
@@ -83,9 +101,7 @@ class _HomePageState extends State<HomePage> {
               icon: Badge(
                 isLabelVisible: _unhandledAlertCount > 0,
                 label: Text(
-                  _unhandledAlertCount > 9
-                      ? '9+'
-                      : '$_unhandledAlertCount',
+                  _unhandledAlertCount > 9 ? '9+' : '$_unhandledAlertCount',
                 ),
                 child: const Icon(Icons.notifications_rounded),
               ),

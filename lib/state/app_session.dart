@@ -1,9 +1,12 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 import 'package:morro_do_peo/models/operator.dart';
 import 'package:morro_do_peo/services/api_config_store.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:morro_do_peo/services/mobile_api_client.dart';
+import 'package:morro_do_peo/services/mobile_api_services.dart';
 
 class AppSession extends ChangeNotifier {
   Operator? _selectedOperator;
@@ -20,27 +23,18 @@ class AppSession extends ChangeNotifier {
   /// `--dart-define=MORROPEAO_API_KEY=...`
   static const String envApiKey = String.fromEnvironment('MORROPEAO_API_KEY');
 
-  /// Environment injection (build-time), e.g.:
-  /// `--dart-define=MORROPEAO_ACTIVATION_CODE=...`
-  static const String envActivationCode = String.fromEnvironment(
-    'MORROPEAO_ACTIVATION_CODE',
-  );
-
   static const String _kLastEmployeeId = 'last_employee_id_v1';
   static const String _kLastEmployeeName = 'last_employee_name_v1';
+  static const String _kEmployeeCode = 'employee_code_v1';
 
   // --- First-time app activation (QR code / manual PIN) --------------------
   static const String _kIsActivated = 'is_activated_v1';
 
-  /// Activation code printed on the farm's QR code and usable as a manual
-  /// PIN (e.g. by Google Play reviewers). No hardcoded fallback: if
-  /// `--dart-define=MORROPEAO_ACTIVATION_CODE=...` isn't supplied at build
-  /// time, this is empty and `activateWithCode` can never succeed.
-  static String get activationCode => envActivationCode.trim();
-
   bool _isActivated = false;
+  String? _employeeCode;
 
   bool get isActivated => _isActivated;
+  String? get employeeCode => _employeeCode;
 
   Operator? get selectedOperator => _selectedOperator;
 
@@ -91,6 +85,7 @@ class AppSession extends ChangeNotifier {
 
       final prefs = await SharedPreferences.getInstance();
       _isActivated = prefs.getBool(_kIsActivated) ?? false;
+      _employeeCode = prefs.getString(_kEmployeeCode);
 
       final id = (prefs.getString(_kLastEmployeeId) ?? '').trim();
       final name = (prefs.getString(_kLastEmployeeName) ?? '').trim();
@@ -139,20 +134,36 @@ class AppSession extends ChangeNotifier {
   /// Clears the selected operator, including its persisted employee prefs.
   void resetAll() {
     _selectedOperator = null;
+    _employeeCode = null;
+    _isActivated = false;
     unawaited(_clearSelectedOperator());
     notifyListeners();
   }
 
-  /// Validates [rawInput] (scanned QR text or manually typed PIN) against
-  /// [activationCode]. On success, persists activation so the gate never
-  /// shows again on this device.
+  /// Validates [rawInput] against the API.
+  /// On success, persists activation and the selected operator.
   Future<bool> activateWithCode(String rawInput) async {
-    if (rawInput.trim() != activationCode) return false;
+    if (!hasApiConfig) return false;
+
+    final tempClient = MobileApiClient(
+      apiBaseUrl: apiBaseUrl,
+      apiKey: apiKey,
+      employeeCode: rawInput,
+    );
+    final api = MobileApiServices(client: tempClient);
+    final op = await api.validateEmployeeCode(rawInput);
+
+    if (op == null) return false;
 
     _isActivated = true;
+    _employeeCode = rawInput;
+    _selectedOperator = op;
+
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(_kIsActivated, true);
+      await prefs.setString(_kEmployeeCode, rawInput);
+      await _persistSelectedOperator(op);
     } catch (e) {
       debugPrint('Failed to persist activation: $e');
     }

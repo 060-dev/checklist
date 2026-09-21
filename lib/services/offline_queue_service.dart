@@ -49,6 +49,7 @@ Future<void> sendQueuedMutation(
   final client = MobileApiClient(
     apiBaseUrl: session.apiBaseUrl.trim(),
     apiKey: session.apiKey.trim(),
+    employeeCode: item.employeeCode ?? session.employeeCode,
     requestTimeout: Duration(seconds: session.requestTimeoutSeconds),
     uploadTimeout: Duration(seconds: session.uploadTimeoutSeconds),
   );
@@ -166,6 +167,13 @@ class OfflineQueueService {
       .where((e) => e.status != PendingQueueStatus.sent && !_hasGivenUp(e))
       .length;
 
+  int pendingCountFor(String? employeeId) => _queue
+      .where((e) =>
+          e.status != PendingQueueStatus.sent &&
+          !_hasGivenUp(e) &&
+          e.employeeId == employeeId)
+      .length;
+
   bool _isNonRetryable(Object error) {
     if (error is! MobileApiException) return false;
     final code = error.statusCode;
@@ -181,6 +189,8 @@ class OfflineQueueService {
     required Map<String, dynamic> jsonBody,
     String? idempotencyKey,
     List<QueuedMediaItem> mediaItems = const [],
+    String? employeeId,
+    String? employeeCode,
   }) async {
     final now = DateTime.now();
     final item = PendingQueueItem(
@@ -195,6 +205,8 @@ class OfflineQueueService {
       jsonBody: jsonBody,
       idempotencyKey: idempotencyKey ?? _uuid.v4(),
       mediaItems: mediaItems,
+      employeeId: employeeId,
+      employeeCode: employeeCode,
     );
     _queue.insert(0, item);
     await _save();

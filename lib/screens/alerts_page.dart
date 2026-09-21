@@ -90,6 +90,7 @@ class _AlertsPageState extends State<AlertsPage> with WidgetsBindingObserver {
     final client = MobileApiClient(
       apiBaseUrl: session.apiBaseUrl.trim(),
       apiKey: session.apiKey.trim(),
+      employeeCode: session.employeeCode,
       requestTimeout: Duration(seconds: session.requestTimeoutSeconds),
       uploadTimeout: Duration(seconds: session.uploadTimeoutSeconds),
     );
@@ -162,6 +163,7 @@ class _AlertsPageState extends State<AlertsPage> with WidgetsBindingObserver {
     final client = MobileApiClient(
       apiBaseUrl: session.apiBaseUrl.trim(),
       apiKey: session.apiKey.trim(),
+      employeeCode: session.employeeCode,
       requestTimeout: Duration(seconds: session.requestTimeoutSeconds),
       uploadTimeout: Duration(seconds: session.uploadTimeoutSeconds),
     );

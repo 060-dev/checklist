@@ -128,6 +128,7 @@ class _CreateOccurrencePageState extends State<CreateOccurrencePage> {
     final client = MobileApiClient(
       apiBaseUrl: session.apiBaseUrl.trim(),
       apiKey: session.apiKey.trim(),
+      employeeCode: session.employeeCode,
       requestTimeout: Duration(seconds: session.requestTimeoutSeconds),
       uploadTimeout: Duration(seconds: session.uploadTimeoutSeconds),
     );

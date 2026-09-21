@@ -89,6 +89,7 @@ class _ExecutionDetailPageState extends State<ExecutionDetailPage> {
     final client = MobileApiClient(
       apiBaseUrl: session.apiBaseUrl.trim(),
       apiKey: session.apiKey.trim(),
+      employeeCode: session.employeeCode,
       requestTimeout: Duration(seconds: session.requestTimeoutSeconds),
       uploadTimeout: Duration(seconds: session.uploadTimeoutSeconds),
     );
@@ -118,6 +119,7 @@ class _ExecutionDetailPageState extends State<ExecutionDetailPage> {
       final client = MobileApiClient(
         apiBaseUrl: session.apiBaseUrl.trim(),
         apiKey: session.apiKey.trim(),
+      employeeCode: session.employeeCode,
         requestTimeout: Duration(seconds: session.requestTimeoutSeconds),
         uploadTimeout: Duration(seconds: session.uploadTimeoutSeconds),
       );
@@ -175,6 +177,7 @@ class _ExecutionDetailPageState extends State<ExecutionDetailPage> {
     final client = MobileApiClient(
       apiBaseUrl: session.apiBaseUrl.trim(),
       apiKey: session.apiKey.trim(),
+      employeeCode: session.employeeCode,
       requestTimeout: Duration(seconds: session.requestTimeoutSeconds),
       uploadTimeout: Duration(seconds: session.uploadTimeoutSeconds),
     );
@@ -296,6 +299,7 @@ class _ExecutionDetailPageState extends State<ExecutionDetailPage> {
       final client = MobileApiClient(
         apiBaseUrl: session.apiBaseUrl.trim(),
         apiKey: session.apiKey.trim(),
+      employeeCode: session.employeeCode,
         requestTimeout: Duration(seconds: session.requestTimeoutSeconds),
         uploadTimeout: Duration(seconds: session.uploadTimeoutSeconds),
       );
@@ -346,6 +350,7 @@ class _ExecutionDetailPageState extends State<ExecutionDetailPage> {
         payload: payload,
         detail: d,
         employeeId: employeeId,
+        employeeCode: session.employeeCode!,
       );
       if (!mounted) return;
       setState(() => _mutating = false);
@@ -371,6 +376,7 @@ class _ExecutionDetailPageState extends State<ExecutionDetailPage> {
     required Map<String, dynamic> payload,
     required ExecutionDetail detail,
     required String employeeId,
+    required String employeeCode,
   }) async {
     final mediaItems = await _buildQueuedMediaItems(detail);
     final basePath = '/employees/$employeeId/executions/${widget.executionId}';
@@ -381,6 +387,8 @@ class _ExecutionDetailPageState extends State<ExecutionDetailPage> {
           : '$basePath/complete-with-evidence',
       jsonBody: payload,
       mediaItems: mediaItems,
+      employeeId: employeeId,
+      employeeCode: employeeCode,
     );
   }
 

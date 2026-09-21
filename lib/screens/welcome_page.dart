@@ -11,7 +11,7 @@ class WelcomePage extends StatelessWidget {
     final session = context.read<AppSession>();
     await session.ensureLoaded();
     if (!context.mounted) return;
-    context.go(session.isActivated ? '/collaborators' : '/activate');
+    context.go(session.isActivated ? '/api' : '/activate');
   }
 
   /// Home background image.

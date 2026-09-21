@@ -49,44 +49,50 @@ class _MorroDoPeaoAppState extends State<MorroDoPeaoApp> {
         routerConfig: _router,
         builder: (context, child) => Column(
           children: [
-            ValueListenableBuilder<int>(
-              valueListenable:
-                  OfflineQueueService.instance.pendingCountNotifier,
-              builder: (context, count, _) => count <= 0
-                  ? const SizedBox.shrink()
-                  : SafeArea(
-                      bottom: false,
-                      child: Container(
-                        width: double.infinity,
-                        color: AppColors.warningLight,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.md,
-                          vertical: AppSpacing.sm,
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(
-                              Icons.cloud_upload_outlined,
-                              size: 18,
+            Consumer<AppSession>(
+              builder: (context, session, _) => ValueListenableBuilder<int>(
+                valueListenable:
+                    OfflineQueueService.instance.pendingCountNotifier,
+                builder: (context, _, __) {
+                  final count = OfflineQueueService.instance
+                      .pendingCountFor(session.selectedOperator?.id);
+                  if (count <= 0) return const SizedBox.shrink();
+                  
+                  return SafeArea(
+                    bottom: false,
+                    child: Container(
+                      width: double.infinity,
+                      color: AppColors.warningLight,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.md,
+                        vertical: AppSpacing.sm,
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(
+                            Icons.cloud_upload_outlined,
+                            size: 18,
+                            color: AppColors.warning,
+                          ),
+                          const SizedBox(width: AppSpacing.sm),
+                          Text(
+                            count == 1
+                                ? '1 ação pendente — será enviada quando houver conexão.'
+                                : '$count ações pendentes — serão enviadas quando houver conexão.',
+                            style: const TextStyle(
                               color: AppColors.warning,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 13,
                             ),
-                            const SizedBox(width: AppSpacing.sm),
-                            Text(
-                              count == 1
-                                  ? '1 ação pendente — será enviada quando houver conexão.'
-                                  : '$count ações pendentes — serão enviadas quando houver conexão.',
-                              style: const TextStyle(
-                                color: AppColors.warning,
-                                fontWeight: FontWeight.w700,
-                                fontSize: 13,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ],
-                        ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
                       ),
                     ),
+                  );
+                },
+              ),
             ),
             if (child != null) Expanded(child: child),
           ],

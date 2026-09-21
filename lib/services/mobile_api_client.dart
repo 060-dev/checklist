@@ -59,6 +59,7 @@ class MobileApiEnvelope<T> {
 class MobileApiClient {
   final String apiBaseUrl;
   final String apiKey;
+  final String? employeeCode;
   final Duration requestTimeout;
   final Duration uploadTimeout;
   final http.Client _http;
@@ -66,6 +67,7 @@ class MobileApiClient {
   MobileApiClient({
     required this.apiBaseUrl,
     required this.apiKey,
+    this.employeeCode,
     this.requestTimeout = const Duration(seconds: 30),
     this.uploadTimeout = const Duration(seconds: 120),
     http.Client? httpClient,
@@ -79,16 +81,28 @@ class MobileApiClient {
     return Uri.parse('$base$cleanPath').replace(queryParameters: query);
   }
 
-  Map<String, String> _headersJson() => {
-    'Accept': 'application/json',
-    'Content-Type': 'application/json',
-    'Authorization': 'Bearer $apiKey',
-  };
+  Map<String, String> _headersJson() {
+    final h = <String, String>{
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $apiKey',
+    };
+    if (employeeCode != null && employeeCode!.isNotEmpty) {
+      h['X-Employee-Code'] = employeeCode!;
+    }
+    return h;
+  }
 
-  Map<String, String> _headersAcceptJson() => {
-    'Accept': 'application/json',
-    'Authorization': 'Bearer $apiKey',
-  };
+  Map<String, String> _headersAcceptJson() {
+    final h = <String, String>{
+      'Accept': 'application/json',
+      'Authorization': 'Bearer $apiKey',
+    };
+    if (employeeCode != null && employeeCode!.isNotEmpty) {
+      h['X-Employee-Code'] = employeeCode!;
+    }
+    return h;
+  }
 
   Future<MobileApiEnvelope<T>> getJson<T>({
     required String path,
