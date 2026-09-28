@@ -3,8 +3,10 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:morro_do_peo/models/alert_models.dart';
 import 'package:morro_do_peo/models/mobile_api_models.dart';
 import 'package:morro_do_peo/models/operator.dart';
+import 'package:morro_do_peo/models/purchase_models.dart';
 
 @immutable
 class CachedList<T> {
@@ -33,6 +35,15 @@ class LocalCacheService {
       'cache_assignment_detail_v1_${employeeId}_$assignmentId';
   static String _occurrencesKey(String employeeId) =>
       'cache_occurrences_v1_$employeeId';
+      
+  static const String _purchaseContextKey = 'cache_purchase_context_v1';
+  static const String _productsKey = 'cache_products_v1';
+  static String _purchasesKey(String employeeId) =>
+      'cache_purchases_v1_$employeeId';
+  static String _purchaseDetailKey(String employeeId, String requestId) =>
+      'cache_purchase_detail_v1_${employeeId}_$requestId';
+  static String _purchaseNotificationsKey(String employeeId) =>
+      'cache_purchase_notifications_v1_$employeeId';
 
   Future<void> _writeEntry(String key, Object? data) async {
     try {
@@ -187,4 +198,98 @@ class LocalCacheService {
         .toList();
     return CachedList(items: items, updatedAt: updatedAt);
   }
+
+  // ---------------------------------------------------------------------------
+  // Purchases Cache
+  // ---------------------------------------------------------------------------
+
+  Future<void> savePurchaseContext(PurchaseContext context) =>
+      _writeEntry(_purchaseContextKey, context.toJson());
+
+  Future<(DateTime, PurchaseContext)?> getPurchaseContext() async {
+    final entry = await _readEntry(_purchaseContextKey);
+    if (entry == null) return null;
+    final (updatedAt, data) = entry;
+    if (data is! Map) return null;
+    return (updatedAt, PurchaseContext.fromJson(data.cast<String, dynamic>()));
+  }
+
+  Future<void> saveProducts(List<PurchaseProduct> products) =>
+      _writeEntry(_productsKey, products.map((e) => e.toJson()).toList());
+
+  Future<CachedList<PurchaseProduct>?> getProducts() async {
+    final entry = await _readEntry(_productsKey);
+    if (entry == null) return null;
+    final (updatedAt, data) = entry;
+    if (data is! List) return null;
+    final items = data
+        .whereType<Map>()
+        .map((e) => PurchaseProduct.fromJson(e.cast<String, dynamic>()))
+        .toList();
+    return CachedList(items: items, updatedAt: updatedAt);
+  }
+
+  Future<void> savePurchases(
+    String employeeId,
+    List<PurchaseRequestSummary> purchases,
+  ) => _writeEntry(
+    _purchasesKey(employeeId),
+    purchases.map((e) => e.toJson()).toList(),
+  );
+
+  Future<CachedList<PurchaseRequestSummary>?> getPurchases(
+    String employeeId,
+  ) async {
+    final entry = await _readEntry(_purchasesKey(employeeId));
+    if (entry == null) return null;
+    final (updatedAt, data) = entry;
+    if (data is! List) return null;
+    final items = data
+        .whereType<Map>()
+        .map((e) => PurchaseRequestSummary(e.cast<String, dynamic>()))
+        .toList();
+    return CachedList(items: items, updatedAt: updatedAt);
+  }
+
+  Future<void> savePurchaseDetail(
+    String employeeId,
+    String requestId,
+    Map<String, dynamic> rawDetail,
+  ) => _writeEntry(_purchaseDetailKey(employeeId, requestId), rawDetail);
+
+  Future<(DateTime, Map<String, dynamic>)?> getPurchaseDetail(
+    String employeeId,
+    String requestId,
+  ) async {
+    final entry = await _readEntry(
+      _purchaseDetailKey(employeeId, requestId),
+    );
+    if (entry == null) return null;
+    final (updatedAt, data) = entry;
+    if (data is! Map) return null;
+    return (updatedAt, data.cast<String, dynamic>());
+  }
+
+  Future<void> savePurchaseNotifications(
+    String employeeId,
+    List<PurchaseNotification> notifications,
+  ) => _writeEntry(
+    _purchaseNotificationsKey(employeeId),
+    notifications.map((e) => e.toJson()).toList(),
+  );
+
+  Future<CachedList<PurchaseNotification>?> getPurchaseNotifications(
+    String employeeId,
+  ) async {
+    final entry = await _readEntry(_purchaseNotificationsKey(employeeId));
+    if (entry == null) return null;
+    final (updatedAt, data) = entry;
+    if (data is! List) return null;
+    final items = data
+        .whereType<Map>()
+        .map((e) => PurchaseNotification.fromJson(e.cast<String, dynamic>()))
+        .toList();
+    return CachedList(items: items, updatedAt: updatedAt);
+  }
 }
+

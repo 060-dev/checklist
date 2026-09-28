@@ -130,6 +130,21 @@ class MobileApiClient {
     return _decodeEnvelope<T>(res, decodeData: decodeData);
   }
 
+  Future<MobileApiEnvelope<T>> putJson<T>({
+    required String path,
+    Map<String, String>? query,
+    required Object body,
+    required String idempotencyKey,
+    required T Function(dynamic json) decodeData,
+  }) async {
+    final headers = _headersJson();
+    headers['Idempotency-Key'] = idempotencyKey;
+    final res = await _http
+        .put(buildUri(path, query), headers: headers, body: jsonEncode(body))
+        .timeout(requestTimeout);
+    return _decodeEnvelope<T>(res, decodeData: decodeData);
+  }
+
   Future<MobileApiEnvelope<T>> patchJson<T>({
     required String path,
     Map<String, String>? query,

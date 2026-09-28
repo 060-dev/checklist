@@ -158,3 +158,68 @@ class MobileAlert {
     history: history,
   );
 }
+
+@immutable
+class PurchaseNotification {
+  final int id;
+  final int requestId;
+  final int? itemId;
+  final String kind;
+  final String title;
+  final String message;
+  final DateTime? readAt;
+  final DateTime createdAt;
+
+  const PurchaseNotification({
+    required this.id,
+    required this.requestId,
+    this.itemId,
+    required this.kind,
+    required this.title,
+    required this.message,
+    this.readAt,
+    required this.createdAt,
+  });
+
+  factory PurchaseNotification.fromJson(Map<String, dynamic> json) {
+    DateTime? parseDate(dynamic raw) => (raw is String) ? DateTime.tryParse(raw) : null;
+    return PurchaseNotification(
+      id: (json['id'] as num?)?.toInt() ?? 0,
+      requestId: (json['request_id'] as num?)?.toInt() ?? 0,
+      itemId: (json['item_id'] as num?)?.toInt(),
+      kind: json['kind'] as String? ?? '',
+      title: json['title'] as String? ?? '',
+      message: json['message'] as String? ?? '',
+      readAt: parseDate(json['read_at']),
+      createdAt: parseDate(json['created_at']) ?? DateTime.now(),
+    );
+  }
+  
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'request_id': requestId,
+    'item_id': itemId,
+    'kind': kind,
+    'title': title,
+    'message': message,
+    'read_at': readAt?.toIso8601String(),
+    'created_at': createdAt.toIso8601String(),
+  };
+
+  bool get isRead => readAt != null;
+
+  PurchaseNotification copyWith({
+    bool? isRead,
+  }) {
+    return PurchaseNotification(
+      id: id,
+      requestId: requestId,
+      itemId: itemId,
+      kind: kind,
+      title: title,
+      message: message,
+      readAt: isRead != null && isRead ? (readAt ?? DateTime.now()) : readAt,
+      createdAt: createdAt,
+    );
+  }
+}

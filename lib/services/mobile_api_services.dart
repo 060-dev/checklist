@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:morro_do_peo/models/alert_models.dart';
 import 'package:morro_do_peo/models/mobile_api_models.dart';
+import 'package:morro_do_peo/models/purchase_models.dart';
 import 'package:morro_do_peo/models/operator.dart';
 import 'package:morro_do_peo/services/mobile_api_client.dart';
 
@@ -501,5 +502,195 @@ class MobileApiServices {
           (json is Map) ? json.cast<String, dynamic>() : <String, dynamic>{},
     );
     return MobileEvidenceRef.fromJson(env.data ?? const <String, dynamic>{});
+  }
+
+  // ---------------------------------------------------------------------------
+  // Purchases
+  // ---------------------------------------------------------------------------
+
+  Future<PurchaseContext> getPurchaseContext() async {
+    final env = await client.getJson<Map<String, dynamic>>(
+      path: '/purchases/context',
+      decodeData: (json) =>
+          (json is Map) ? json.cast<String, dynamic>() : <String, dynamic>{},
+    );
+    return PurchaseContext.fromJson(env.data ?? const <String, dynamic>{});
+  }
+
+  Future<PaginatedResult<PurchaseRequestSummary>> listPurchases({
+    String? status,
+    String? itemStatus,
+    int? farmId,
+    int? sectorId,
+    String? priority,
+    int? requesterId,
+    String? search,
+    String? dateFrom,
+    String? dateTo,
+    int page = 1,
+    int pageSize = 25,
+    bool viewAll = false,
+  }) async {
+    final query = {
+      'page': page.toString(),
+      'page_size': pageSize.toString(),
+      if ((status ?? '').trim().isNotEmpty) 'status': status!.trim(),
+      if ((itemStatus ?? '').trim().isNotEmpty) 'item_status': itemStatus!.trim(),
+      if (farmId != null) 'farm_id': farmId.toString(),
+      if (sectorId != null) 'sector_id': sectorId.toString(),
+      if ((priority ?? '').trim().isNotEmpty) 'priority': priority!.trim(),
+      if (requesterId != null) 'requester_id': requesterId.toString(),
+      if ((search ?? '').trim().isNotEmpty) 'search': search!.trim(),
+      if ((dateFrom ?? '').trim().isNotEmpty) 'date_from': dateFrom!.trim(),
+      if ((dateTo ?? '').trim().isNotEmpty) 'date_to': dateTo!.trim(),
+    };
+    
+    // /me/purchases for own requests, /purchases/requests for all
+    final path = viewAll ? '/purchases/requests' : '/me/purchases';
+    
+    final env = await client.getJson<Map<String, dynamic>>(
+      path: path,
+      query: query,
+      decodeData: (json) =>
+          (json is Map) ? json.cast<String, dynamic>() : <String, dynamic>{},
+    );
+
+    final data = env.data ?? const <String, dynamic>{};
+    final itemsRaw = data['items'];
+    final items = <PurchaseRequestSummary>[];
+    if (itemsRaw is List) {
+      for (final it in itemsRaw) {
+        if (it is Map<String, dynamic>) {
+          items.add(PurchaseRequestSummary(it));
+        } else if (it is Map) {
+          items.add(PurchaseRequestSummary(it.cast<String, dynamic>()));
+        }
+      }
+    }
+
+    return PaginatedResult(
+      items: items,
+      page: (data['page'] as num?)?.toInt() ?? page,
+      pageSize: (data['page_size'] as num?)?.toInt() ?? pageSize,
+      total: (data['total'] as num?)?.toInt() ?? items.length,
+      pages: (data['pages'] as num?)?.toInt() ?? 1,
+    );
+  }
+
+  Future<Map<String, dynamic>> createPurchase({
+    required String idempotencyKey,
+    required Map<String, dynamic> payload,
+  }) async {
+    final env = await client.postJson<Map<String, dynamic>>(
+      path: '/purchases/requests',
+      body: payload,
+      idempotencyKey: idempotencyKey,
+      decodeData: (json) =>
+          (json is Map) ? json.cast<String, dynamic>() : <String, dynamic>{},
+    );
+    return env.data ?? const <String, dynamic>{};
+  }
+
+  Future<PurchaseRequestDetail> getPurchaseDetail({
+    required String requestId,
+    bool viewAll = false,
+  }) async {
+    final path = viewAll ? '/purchases/requests/$requestId' : '/me/purchases/$requestId';
+    final env = await client.getJson<Map<String, dynamic>>(
+      path: path,
+      decodeData: (json) =>
+          (json is Map) ? json.cast<String, dynamic>() : <String, dynamic>{},
+    );
+    return PurchaseRequestDetail(env.data ?? const <String, dynamic>{});
+  }
+
+  Future<PurchaseRequestDetail> updatePurchase({
+    required String requestId,
+    required String idempotencyKey,
+    required Map<String, dynamic> payload,
+  }) async {
+    final env = await client.putJson<Map<String, dynamic>>(
+      path: '/purchases/requests/$requestId',
+      body: payload,
+      idempotencyKey: idempotencyKey,
+      decodeData: (json) =>
+          (json is Map) ? json.cast<String, dynamic>() : <String, dynamic>{},
+    );
+    return PurchaseRequestDetail(env.data ?? const <String, dynamic>{});
+  }
+
+  Future<void> submitPurchase({
+    required String requestId,
+    required String idempotencyKey,
+  }) async {
+    await client.postJson<Map<String, dynamic>>(
+      path: '/purchases/requests/$requestId/submit',
+      body: const <String, dynamic>{},
+      idempotencyKey: idempotencyKey,
+      decodeData: (json) =>
+          (json is Map) ? json.cast<String, dynamic>() : <String, dynamic>{},
+    );
+  }
+
+  Future<List<PurchaseNotification>> listPurchaseNotifications() async {
+    final env = await client.getJson<Map<String, dynamic>>(
+      path: '/me/purchase-notifications',
+      query: {'page_size': '50'},
+      decodeData: (json) => (json is Map) ? json.cast<String, dynamic>() : <String, dynamic>{},
+    );
+    final data = env.data ?? const <String, dynamic>{};
+    final itemsRaw = data['items'];
+    final items = <PurchaseNotification>[];
+    if (itemsRaw is List) {
+      for (final it in itemsRaw) {
+        if (it is Map<String, dynamic>) {
+          items.add(PurchaseNotification.fromJson(it));
+        } else if (it is Map) {
+          items.add(PurchaseNotification.fromJson(it.cast<String, dynamic>()));
+        }
+      }
+    }
+    return items;
+  }
+
+  Future<void> markPurchaseNotificationRead({
+    required String notificationId,
+    required String idempotencyKey,
+  }) async {
+    await client.patchJson<Map<String, dynamic>>(
+      path: '/purchases/notifications/$notificationId',
+      body: const <String, dynamic>{'read': true},
+      idempotencyKey: idempotencyKey,
+      decodeData: (json) =>
+          (json is Map) ? json.cast<String, dynamic>() : <String, dynamic>{},
+    );
+  }
+
+  Future<Uint8List> downloadPurchaseAttachment({
+    required String attachmentId,
+  }) async {
+    final url = client.buildUri('/me/purchases/attachments/$attachmentId').toString();
+    return client.getBinaryAbsoluteUrl(url);
+  }
+
+  Future<List<PurchaseProduct>> listProducts() async {
+    final env = await client.getJson<Map<String, dynamic>>(
+      path: '/purchases/products',
+      query: {'page_size': '1000'}, // get them all for offline create
+      decodeData: (json) => (json is Map) ? json.cast<String, dynamic>() : <String, dynamic>{},
+    );
+    final data = env.data ?? const <String, dynamic>{};
+    final itemsRaw = data['items'];
+    final items = <PurchaseProduct>[];
+    if (itemsRaw is List) {
+      for (final it in itemsRaw) {
+        if (it is Map<String, dynamic>) {
+          items.add(PurchaseProduct.fromJson(it));
+        } else if (it is Map) {
+          items.add(PurchaseProduct.fromJson(it.cast<String, dynamic>()));
+        }
+      }
+    }
+    return items;
   }
 }

@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:morro_do_peo/screens/alerts_page.dart';
 import 'package:morro_do_peo/screens/history_page.dart';
 import 'package:morro_do_peo/screens/occurrences_page.dart';
+import 'package:morro_do_peo/screens/purchases_page.dart';
 import 'package:morro_do_peo/screens/today_page.dart';
 import 'package:morro_do_peo/state/app_session.dart';
 
@@ -35,9 +36,16 @@ class _HomePageState extends State<HomePage> {
       const TodayPage(),
       const HistoryPage(),
       const OccurrencesPage(),
+      const PurchasesPage(),
       AlertsPage(onCountChanged: _onAlertCountChanged),
     ];
-    final titles = const ['Hoje', 'Histórico', 'Ocorrências', 'Avisos'];
+    final titles = const [
+      'Hoje',
+      'Histórico',
+      'Ocorrências',
+      'Compras',
+      'Avisos',
+    ];
 
     Future<void> confirmLogout() async {
       final ok = await showDialog<bool>(
@@ -80,34 +88,50 @@ class _HomePageState extends State<HomePage> {
       body: pages[_index],
       bottomNavigationBar: SafeArea(
         top: false,
-        child: NavigationBar(
-          selectedIndex: _index,
-          onDestinationSelected: (i) => setState(() => _index = i),
-          indicatorColor: theme.colorScheme.primary.withValues(alpha: 0.14),
-          destinations: [
-            const NavigationDestination(
-              icon: Icon(Icons.today_rounded),
-              label: 'Hoje',
-            ),
-            const NavigationDestination(
-              icon: Icon(Icons.history_rounded),
-              label: 'Histórico',
-            ),
-            const NavigationDestination(
-              icon: Icon(Icons.warning_rounded),
-              label: 'Ocorrências',
-            ),
-            NavigationDestination(
-              icon: Badge(
-                isLabelVisible: _unhandledAlertCount > 0,
-                label: Text(
-                  _unhandledAlertCount > 9 ? '9+' : '$_unhandledAlertCount',
-                ),
-                child: const Icon(Icons.notifications_rounded),
+        child: NavigationBarTheme(
+          data: NavigationBarThemeData(
+            labelTextStyle: WidgetStateProperty.resolveWith((states) {
+              return const TextStyle(
+                fontSize: 12,
+                overflow: TextOverflow.ellipsis,
+              );
+            }),
+          ),
+          child: NavigationBar(
+            selectedIndex: _index,
+            onDestinationSelected: (i) => setState(() => _index = i),
+            labelBehavior: NavigationDestinationLabelBehavior.onlyShowSelected,
+            indicatorColor: theme.colorScheme.primary.withValues(alpha: 0.14),
+            destinations: [
+              const NavigationDestination(
+                icon: Icon(Icons.today_rounded),
+                label: 'Hoje',
               ),
-              label: 'Avisos',
-            ),
-          ],
+              const NavigationDestination(
+                icon: Icon(Icons.history_rounded),
+                label: 'Histórico',
+              ),
+              const NavigationDestination(
+                icon: Icon(Icons.warning_rounded),
+                label: 'Ocorrências',
+              ),
+              const NavigationDestination(
+                icon: Icon(Icons.shopping_cart_outlined),
+                selectedIcon: Icon(Icons.shopping_cart),
+                label: 'Compras',
+              ),
+              NavigationDestination(
+                icon: Badge(
+                  isLabelVisible: _unhandledAlertCount > 0,
+                  label: Text(
+                    _unhandledAlertCount > 9 ? '9+' : '$_unhandledAlertCount',
+                  ),
+                  child: const Icon(Icons.notifications_rounded),
+                ),
+                label: 'Avisos',
+              ),
+            ],
+          ),
         ),
       ),
     );

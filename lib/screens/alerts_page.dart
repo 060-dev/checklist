@@ -13,6 +13,33 @@ import 'package:morro_do_peo/services/mobile_api_services.dart';
 import 'package:morro_do_peo/state/app_session.dart';
 import 'package:morro_do_peo/theme.dart';
 
+class _AlertWrapper {
+  final MobileAlert? mobileAlert;
+  final PurchaseNotification? purchaseNotification;
+  
+  _AlertWrapper.fromMobileAlert(this.mobileAlert) : purchaseNotification = null;
+  _AlertWrapper.fromPurchaseNotification(this.purchaseNotification) : mobileAlert = null;
+  
+  String get id => mobileAlert?.id.toString() ?? purchaseNotification!.id.toString();
+  
+  DateTime get createdAt => mobileAlert?.createdAt ?? purchaseNotification!.createdAt;
+  bool get isHandled => mobileAlert != null ? mobileAlert!.isHandled : purchaseNotification!.isRead;
+  
+  int get sortRank {
+    if (mobileAlert != null) {
+      return switch(mobileAlert!.status) {
+        'pending' => 0,
+        'sent' => 0,
+        'viewed' => 1,
+        'handled' => 2,
+        _ => 3,
+      };
+    } else {
+      return purchaseNotification!.isRead ? 2 : 0;
+    }
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Public callback type so HomePage can react to badge count changes.
 // ---------------------------------------------------------------------------
@@ -31,7 +58,7 @@ class AlertsPage extends StatefulWidget {
 class _AlertsPageState extends State<AlertsPage> with WidgetsBindingObserver {
   bool _loading = true;
   String? _error;
-  List<MobileAlert> _items = const [];
+  List<_AlertWrapper> _items = const [];
 
   Timer? _refreshTimer;
   static const _refreshInterval = Duration(minutes: 1);
@@ -96,20 +123,31 @@ class _AlertsPageState extends State<AlertsPage> with WidgetsBindingObserver {
     );
     final api = MobileApiServices(client: client);
     try {
-      final alerts = await api.listAlerts(employeeId: employeeId);
+      final alertsFuture = api.listAlerts(employeeId: employeeId);
+      final purchasesFuture = api.listPurchaseNotifications();
+      
+      final results = await Future.wait([alertsFuture, purchasesFuture]);
+      final alerts = results[0] as List<MobileAlert>;
+      final purchases = results[1] as List<PurchaseNotification>;
+      
+      final List<_AlertWrapper> combined = [
+        ...alerts.map((a) => _AlertWrapper.fromMobileAlert(a)),
+        ...purchases.map((p) => _AlertWrapper.fromPurchaseNotification(p)),
+      ];
+      
       // Sort: pending/sent first, then viewed, then handled; newest first within each.
-      alerts.sort((a, b) {
-        final rankA = _statusRank(a.status);
-        final rankB = _statusRank(b.status);
+      combined.sort((a, b) {
+        final rankA = a.sortRank;
+        final rankB = b.sortRank;
         if (rankA != rankB) return rankA.compareTo(rankB);
         return b.createdAt.compareTo(a.createdAt);
       });
       if (mounted) {
         setState(() {
-          _items = alerts;
+          _items = combined;
           _loading = false;
         });
-        _notifyCount(alerts);
+        _notifyCount(combined);
       }
     } on MobileApiException catch (e) {
       if (mounted) {
@@ -130,33 +168,58 @@ class _AlertsPageState extends State<AlertsPage> with WidgetsBindingObserver {
     }
   }
 
-  int _statusRank(String status) => switch (status) {
-    'pending' => 0,
-    'sent' => 0,
-    'viewed' => 1,
-    'handled' => 2,
-    _ => 3,
-  };
-
-  void _notifyCount(List<MobileAlert> alerts) {
+  void _notifyCount(List<_AlertWrapper> alerts) {
     final unhandled = alerts.where((a) => !a.isHandled).length;
     widget.onCountChanged?.call(unhandled);
   }
 
   /// Optimistically marks an alert as `viewed` silently in background,
   /// then (if [andHandle]) also marks it as `handled`.
-  Future<void> _acknowledge(MobileAlert alert, {required bool andHandle}) async {
+  Future<void> _acknowledge(_AlertWrapper item, {required bool andHandle}) async {
     final session = context.read<AppSession>();
     final employeeId = session.selectedOperator?.id ?? '';
     if (employeeId.isEmpty) return;
 
+    if (item.purchaseNotification != null) {
+      // Purchase notification -> mark as read
+      final notif = item.purchaseNotification!;
+      final updated = notif.copyWith(isRead: true);
+      final idx = _items.indexWhere((a) => a.id == item.id);
+      if (idx == -1) return;
+
+      setState(() => _items = [..._items]..[idx] = _AlertWrapper.fromPurchaseNotification(updated));
+      _notifyCount(_items);
+
+      final client = MobileApiClient(
+        apiBaseUrl: session.apiBaseUrl.trim(),
+        apiKey: session.apiKey.trim(),
+        employeeCode: session.employeeCode,
+        requestTimeout: Duration(seconds: session.requestTimeoutSeconds),
+      );
+      final api = MobileApiServices(client: client);
+      try {
+        await api.markPurchaseNotificationRead(
+          notificationId: notif.id.toString(),
+          idempotencyKey: const Uuid().v4(),
+        );
+      } catch (_) {
+        // Ignore failure or rollback
+      } finally {
+        client.dispose();
+      }
+      return;
+    }
+
+    // MobileAlert
+    final alert = item.mobileAlert!;
+
     // --- Optimistic UI update ---
     final targetStatus = andHandle ? 'handled' : 'viewed';
-    final idx = _items.indexWhere((a) => a.id == alert.id);
+    final idx = _items.indexWhere((a) => a.id == alert.id.toString());
     if (idx == -1) return;
 
     final updated = alert.copyWithStatus(targetStatus);
-    setState(() => _items = [..._items]..[idx] = updated);
+    setState(() => _items = [..._items]..[idx] = _AlertWrapper.fromMobileAlert(updated));
     _notifyCount(_items);
 
     // --- API call in background ---
@@ -187,9 +250,9 @@ class _AlertsPageState extends State<AlertsPage> with WidgetsBindingObserver {
     } catch (e) {
       // Roll back optimistic update on failure.
       if (mounted) {
-        final rollbackIdx = _items.indexWhere((a) => a.id == alert.id);
+        final rollbackIdx = _items.indexWhere((a) => a.id == alert.id.toString());
         if (rollbackIdx != -1) {
-          setState(() => _items = [..._items]..[rollbackIdx] = alert);
+          setState(() => _items = [..._items]..[rollbackIdx] = _AlertWrapper.fromMobileAlert(alert));
           _notifyCount(_items);
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Falha ao atualizar aviso.')),
@@ -205,7 +268,7 @@ class _AlertsPageState extends State<AlertsPage> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final pendingCount =
-        _items.where((a) => a.status == 'pending' || a.status == 'sent').length;
+        _items.where((a) => a.mobileAlert?.status == 'pending' || a.mobileAlert?.status == 'sent' || (a.purchaseNotification != null && !a.purchaseNotification!.isRead)).length;
 
     return SafeArea(
       child: ResponsiveBody(
@@ -292,16 +355,19 @@ class _AlertsPageState extends State<AlertsPage> with WidgetsBindingObserver {
                             final alert = _items[i];
                             return _AlertCard(
                               alert: alert,
-                              onTapCard: () => context.push(
-                                '/api/occurrences/${alert.occurrenceId}',
-                              ),
-                              onAcknowledge: alert.status == 'pending' ||
-                                      alert.status == 'sent'
+                              onTapCard: () {
+                                if (alert.mobileAlert != null) {
+                                  context.push('/api/occurrences/${alert.mobileAlert!.occurrenceId}');
+                                } else if (alert.purchaseNotification != null) {
+                                  context.push('/compras/${alert.purchaseNotification!.requestId}');
+                                }
+                              },
+                              onAcknowledge: (alert.mobileAlert != null && (alert.mobileAlert!.status == 'pending' || alert.mobileAlert!.status == 'sent'))
                                   ? () => _acknowledge(
                                         alert,
                                         andHandle: false,
                                       )
-                                  : alert.status == 'viewed'
+                                  : (alert.mobileAlert != null && alert.mobileAlert!.status == 'viewed') || (alert.purchaseNotification != null && !alert.purchaseNotification!.isRead)
                                       ? () => _acknowledge(
                                             alert,
                                             andHandle: true,
@@ -355,7 +421,7 @@ class _EmptyState extends StatelessWidget {
 // ---------------------------------------------------------------------------
 
 class _AlertCard extends StatelessWidget {
-  final MobileAlert alert;
+  final _AlertWrapper alert;
   final VoidCallback onTapCard;
 
   /// null = no action button (handled state).
@@ -371,6 +437,13 @@ class _AlertCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
+    String status = 'handled';
+    if (alert.mobileAlert != null) {
+      status = alert.mobileAlert!.status;
+    } else if (alert.purchaseNotification != null) {
+      status = alert.purchaseNotification!.isRead ? 'handled' : 'sent';
+    }
+
     final (
       Color iconBg,
       Color iconFg,
@@ -378,7 +451,7 @@ class _AlertCard extends StatelessWidget {
       Color borderColor,
       Color cardBg,
       double opacity,
-    ) = switch (alert.status) {
+    ) = switch (status) {
       'handled' => (
           AppColors.successLight,
           AppColors.success,
@@ -411,7 +484,7 @@ class _AlertCard extends StatelessWidget {
       Color btnFg,
       IconData btnIcon,
       String btnLabel,
-    ) = switch (alert.status) {
+    ) = switch (status) {
       'viewed' => (
           AppColors.brandRed,
           AppColors.white,
@@ -466,10 +539,10 @@ class _AlertCard extends StatelessWidget {
                       width: 56,
                       height: 56,
                       decoration: BoxDecoration(
-                        color: iconBg,
+                        color: alert.purchaseNotification != null ? AppColors.brandRed.withValues(alpha: 0.1) : iconBg,
                         borderRadius: BorderRadius.circular(AppRadius.xl),
                       ),
-                      child: Icon(iconData, color: iconFg, size: 30),
+                      child: Icon(alert.purchaseNotification != null ? Icons.shopping_cart_outlined : iconData, color: alert.purchaseNotification != null ? AppColors.brandRed : iconFg, size: 30),
                     ),
                     const SizedBox(width: AppSpacing.lg),
 
@@ -479,7 +552,7 @@ class _AlertCard extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            alert.message,
+                            alert.mobileAlert?.message ?? alert.purchaseNotification!.message,
                             maxLines: 3,
                             overflow: TextOverflow.ellipsis,
                             style: theme.textTheme.titleSmall?.copyWith(
@@ -499,7 +572,7 @@ class _AlertCard extends StatelessWidget {
                               const SizedBox(width: 4),
                               Expanded(
                                 child: Text(
-                                  alert.sender.name,
+                                  alert.mobileAlert?.sender.name ?? 'Sistema',
                                   style: theme.textTheme.bodySmall?.copyWith(
                                     color: theme.colorScheme.onSurfaceVariant,
                                   ),

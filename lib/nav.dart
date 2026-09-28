@@ -7,6 +7,8 @@ import 'package:morro_do_peo/screens/home_page.dart';
 import 'package:morro_do_peo/screens/execution_detail_page.dart';
 import 'package:morro_do_peo/screens/occurrence_detail_page.dart';
 import 'package:morro_do_peo/screens/create_occurrence_page.dart';
+import 'package:morro_do_peo/screens/create_purchase_page.dart';
+import 'package:morro_do_peo/screens/purchase_detail_page.dart';
 import 'package:morro_do_peo/state/app_session.dart';
 
 class AppRouter {
@@ -74,6 +76,19 @@ class AppRouter {
               return CustomTransitionPage(child: OccurrenceDetailPage(occurrenceId: id), transitionsBuilder: _slideTransition);
             },
           ),
+          GoRoute(
+            path: AppRoutes.apiPurchaseNew,
+            name: 'apiPurchaseNew',
+            pageBuilder: (context, state) => CustomTransitionPage(child: const CreatePurchasePage(), transitionsBuilder: _slideTransition),
+          ),
+          GoRoute(
+            path: AppRoutes.apiPurchaseDetail,
+            name: 'apiPurchaseDetail',
+            pageBuilder: (context, state) {
+              final id = state.pathParameters['purchaseId'] ?? '';
+              return CustomTransitionPage(child: PurchaseDetailPage(requestId: id), transitionsBuilder: _slideTransition);
+            },
+          ),
         ],
       );
 
@@ -106,4 +121,7 @@ class AppRoutes {
   static const String apiExecutionDetail = '/api/executions/:executionId';
   static const String apiOccurrenceDetail = '/api/occurrences/:occurrenceId';
   static const String apiOccurrenceNew = '/api/occurrences/new';
+
+  static const String apiPurchaseNew = '/compras/nova';
+  static const String apiPurchaseDetail = '/compras/:purchaseId';
 }
