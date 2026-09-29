@@ -113,6 +113,12 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
     }
   }
 
+  String _getDisplayName(String? name) {
+    if (name == null || name.trim().isEmpty) return 'Pedido';
+    if (name.trim().startsWith('SOL-')) return 'Pedido';
+    return name.trim();
+  }
+
   Widget _buildStatusBadge(String status) {
     Color bg;
     Color fg;
@@ -176,6 +182,29 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
         style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: fg),
       ),
     );
+  }
+
+  String _getItemStatusLabel(String status) {
+    switch (status) {
+      case 'draft':
+        return 'Rascunho';
+      case 'pending':
+        return 'Pendente';
+      case 'in_triage':
+        return 'Em Triagem';
+      case 'awaiting_validation':
+        return 'Em Validação';
+      case 'approved':
+        return 'Aprovado';
+      case 'rejected':
+        return 'Rejeitado';
+      case 'canceled':
+        return 'Cancelado';
+      case 'adjusted':
+        return 'Ajustado';
+      default:
+        return status;
+    }
   }
 
   bool _canEditOrSubmit(AppSession session) {
@@ -328,206 +357,197 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
                 )
               else if (_detail != null)
                 SliverToBoxAdapter(
-                  child: Padding(
-                    padding: AppSpacing.paddingMd,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Expanded(
-                              child: Text(
-                                _detail!.name?.isNotEmpty == true
-                                    ? _detail!.name!
-                                    : 'Pedido',
-                                style: context.textStyles.headlineSmall?.bold,
-                              ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              _getDisplayName(_detail!.name),
+                              style: context.textStyles.headlineSmall?.bold,
                             ),
-                            const SizedBox(width: AppSpacing.sm),
-                            _buildStatusBadge(_detail!.status),
-                          ],
-                        ),
-                        // Removed name from below title
-                        const SizedBox(height: AppSpacing.md),
-                        const Divider(color: AppColors.brandBorder),
-                        const SizedBox(height: AppSpacing.md),
-                        Row(
-                          children: [
-                            const Icon(
-                              Icons.landscape_outlined,
-                              size: 20,
-                              color: AppColors.textSecondary,
-                            ),
-                            const SizedBox(width: AppSpacing.sm),
-                            Expanded(
-                              child: Text(
-                                _detail!.farmName,
-                                style: context.textStyles.bodyLarge,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: AppSpacing.sm),
-                        Row(
-                          children: [
-                            const Icon(
-                              Icons.business_outlined,
-                              size: 20,
-                              color: AppColors.textSecondary,
-                            ),
-                            const SizedBox(width: AppSpacing.sm),
-                            Expanded(
-                              child: Text(
-                                _detail!.sectorName,
-                                style: context.textStyles.bodyLarge,
-                              ),
-                            ),
-                          ],
-                        ),
-                        if (_detail!.notes != null &&
-                            _detail!.notes!.isNotEmpty) ...[
-                          const SizedBox(height: AppSpacing.lg),
-                          Text(
-                            'Observações',
-                            style: context.textStyles.titleMedium?.bold,
                           ),
-                          const SizedBox(height: AppSpacing.xs),
-                          Text(
-                            _detail!.notes!,
-                            style: context.textStyles.bodyMedium,
+                          const SizedBox(width: AppSpacing.sm),
+                          _buildStatusBadge(_detail!.status),
+                        ],
+                      ),
+                      // Removed name from below title
+                      const SizedBox(height: AppSpacing.md),
+                      const Divider(color: AppColors.brandBorder),
+                      const SizedBox(height: AppSpacing.md),
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.landscape_outlined,
+                            size: 20,
+                            color: AppColors.textSecondary,
+                          ),
+                          const SizedBox(width: AppSpacing.sm),
+                          Expanded(
+                            child: Text(
+                              _detail!.farmName,
+                              style: context.textStyles.bodyLarge,
+                            ),
                           ),
                         ],
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.business_outlined,
+                            size: 20,
+                            color: AppColors.textSecondary,
+                          ),
+                          const SizedBox(width: AppSpacing.sm),
+                          Expanded(
+                            child: Text(
+                              _detail!.sectorName,
+                              style: context.textStyles.bodyLarge,
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (_detail!.notes != null &&
+                          _detail!.notes!.isNotEmpty) ...[
                         const SizedBox(height: AppSpacing.lg),
                         Text(
-                          'Itens (${_detail!.items.length})',
-                          style: context.textStyles.titleLarge?.bold,
+                          'Observações',
+                          style: context.textStyles.titleMedium?.bold,
                         ),
-                        const SizedBox(height: AppSpacing.sm),
-                        ..._detail!.items.map((item) {
-                          return Card(
-                            margin: const EdgeInsets.only(
-                              bottom: AppSpacing.sm,
+                        const SizedBox(height: AppSpacing.xs),
+                        Text(
+                          _detail!.notes!,
+                          style: context.textStyles.bodyMedium,
+                        ),
+                      ],
+                      const SizedBox(height: AppSpacing.lg),
+                      Text(
+                        'Itens (${_detail!.items.length})',
+                        style: context.textStyles.titleLarge?.bold,
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      ..._detail!.items.map((item) {
+                        return Card(
+                          margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(AppRadius.sm),
+                            side: const BorderSide(
+                              color: AppColors.brandBorder,
                             ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(AppRadius.sm),
-                              side: const BorderSide(
-                                color: AppColors.brandBorder,
-                              ),
-                            ),
-                            elevation: 0,
-                            child: Padding(
-                              padding: AppSpacing.paddingMd,
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          item.productName.isNotEmpty
-                                              ? item.productName
-                                              : (item.description ??
-                                                    'Sem descrição'),
-                                          style: context
-                                              .textStyles
-                                              .titleMedium
-                                              ?.bold,
-                                        ),
-                                        if (item.description != null &&
-                                            item.productName.isNotEmpty) ...[
-                                          const SizedBox(height: AppSpacing.xs),
-                                          Text(
-                                            item.description!,
-                                            style: context.textStyles.bodyMedium
-                                                ?.withColor(
-                                                  AppColors.textSecondary,
-                                                ),
-                                          ),
-                                        ],
-                                      ],
-                                    ),
-                                  ),
-                                  const SizedBox(width: AppSpacing.md),
-                                  Column(
-                                    crossAxisAlignment: CrossAxisAlignment.end,
+                          ),
+                          elevation: 0,
+                          child: Padding(
+                            padding: AppSpacing.paddingMd,
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        '${item.quantity} ${item.unit}',
+                                        item.productName.isNotEmpty
+                                            ? item.productName
+                                            : (item.description ??
+                                                  'Sem descrição'),
                                         style: context
                                             .textStyles
                                             .titleMedium
                                             ?.bold,
                                       ),
-                                      if (item.status.isNotEmpty) ...[
+                                      if (item.description != null &&
+                                          item.productName.isNotEmpty) ...[
                                         const SizedBox(height: AppSpacing.xs),
                                         Text(
-                                          item.status,
-                                          style: context.textStyles.bodySmall
-                                              ?.withColor(AppColors.brandRed),
+                                          item.description!,
+                                          style: context.textStyles.bodyMedium
+                                              ?.withColor(
+                                                AppColors.textSecondary,
+                                              ),
                                         ),
                                       ],
                                     ],
                                   ),
-                                  if (canManage) ...[
-                                    const SizedBox(width: AppSpacing.sm),
-                                    PopupMenuButton<String>(
-                                      icon: const Icon(
-                                        Icons.more_vert,
-                                        color: AppColors.textSecondary,
-                                      ),
-                                      onSelected: (val) {
-                                        if (val == 'triage') {
-                                          _showTriageDialog(item);
-                                        }
-                                      },
-                                      itemBuilder: (context) => [
-                                        const PopupMenuItem(
-                                          value: 'triage',
-                                          child: Text('Fazer Triagem'),
-                                        ),
-                                      ],
+                                ),
+                                const SizedBox(width: AppSpacing.md),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    Text(
+                                      '${item.quantity} ${item.unit}',
+                                      style:
+                                          context.textStyles.titleMedium?.bold,
                                     ),
+                                    if (item.status.isNotEmpty) ...[
+                                      const SizedBox(height: AppSpacing.xs),
+                                      Text(
+                                        _getItemStatusLabel(item.status),
+                                        style: context.textStyles.bodySmall
+                                            ?.withColor(AppColors.brandRed),
+                                      ),
+                                    ],
                                   ],
+                                ),
+                                if (canManage) ...[
+                                  const SizedBox(width: AppSpacing.sm),
+                                  PopupMenuButton<String>(
+                                    icon: const Icon(
+                                      Icons.more_vert,
+                                      color: AppColors.textSecondary,
+                                    ),
+                                    onSelected: (val) {
+                                      if (val == 'triage') {
+                                        _showTriageDialog(item);
+                                      }
+                                    },
+                                    itemBuilder: (context) => [
+                                      const PopupMenuItem(
+                                        value: 'triage',
+                                        child: Text('Fazer Triagem'),
+                                      ),
+                                    ],
+                                  ),
                                 ],
-                              ),
+                              ],
                             ),
-                          );
-                        }),
-                        const SizedBox(height: AppSpacing.lg),
-                        Text(
-                          'Anexos (${_detail!.attachments.length})',
-                          style: context.textStyles.titleLarge?.bold,
-                        ),
-                        const SizedBox(height: AppSpacing.sm),
-                        ..._detail!.attachments.map((att) {
-                          return ListTile(
-                            leading: const Icon(
-                              Icons.attachment,
-                              color: AppColors.brandRed,
-                            ),
-                            title: Text(att.originalName),
-                            subtitle: Text(
-                              '${(att.sizeBytes / 1024).toStringAsFixed(1)} KB',
-                            ),
-                            onTap: () {
-                              // TODO: view attachment
-                            },
-                          );
-                        }),
-                        if (canEditSubmit) ...[
-                          const SizedBox(height: AppSpacing.md),
-                          OutlinedButton.icon(
-                            onPressed: () => _uploadAttachment(session),
-                            icon: const Icon(Icons.upload_file),
-                            label: const Text('Adicionar Anexo'),
                           ),
-                        ],
-                        const SizedBox(height: AppSpacing.xxl),
+                        );
+                      }),
+                      const SizedBox(height: AppSpacing.lg),
+                      Text(
+                        'Anexos (${_detail!.attachments.length})',
+                        style: context.textStyles.titleLarge?.bold,
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      ..._detail!.attachments.map((att) {
+                        return ListTile(
+                          leading: const Icon(
+                            Icons.attachment,
+                            color: AppColors.brandRed,
+                          ),
+                          title: Text(att.originalName),
+                          subtitle: Text(
+                            '${(att.sizeBytes / 1024).toStringAsFixed(1)} KB',
+                          ),
+                          onTap: () {
+                            // TODO: view attachment
+                          },
+                        );
+                      }),
+                      if (canEditSubmit) ...[
+                        const SizedBox(height: AppSpacing.md),
+                        OutlinedButton.icon(
+                          onPressed: () => _uploadAttachment(session),
+                          icon: const Icon(Icons.upload_file),
+                          label: const Text('Adicionar Anexo'),
+                        ),
                       ],
-                    ),
+                      const SizedBox(height: AppSpacing.xxl),
+                    ],
                   ),
                 ),
             ],

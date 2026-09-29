@@ -256,6 +256,12 @@ class _PurchasesPageState extends State<PurchasesPage> {
     );
   }
 
+  String _getDisplayName(String? name) {
+    if (name == null || name.trim().isEmpty) return 'Pedido';
+    if (name.trim().startsWith('SOL-')) return 'Pedido';
+    return name.trim();
+  }
+
   Widget _buildItem(PurchaseRequestSummary item) {
     return Card(
       margin: const EdgeInsets.only(bottom: AppSpacing.md),
@@ -279,7 +285,7 @@ class _PurchasesPageState extends State<PurchasesPage> {
                 children: [
                   Expanded(
                     child: Text(
-                      item.name?.isNotEmpty == true ? item.name! : 'Pedido',
+                      _getDisplayName(item.name),
                       style: context.textStyles.titleMedium?.bold,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -455,7 +461,9 @@ class _PurchasesPageState extends State<PurchasesPage> {
                   children: [
                     Text(
                       _getScopeLabel(context),
-                      style: context.textStyles.titleMedium?.withColor(AppColors.textSecondary),
+                      style: context.textStyles.titleMedium?.withColor(
+                        AppColors.textSecondary,
+                      ),
                     ),
                     IconButton(
                       icon: const Icon(Icons.dashboard_outlined),
