@@ -40,7 +40,7 @@ class _HomePageState extends State<HomePage> {
       AlertsPage(onCountChanged: _onAlertCountChanged),
     ];
     final titles = const [
-      'Hoje',
+      'Checklists',
       'Histórico',
       'Ocorrências',
       'Compras',
@@ -105,7 +105,7 @@ class _HomePageState extends State<HomePage> {
             destinations: [
               const NavigationDestination(
                 icon: Icon(Icons.today_rounded),
-                label: 'Hoje',
+                label: 'Checklists',
               ),
               const NavigationDestination(
                 icon: Icon(Icons.history_rounded),

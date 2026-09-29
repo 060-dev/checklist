@@ -9,7 +9,12 @@ class ResponsiveBody extends StatelessWidget {
   final double maxWidth;
   final EdgeInsetsGeometry padding;
 
-  const ResponsiveBody({super.key, required this.child, this.maxWidth = 560, this.padding = const EdgeInsets.all(AppSpacing.lg)});
+  const ResponsiveBody({
+    super.key,
+    required this.child,
+    this.maxWidth = 560,
+    this.padding = const EdgeInsets.all(AppSpacing.lg),
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -19,8 +24,8 @@ class ResponsiveBody extends StatelessWidget {
         final horizontal = width >= 900
             ? AppSpacing.xxl
             : width >= 600
-                ? AppSpacing.xl
-                : AppSpacing.lg;
+            ? AppSpacing.xl
+            : AppSpacing.lg;
 
         final resolvedPadding = padding.resolve(Directionality.of(context));
         final base = EdgeInsets.fromLTRB(

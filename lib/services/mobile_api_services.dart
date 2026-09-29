@@ -33,9 +33,7 @@ class MobileApiServices {
       if (itemsRaw is List && itemsRaw.isNotEmpty) {
         final first = itemsRaw.first;
         if (first is Map) {
-          return Operator.fromMobileApiEmployee(
-            first.cast<String, dynamic>(),
-          );
+          return Operator.fromMobileApiEmployee(first.cast<String, dynamic>());
         }
       }
       return null;
@@ -535,7 +533,8 @@ class MobileApiServices {
       'page': page.toString(),
       'page_size': pageSize.toString(),
       if ((status ?? '').trim().isNotEmpty) 'status': status!.trim(),
-      if ((itemStatus ?? '').trim().isNotEmpty) 'item_status': itemStatus!.trim(),
+      if ((itemStatus ?? '').trim().isNotEmpty)
+        'item_status': itemStatus!.trim(),
       if (farmId != null) 'farm_id': farmId.toString(),
       if (sectorId != null) 'sector_id': sectorId.toString(),
       if ((priority ?? '').trim().isNotEmpty) 'priority': priority!.trim(),
@@ -544,10 +543,10 @@ class MobileApiServices {
       if ((dateFrom ?? '').trim().isNotEmpty) 'date_from': dateFrom!.trim(),
       if ((dateTo ?? '').trim().isNotEmpty) 'date_to': dateTo!.trim(),
     };
-    
+
     // /me/purchases for own requests, /purchases/requests for all
     final path = viewAll ? '/purchases/requests' : '/me/purchases';
-    
+
     final env = await client.getJson<Map<String, dynamic>>(
       path: path,
       query: query,
@@ -595,7 +594,9 @@ class MobileApiServices {
     required String requestId,
     bool viewAll = false,
   }) async {
-    final path = viewAll ? '/purchases/requests/$requestId' : '/me/purchases/$requestId';
+    final path = viewAll
+        ? '/purchases/requests/$requestId'
+        : '/me/purchases/$requestId';
     final env = await client.getJson<Map<String, dynamic>>(
       path: path,
       decodeData: (json) =>
@@ -632,6 +633,26 @@ class MobileApiServices {
     );
   }
 
+  Future<void> triagePurchaseItem({
+    required String itemId,
+    required String idempotencyKey,
+    required String action, // 'accept', 'return', 'cancel', 'adjust'
+    num? quantity,
+    String? reason,
+  }) async {
+    await client.postJson<Map<String, dynamic>>(
+      path: '/purchases/items/$itemId/triage',
+      body: <String, dynamic>{
+        'action': action,
+        if (quantity != null) 'quantity': quantity,
+        if (reason != null && reason.isNotEmpty) 'reason': reason,
+      },
+      idempotencyKey: idempotencyKey,
+      decodeData: (json) =>
+          (json is Map) ? json.cast<String, dynamic>() : <String, dynamic>{},
+    );
+  }
+
   Future<Map<String, dynamic>> uploadPurchaseAttachment({
     required String target,
     required String targetId,
@@ -643,7 +664,8 @@ class MobileApiServices {
       idempotencyKey: idempotencyKey,
       fields: [],
       files: [file],
-      decodeData: (json) => (json is Map) ? json.cast<String, dynamic>() : <String, dynamic>{},
+      decodeData: (json) =>
+          (json is Map) ? json.cast<String, dynamic>() : <String, dynamic>{},
     );
     return env.data ?? const <String, dynamic>{};
   }
@@ -659,7 +681,8 @@ class MobileApiServices {
     final env = await client.getJson<Map<String, dynamic>>(
       path: '/purchases/dashboard',
       query: query,
-      decodeData: (json) => (json is Map) ? json.cast<String, dynamic>() : <String, dynamic>{},
+      decodeData: (json) =>
+          (json is Map) ? json.cast<String, dynamic>() : <String, dynamic>{},
     );
     return PurchaseDashboard(env.data ?? const <String, dynamic>{});
   }
@@ -668,7 +691,8 @@ class MobileApiServices {
     final env = await client.getJson<Map<String, dynamic>>(
       path: '/me/purchase-notifications',
       query: {'page_size': '50'},
-      decodeData: (json) => (json is Map) ? json.cast<String, dynamic>() : <String, dynamic>{},
+      decodeData: (json) =>
+          (json is Map) ? json.cast<String, dynamic>() : <String, dynamic>{},
     );
     final data = env.data ?? const <String, dynamic>{};
     final itemsRaw = data['items'];
@@ -701,7 +725,9 @@ class MobileApiServices {
   Future<Uint8List> downloadPurchaseAttachment({
     required String attachmentId,
   }) async {
-    final url = client.buildUri('/me/purchases/attachments/$attachmentId').toString();
+    final url = client
+        .buildUri('/me/purchases/attachments/$attachmentId')
+        .toString();
     return client.getBinaryAbsoluteUrl(url);
   }
 
@@ -709,7 +735,8 @@ class MobileApiServices {
     final env = await client.getJson<Map<String, dynamic>>(
       path: '/purchases/products',
       query: {'page_size': '1000'}, // get them all for offline create
-      decodeData: (json) => (json is Map) ? json.cast<String, dynamic>() : <String, dynamic>{},
+      decodeData: (json) =>
+          (json is Map) ? json.cast<String, dynamic>() : <String, dynamic>{},
     );
     final data = env.data ?? const <String, dynamic>{};
     final itemsRaw = data['items'];

@@ -22,10 +22,7 @@ import 'package:morro_do_peo/utils/connectivity.dart';
 class PurchaseDetailPage extends StatefulWidget {
   final String requestId;
 
-  const PurchaseDetailPage({
-    super.key,
-    required this.requestId,
-  });
+  const PurchaseDetailPage({super.key, required this.requestId});
 
   @override
   State<PurchaseDetailPage> createState() => _PurchaseDetailPageState();
@@ -69,11 +66,13 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
 
     try {
       final detail = await api.getPurchaseDetail(requestId: widget.requestId);
-      unawaited(LocalCacheService.instance.savePurchaseDetail(
-        employeeId,
-        widget.requestId,
-        detail.toJson(),
-      ));
+      unawaited(
+        LocalCacheService.instance.savePurchaseDetail(
+          employeeId,
+          widget.requestId,
+          detail.toJson(),
+        ),
+      );
       if (mounted) {
         setState(() {
           _detail = detail;
@@ -174,11 +173,7 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
       ),
       child: Text(
         label,
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.bold,
-          color: fg,
-        ),
+        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: fg),
       ),
     );
   }
@@ -187,7 +182,8 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
     if (_detail == null || _detail!.status != 'draft') return false;
     final cap = session.purchaseCapabilities;
     if (!cap.editOwnRequests) return false;
-    final isOwn = _detail!.requesterId == (session.purchaseCurrentUser?.id ?? 0);
+    final isOwn =
+        _detail!.requesterId == (session.purchaseCurrentUser?.id ?? 0);
     return isOwn || cap.createForOthers;
   }
 
@@ -222,14 +218,17 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
                       apiBaseUrl: session.apiBaseUrl.trim(),
                       apiKey: session.apiKey.trim(),
                       employeeCode: session.employeeCode,
-                      requestTimeout: Duration(seconds: session.requestTimeoutSeconds),
+                      requestTimeout: Duration(
+                        seconds: session.requestTimeoutSeconds,
+                      ),
                     );
                     final api = MobileApiServices(client: client);
                     try {
                       showDialog(
                         context: context,
                         barrierDismissible: false,
-                        builder: (_) => const Center(child: CircularProgressIndicator()),
+                        builder: (_) =>
+                            const Center(child: CircularProgressIndicator()),
                       );
                       await api.submitPurchase(
                         requestId: _detail!.id.toString(),
@@ -241,7 +240,9 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
                     } catch (e) {
                       if (!mounted) return;
                       Navigator.pop(context); // close dialog
-                      final msg = e is MobileApiException ? e.message : e.toString();
+                      final msg = e is MobileApiException
+                          ? e.message
+                          : e.toString();
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(content: Text('Erro ao enviar: $msg')),
                       );
@@ -252,18 +253,25 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
                         method: 'POST',
                         path: '/purchases/requests/${_detail!.id}/submit',
                         jsonBody: const {},
-                        employeeId: session.selectedOperator?.id.toString() ?? '',
+                        employeeId:
+                            session.selectedOperator?.id.toString() ?? '',
                         employeeCode: session.employeeCode,
                       );
                       if (!mounted) return;
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Envio salvo offline. Será sincronizado depois.')),
+                        const SnackBar(
+                          content: Text(
+                            'Envio salvo offline. Será sincronizado depois.',
+                          ),
+                        ),
                       );
                       _load();
                     } catch (e) {
                       if (!mounted) return;
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Falha ao salvar offline.')),
+                        const SnackBar(
+                          content: Text('Falha ao salvar offline.'),
+                        ),
                       );
                     }
                   }
@@ -314,7 +322,9 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
                 ),
               if (_loading)
                 SliverFillRemaining(
-                  child: Center(child: CircularProgressIndicator(strokeWidth: 3.0)),
+                  child: Center(
+                    child: CircularProgressIndicator(strokeWidth: 3.0),
+                  ),
                 )
               else if (_detail != null)
                 SliverToBoxAdapter(
@@ -328,7 +338,9 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
                           children: [
                             Expanded(
                               child: Text(
-                                _detail!.name?.isNotEmpty == true ? _detail!.name! : 'Pedido',
+                                _detail!.name?.isNotEmpty == true
+                                    ? _detail!.name!
+                                    : 'Pedido',
                                 style: context.textStyles.headlineSmall?.bold,
                               ),
                             ),
@@ -342,7 +354,11 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
                         const SizedBox(height: AppSpacing.md),
                         Row(
                           children: [
-                            const Icon(Icons.landscape_outlined, size: 20, color: AppColors.textSecondary),
+                            const Icon(
+                              Icons.landscape_outlined,
+                              size: 20,
+                              color: AppColors.textSecondary,
+                            ),
                             const SizedBox(width: AppSpacing.sm),
                             Expanded(
                               child: Text(
@@ -355,7 +371,11 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
                         const SizedBox(height: AppSpacing.sm),
                         Row(
                           children: [
-                            const Icon(Icons.business_outlined, size: 20, color: AppColors.textSecondary),
+                            const Icon(
+                              Icons.business_outlined,
+                              size: 20,
+                              color: AppColors.textSecondary,
+                            ),
                             const SizedBox(width: AppSpacing.sm),
                             Expanded(
                               child: Text(
@@ -365,7 +385,8 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
                             ),
                           ],
                         ),
-                        if (_detail!.notes != null && _detail!.notes!.isNotEmpty) ...[
+                        if (_detail!.notes != null &&
+                            _detail!.notes!.isNotEmpty) ...[
                           const SizedBox(height: AppSpacing.lg),
                           Text(
                             'Observações',
@@ -385,10 +406,14 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
                         const SizedBox(height: AppSpacing.sm),
                         ..._detail!.items.map((item) {
                           return Card(
-                            margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+                            margin: const EdgeInsets.only(
+                              bottom: AppSpacing.sm,
+                            ),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(AppRadius.sm),
-                              side: const BorderSide(color: AppColors.brandBorder),
+                              side: const BorderSide(
+                                color: AppColors.brandBorder,
+                              ),
                             ),
                             elevation: 0,
                             child: Padding(
@@ -398,17 +423,28 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
                                 children: [
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Text(
-                                          item.productName.isNotEmpty ? item.productName : (item.description ?? 'Sem descrição'),
-                                          style: context.textStyles.titleMedium?.bold,
+                                          item.productName.isNotEmpty
+                                              ? item.productName
+                                              : (item.description ??
+                                                    'Sem descrição'),
+                                          style: context
+                                              .textStyles
+                                              .titleMedium
+                                              ?.bold,
                                         ),
-                                        if (item.description != null && item.productName.isNotEmpty) ...[
+                                        if (item.description != null &&
+                                            item.productName.isNotEmpty) ...[
                                           const SizedBox(height: AppSpacing.xs),
                                           Text(
                                             item.description!,
-                                            style: context.textStyles.bodyMedium?.withColor(AppColors.textSecondary),
+                                            style: context.textStyles.bodyMedium
+                                                ?.withColor(
+                                                  AppColors.textSecondary,
+                                                ),
                                           ),
                                         ],
                                       ],
@@ -420,17 +456,41 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
                                     children: [
                                       Text(
                                         '${item.quantity} ${item.unit}',
-                                        style: context.textStyles.titleMedium?.bold,
+                                        style: context
+                                            .textStyles
+                                            .titleMedium
+                                            ?.bold,
                                       ),
                                       if (item.status.isNotEmpty) ...[
                                         const SizedBox(height: AppSpacing.xs),
                                         Text(
                                           item.status,
-                                          style: context.textStyles.bodySmall?.withColor(AppColors.brandRed),
+                                          style: context.textStyles.bodySmall
+                                              ?.withColor(AppColors.brandRed),
                                         ),
                                       ],
                                     ],
                                   ),
+                                  if (canManage) ...[
+                                    const SizedBox(width: AppSpacing.sm),
+                                    PopupMenuButton<String>(
+                                      icon: const Icon(
+                                        Icons.more_vert,
+                                        color: AppColors.textSecondary,
+                                      ),
+                                      onSelected: (val) {
+                                        if (val == 'triage') {
+                                          _showTriageDialog(item);
+                                        }
+                                      },
+                                      itemBuilder: (context) => [
+                                        const PopupMenuItem(
+                                          value: 'triage',
+                                          child: Text('Fazer Triagem'),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
                                 ],
                               ),
                             ),
@@ -444,9 +504,14 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
                         const SizedBox(height: AppSpacing.sm),
                         ..._detail!.attachments.map((att) {
                           return ListTile(
-                            leading: const Icon(Icons.attachment, color: AppColors.brandRed),
+                            leading: const Icon(
+                              Icons.attachment,
+                              color: AppColors.brandRed,
+                            ),
                             title: Text(att.originalName),
-                            subtitle: Text('${(att.sizeBytes / 1024).toStringAsFixed(1)} KB'),
+                            subtitle: Text(
+                              '${(att.sizeBytes / 1024).toStringAsFixed(1)} KB',
+                            ),
                             onTap: () {
                               // TODO: view attachment
                             },
@@ -483,7 +548,11 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
       if (!isOnline) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('É necessário conexão com a internet para enviar anexos.')),
+          const SnackBar(
+            content: Text(
+              'É necessário conexão com a internet para enviar anexos.',
+            ),
+          ),
         );
         return;
       }
@@ -524,9 +593,165 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
       if (!mounted) return;
       Navigator.pop(context); // close dialog
       final msg = e is MobileApiException ? e.message : e.toString();
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Erro ao anexar: $msg')));
+    }
+  }
+
+  void _showTriageDialog(PurchaseItem item) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        String action = 'accept';
+        final reasonCtrl = TextEditingController();
+        final qtyCtrl = TextEditingController(text: item.quantity);
+
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: Text(
+                'Triagem: ${item.productName.isNotEmpty ? item.productName : item.description}',
+                style: const TextStyle(fontSize: 18),
+              ),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    DropdownButtonFormField<String>(
+                      initialValue: action,
+                      decoration: const InputDecoration(labelText: 'Ação'),
+                      items: const [
+                        DropdownMenuItem(
+                          value: 'accept',
+                          child: Text('Aceitar'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'return',
+                          child: Text('Devolver ao solicitante'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'cancel',
+                          child: Text('Cancelar item'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'adjust',
+                          child: Text('Ajustar quantidade'),
+                        ),
+                      ],
+                      onChanged: (val) {
+                        if (val != null) setDialogState(() => action = val);
+                      },
+                    ),
+                    if (action == 'adjust') ...[
+                      const SizedBox(height: AppSpacing.md),
+                      TextFormField(
+                        controller: qtyCtrl,
+                        decoration: const InputDecoration(
+                          labelText: 'Nova Quantidade',
+                        ),
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                      ),
+                    ],
+                    if (action == 'return' ||
+                        action == 'cancel' ||
+                        action == 'adjust') ...[
+                      const SizedBox(height: AppSpacing.md),
+                      TextFormField(
+                        controller: reasonCtrl,
+                        decoration: InputDecoration(
+                          labelText:
+                              'Motivo ${action == 'adjust' ? '(opcional)' : '(obrigatório)'}',
+                        ),
+                        maxLines: 2,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Voltar'),
+                ),
+                FilledButton(
+                  onPressed: () {
+                    if ((action == 'return' || action == 'cancel') &&
+                        reasonCtrl.text.trim().isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Motivo é obrigatório')),
+                      );
+                      return;
+                    }
+                    Navigator.pop(context);
+                    _submitTriage(
+                      item: item,
+                      action: action,
+                      reason: reasonCtrl.text.trim(),
+                      quantity: action == 'adjust'
+                          ? double.tryParse(qtyCtrl.text.replaceAll(',', '.'))
+                          : null,
+                    );
+                  },
+                  child: const Text('Confirmar'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _submitTriage({
+    required PurchaseItem item,
+    required String action,
+    String? reason,
+    num? quantity,
+  }) async {
+    final isOnline = Connectivity.instance.isOnline;
+    if (!isOnline) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erro ao anexar: $msg')),
+        const SnackBar(content: Text('É necessário internet para triagem.')),
       );
+      return;
+    }
+
+    final session = context.read<AppSession>();
+    final client = MobileApiClient(
+      apiBaseUrl: session.apiBaseUrl.trim(),
+      apiKey: session.apiKey.trim(),
+      employeeCode: session.employeeCode,
+      requestTimeout: Duration(seconds: session.requestTimeoutSeconds),
+    );
+    final api = MobileApiServices(client: client);
+
+    try {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => const Center(child: CircularProgressIndicator()),
+      );
+      await api.triagePurchaseItem(
+        itemId: item.id.toString(),
+        idempotencyKey: const Uuid().v4(),
+        action: action,
+        reason: reason,
+        quantity: quantity,
+      );
+      if (!mounted) return;
+      Navigator.pop(context); // close loader
+      _load();
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.pop(context); // close loader
+      final msg = e is MobileApiException ? e.message : e.toString();
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Erro na triagem: $msg')));
     }
   }
 }

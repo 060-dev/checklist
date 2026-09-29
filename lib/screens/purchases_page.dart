@@ -203,18 +203,15 @@ class _PurchasesPageState extends State<PurchasesPage> {
   }
 
   Widget _buildStatusFilter() {
-    return Padding(
-      padding: AppSpacing.horizontalMd,
-      child: Wrap(
-        spacing: AppSpacing.sm,
-        runSpacing: 0,
-        children: [
-          _filterChip('Rascunhos', 'draft'),
-          _filterChip('Pendentes', 'pending'),
-          _filterChip('Aprovadas', 'approved'),
-          _filterChip('Rejeitadas', 'rejected'),
-        ],
-      ),
+    return Wrap(
+      spacing: AppSpacing.sm,
+      runSpacing: 0,
+      children: [
+        _filterChip('Rascunhos', 'draft'),
+        _filterChip('Pendentes', 'pending'),
+        _filterChip('Aprovadas', 'approved'),
+        _filterChip('Rejeitadas', 'rejected'),
+      ],
     );
   }
 
@@ -411,7 +408,6 @@ class _PurchasesPageState extends State<PurchasesPage> {
 
     return ListView.builder(
       controller: _scrollController,
-      padding: AppSpacing.paddingMd,
       itemCount: _items.length + (_hasMore ? 1 : 0),
       itemBuilder: (context, index) {
         if (index == _items.length) {
@@ -436,20 +432,7 @@ class _PurchasesPageState extends State<PurchasesPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [Text(_getScopeLabel(context))],
-        ),
-        centerTitle: false,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.dashboard_outlined),
-            onPressed: () => context.push('/compras/dashboard'),
-          ),
-        ],
-      ),
+      backgroundColor: Colors.transparent,
       floatingActionButton:
           context.watch<AppSession>().purchaseCapabilities.createRequests
           ? FloatingActionButton(
@@ -460,29 +443,44 @@ class _PurchasesPageState extends State<PurchasesPage> {
               child: const Icon(Icons.add, color: AppColors.white),
             )
           : null,
-      body: ResponsiveBody(
-        child: RefreshIndicator(
-          onRefresh: _load,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: AppSpacing.md),
-              _buildStatusFilter(),
-              const SizedBox(height: AppSpacing.md),
-              if (_error != null) ErrorBanner(message: _error!),
-              if (_fromCache && _error == null)
-                Container(
-                  width: double.infinity,
-                  color: AppColors.warningLight,
-                  padding: AppSpacing.paddingSm,
-                  child: const Text(
-                    'Modo offline (mostrando itens em cache)',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: AppColors.warning, fontSize: 12),
-                  ),
+      body: SafeArea(
+        child: ResponsiveBody(
+          child: RefreshIndicator(
+            onRefresh: _load,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      _getScopeLabel(context),
+                      style: context.textStyles.titleMedium?.withColor(AppColors.textSecondary),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.dashboard_outlined),
+                      onPressed: () => context.push('/compras/dashboard'),
+                    ),
+                  ],
                 ),
-              Expanded(child: _buildList()),
-            ],
+                const SizedBox(height: AppSpacing.sm),
+                _buildStatusFilter(),
+                const SizedBox(height: AppSpacing.md),
+                if (_error != null) ErrorBanner(message: _error!),
+                if (_fromCache && _error == null)
+                  Container(
+                    width: double.infinity,
+                    color: AppColors.warningLight,
+                    padding: AppSpacing.paddingSm,
+                    child: const Text(
+                      'Modo offline (mostrando itens em cache)',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: AppColors.warning, fontSize: 12),
+                    ),
+                  ),
+                Expanded(child: _buildList()),
+              ],
+            ),
           ),
         ),
       ),

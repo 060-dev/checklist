@@ -152,25 +152,6 @@ class _TodayPageState extends State<TodayPage> {
                     ErrorBanner(message: _error!, onRetry: _load),
                     const SizedBox(height: AppSpacing.md),
                   ],
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          'Hoje',
-                          style: theme.textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                      ),
-                      IconButton(
-                        onPressed: _load,
-                        icon: Icon(
-                          Icons.refresh,
-                          color: theme.colorScheme.primary,
-                        ),
-                      ),
-                    ],
-                  ),
                   if (_fromCache) ...[
                     const SizedBox(height: AppSpacing.sm),
                     const OfflineIndicator(pendingCount: 0),
@@ -215,22 +196,25 @@ class _TodayPageState extends State<TodayPage> {
                     )
                   else
                     Expanded(
-                      child: ListView.separated(
-                        itemCount: _items.length,
-                        separatorBuilder: (_, __) =>
-                            const SizedBox(height: AppSpacing.md),
-                        itemBuilder: (context, i) {
-                          final it = _items[i];
-                          return _ExecutionCard(
-                            item: it,
-                            onTap: () async {
-                              final res = await context.push(
-                                '/api/executions/${it.executionId}',
-                              );
-                              if (res == true) await _load();
-                            },
-                          );
-                        },
+                      child: RefreshIndicator(
+                        onRefresh: _load,
+                        child: ListView.separated(
+                          itemCount: _items.length,
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(height: AppSpacing.md),
+                          itemBuilder: (context, i) {
+                            final it = _items[i];
+                            return _ExecutionCard(
+                              item: it,
+                              onTap: () async {
+                                final res = await context.push(
+                                  '/api/executions/${it.executionId}',
+                                );
+                                if (res == true) await _load();
+                              },
+                            );
+                          },
+                        ),
                       ),
                     ),
                 ],
@@ -253,7 +237,7 @@ class _ExecutionCard extends StatelessWidget {
     final timeText = (status != 'completed' && item.dueAt != null)
         ? DateFormat('HH:mm').format(item.dueAt!.toLocal())
         : null;
-    
+
     final scheduledDateText = item.scheduledFor != null
         ? DateFormat('dd/MM').format(item.scheduledFor!.toLocal())
         : null;
