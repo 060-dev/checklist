@@ -88,8 +88,12 @@ class _PurchasesPageState extends State<PurchasesPage> {
         page: 1,
         pageSize: _pageSize,
       );
-      final items = res.items;
-      unawaited(LocalCacheService.instance.savePurchases(employeeId, items));
+      final items = res.items
+          .where((item) => _matchesStatus(item.status, _statusFilter))
+          .toList();
+      unawaited(
+        LocalCacheService.instance.savePurchases(employeeId, res.items),
+      );
       if (mounted) {
         setState(() {
           _items = items;
@@ -158,8 +162,11 @@ class _PurchasesPageState extends State<PurchasesPage> {
         pageSize: _pageSize,
       );
       if (mounted) {
+        final newItems = res.items
+            .where((item) => _matchesStatus(item.status, _statusFilter))
+            .toList();
         setState(() {
-          _items = [..._items, ...res.items];
+          _items = [..._items, ...newItems];
           _hasMore = res.page < res.pages;
           _currentPage = res.page;
           _loadingMore = false;
@@ -179,9 +186,9 @@ class _PurchasesPageState extends State<PurchasesPage> {
       if (mounted) {
         setState(() {
           _loadingMore = false;
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(const SnackBar(content: Text('Falha ao carregar mais itens')));
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Falha ao carregar mais itens')),
+          );
         });
       }
     }
@@ -196,17 +203,15 @@ class _PurchasesPageState extends State<PurchasesPage> {
   }
 
   Widget _buildStatusFilter() {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
+    return Padding(
       padding: AppSpacing.horizontalMd,
-      child: Row(
+      child: Wrap(
+        spacing: AppSpacing.sm,
+        runSpacing: 0,
         children: [
-          _filterChip('Pendentes', 'pending'),
-          const SizedBox(width: AppSpacing.sm),
           _filterChip('Rascunhos', 'draft'),
-          const SizedBox(width: AppSpacing.sm),
+          _filterChip('Pendentes', 'pending'),
           _filterChip('Aprovadas', 'approved'),
-          const SizedBox(width: AppSpacing.sm),
           _filterChip('Rejeitadas', 'rejected'),
         ],
       ),
@@ -232,9 +237,14 @@ class _PurchasesPageState extends State<PurchasesPage> {
       child: Padding(
         padding: AppSpacing.paddingXl,
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.shopping_cart_outlined, size: 64, color: AppColors.textLight),
+            Icon(
+              Icons.shopping_cart_outlined,
+              size: 64,
+              color: AppColors.textLight,
+            ),
             const SizedBox(height: AppSpacing.md),
             Text(
               'Nenhuma solicitação encontrada.',
@@ -270,20 +280,18 @@ class _PurchasesPageState extends State<PurchasesPage> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    item.number.isNotEmpty ? item.number : 'Novo Pedido',
-                    style: context.textStyles.titleMedium?.bold,
+                  Expanded(
+                    child: Text(
+                      item.name?.isNotEmpty == true ? item.name! : 'Pedido',
+                      style: context.textStyles.titleMedium?.bold,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
+                  const SizedBox(width: AppSpacing.sm),
                   _buildStatusBadge(item.status),
                 ],
               ),
-              if (item.name != null && item.name!.isNotEmpty) ...[
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  item.name!,
-                  style: context.textStyles.bodyMedium?.bold,
-                ),
-              ],
+              // Name displayed as title now
               const SizedBox(height: AppSpacing.md),
               Row(
                 children: [
@@ -308,7 +316,9 @@ class _PurchasesPageState extends State<PurchasesPage> {
                   const SizedBox(width: AppSpacing.xs),
                   Expanded(
                     child: Text(
-                      item.farmName.isNotEmpty ? item.farmName : 'Fazenda Indefinida',
+                      item.farmName.isNotEmpty
+                          ? item.farmName
+                          : 'Fazenda Indefinida',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: context.textStyles.bodySmall?.withColor(
@@ -336,9 +346,29 @@ class _PurchasesPageState extends State<PurchasesPage> {
         label = 'Rascunho';
         break;
       case 'pending':
+      case 'submitted':
         bg = AppColors.warningLight;
         fg = AppColors.warning;
         label = 'Pendente';
+        break;
+      case 'in_triage':
+      case 'triage':
+      case 'awaiting_validation':
+        bg = AppColors.warningLight;
+        fg = AppColors.warning;
+        label = 'Em Validação';
+        break;
+      case 'in_quote':
+      case 'quoting':
+        bg = AppColors.warningLight;
+        fg = AppColors.warning;
+        label = 'Em Cotação';
+        break;
+      case 'in_approval':
+      case 'awaiting_approval':
+        bg = AppColors.warningLight;
+        fg = AppColors.warning;
+        label = 'Em Aprovação';
         break;
       case 'approved':
         bg = AppColors.successLight;
@@ -365,11 +395,7 @@ class _PurchasesPageState extends State<PurchasesPage> {
       ),
       child: Text(
         label,
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.bold,
-          color: fg,
-        ),
+        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: fg),
       ),
     );
   }
@@ -414,30 +440,18 @@ class _PurchasesPageState extends State<PurchasesPage> {
       appBar: AppBar(
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Compras'),
-            Text(
-              _getScopeLabel(context),
-              style: TextStyle(
-                fontSize: 12,
-                color: AppColors.textSecondary.withValues(alpha: 0.8),
-                fontWeight: FontWeight.normal,
-              ),
-            ),
-          ],
+          children: [Text(_getScopeLabel(context))],
         ),
         centerTitle: false,
-        actions: const [],
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(56),
-          child: Container(
-            alignment: Alignment.centerLeft,
-            padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-            child: _buildStatusFilter(),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.dashboard_outlined),
+            onPressed: () => context.push('/compras/dashboard'),
           ),
-        ),
+        ],
       ),
-      floatingActionButton: context.watch<AppSession>().purchaseCapabilities.createRequests
+      floatingActionButton:
+          context.watch<AppSession>().purchaseCapabilities.createRequests
           ? FloatingActionButton(
               onPressed: () {
                 context.push('/compras/nova');
@@ -450,7 +464,11 @@ class _PurchasesPageState extends State<PurchasesPage> {
         child: RefreshIndicator(
           onRefresh: _load,
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              const SizedBox(height: AppSpacing.md),
+              _buildStatusFilter(),
+              const SizedBox(height: AppSpacing.md),
               if (_error != null) ErrorBanner(message: _error!),
               if (_fromCache && _error == null)
                 Container(
@@ -469,5 +487,15 @@ class _PurchasesPageState extends State<PurchasesPage> {
         ),
       ),
     );
+  }
+
+  bool _matchesStatus(String itemStatus, String filter) {
+    if (filter == 'pending') {
+      return itemStatus != 'draft' &&
+          itemStatus != 'approved' &&
+          itemStatus != 'rejected' &&
+          itemStatus != 'canceled';
+    }
+    return itemStatus == filter;
   }
 }

@@ -17,18 +17,19 @@ class AppSession extends ChangeNotifier {
   ApiConfig? _apiConfig;
   bool _loaded = false;
 
-  // static const String _origin =
-  //     'https://homolog-morro-peao.yplanejamento.com.br';
-  // static const String _apiBaseUrl =
-  //     'https://homolog-morro-peao.yplanejamento.com.br/api/mobile/v1';
+  static const String _origin = kDebugMode
+      ? 'https://homolog-morro-peao.yplanejamento.com.br'
+      : 'https://morropeao.yplanejamento.com.br';
 
-  static const String _origin = 'https://morropeao.yplanejamento.com.br';
-  static const String _apiBaseUrl =
-      'https://morropeao.yplanejamento.com.br/api/mobile/v1';
+  static const String _apiBaseUrl = kDebugMode
+      ? 'https://homolog-morro-peao.yplanejamento.com.br/api/mobile/v1'
+      : 'https://morropeao.yplanejamento.com.br/api/mobile/v1';
 
   /// Environment injection (build-time), e.g.:
   /// `--dart-define=MORROPEAO_API_KEY=...`
-  static const String envApiKey = String.fromEnvironment('MORROPEAO_API_KEY');
+  static const String envApiKey = kDebugMode
+      ? String.fromEnvironment('MORROPEAO_DEV_API_KEY')
+      : String.fromEnvironment('MORROPEAO_API_KEY');
 
   static const String _kLastEmployeeId = 'last_employee_id_v1';
   static const String _kLastEmployeeName = 'last_employee_name_v1';

@@ -3,14 +3,21 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:http/http.dart' as http;
+import 'package:uuid/uuid.dart';
+
 import 'package:morro_do_peo/components/error_banner.dart';
 import 'package:morro_do_peo/components/responsive_body.dart';
 import 'package:morro_do_peo/models/purchase_models.dart';
 import 'package:morro_do_peo/services/local_cache_service.dart';
 import 'package:morro_do_peo/services/mobile_api_client.dart';
 import 'package:morro_do_peo/services/mobile_api_services.dart';
+import 'package:morro_do_peo/services/offline_queue_service.dart';
 import 'package:morro_do_peo/state/app_session.dart';
 import 'package:morro_do_peo/theme.dart';
+import 'package:morro_do_peo/utils/connectivity.dart';
 
 class PurchaseDetailPage extends StatefulWidget {
   final String requestId;
@@ -118,9 +125,29 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
         label = 'Rascunho';
         break;
       case 'pending':
+      case 'submitted':
         bg = AppColors.warningLight;
         fg = AppColors.warning;
         label = 'Pendente';
+        break;
+      case 'in_triage':
+      case 'triage':
+      case 'awaiting_validation':
+        bg = AppColors.warningLight;
+        fg = AppColors.warning;
+        label = 'Em Validação';
+        break;
+      case 'in_quote':
+      case 'quoting':
+        bg = AppColors.warningLight;
+        fg = AppColors.warning;
+        label = 'Em Cotação';
+        break;
+      case 'in_approval':
+      case 'awaiting_approval':
+        bg = AppColors.warningLight;
+        fg = AppColors.warning;
+        label = 'Em Aprovação';
         break;
       case 'approved':
         bg = AppColors.successLight;
@@ -183,8 +210,64 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
         actions: [
           if (showMenu)
             PopupMenuButton<String>(
-              onSelected: (val) {
-                // TODO: Implement Phase B / C actions
+              onSelected: (val) async {
+                if (val == 'edit') {
+                  context.push('/compras/nova', extra: _detail).then((res) {
+                    if (res == true) _load();
+                  });
+                } else if (val == 'submit') {
+                  final isOnline = Connectivity.instance.isOnline;
+                  if (isOnline) {
+                    final client = MobileApiClient(
+                      apiBaseUrl: session.apiBaseUrl.trim(),
+                      apiKey: session.apiKey.trim(),
+                      employeeCode: session.employeeCode,
+                      requestTimeout: Duration(seconds: session.requestTimeoutSeconds),
+                    );
+                    final api = MobileApiServices(client: client);
+                    try {
+                      showDialog(
+                        context: context,
+                        barrierDismissible: false,
+                        builder: (_) => const Center(child: CircularProgressIndicator()),
+                      );
+                      await api.submitPurchase(
+                        requestId: _detail!.id.toString(),
+                        idempotencyKey: const Uuid().v4(),
+                      );
+                      if (!mounted) return;
+                      Navigator.pop(context); // close dialog
+                      _load();
+                    } catch (e) {
+                      if (!mounted) return;
+                      Navigator.pop(context); // close dialog
+                      final msg = e is MobileApiException ? e.message : e.toString();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Erro ao enviar: $msg')),
+                      );
+                    }
+                  } else {
+                    try {
+                      await OfflineQueueService.instance.enqueueApiMutation(
+                        method: 'POST',
+                        path: '/purchases/requests/${_detail!.id}/submit',
+                        jsonBody: const {},
+                        employeeId: session.selectedOperator?.id.toString() ?? '',
+                        employeeCode: session.employeeCode,
+                      );
+                      if (!mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Envio salvo offline. Será sincronizado depois.')),
+                      );
+                      _load();
+                    } catch (e) {
+                      if (!mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Falha ao salvar offline.')),
+                      );
+                    }
+                  }
+                }
               },
               itemBuilder: (context) => [
                 if (canEditSubmit) ...[
@@ -243,20 +326,17 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(
-                              _detail!.number.isNotEmpty ? _detail!.number : 'N/A',
-                              style: context.textStyles.headlineSmall?.bold,
+                            Expanded(
+                              child: Text(
+                                _detail!.name?.isNotEmpty == true ? _detail!.name! : 'Pedido',
+                                style: context.textStyles.headlineSmall?.bold,
+                              ),
                             ),
+                            const SizedBox(width: AppSpacing.sm),
                             _buildStatusBadge(_detail!.status),
                           ],
                         ),
-                        if (_detail!.name != null && _detail!.name!.isNotEmpty) ...[
-                          const SizedBox(height: AppSpacing.xs),
-                          Text(
-                            _detail!.name!,
-                            style: context.textStyles.titleMedium,
-                          ),
-                        ],
+                        // Removed name from below title
                         const SizedBox(height: AppSpacing.md),
                         const Divider(color: AppColors.brandBorder),
                         const SizedBox(height: AppSpacing.md),
@@ -356,6 +436,31 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
                             ),
                           );
                         }),
+                        const SizedBox(height: AppSpacing.lg),
+                        Text(
+                          'Anexos (${_detail!.attachments.length})',
+                          style: context.textStyles.titleLarge?.bold,
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                        ..._detail!.attachments.map((att) {
+                          return ListTile(
+                            leading: const Icon(Icons.attachment, color: AppColors.brandRed),
+                            title: Text(att.originalName),
+                            subtitle: Text('${(att.sizeBytes / 1024).toStringAsFixed(1)} KB'),
+                            onTap: () {
+                              // TODO: view attachment
+                            },
+                          );
+                        }),
+                        if (canEditSubmit) ...[
+                          const SizedBox(height: AppSpacing.md),
+                          OutlinedButton.icon(
+                            onPressed: () => _uploadAttachment(session),
+                            icon: const Icon(Icons.upload_file),
+                            label: const Text('Adicionar Anexo'),
+                          ),
+                        ],
+                        const SizedBox(height: AppSpacing.xxl),
                       ],
                     ),
                   ),
@@ -365,5 +470,63 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
         ),
       ),
     );
+  }
+
+  Future<void> _uploadAttachment(AppSession session) async {
+    if (_detail == null) return;
+    try {
+      final picker = ImagePicker();
+      final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+      if (image == null) return;
+
+      final isOnline = Connectivity.instance.isOnline;
+      if (!isOnline) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('É necessário conexão com a internet para enviar anexos.')),
+        );
+        return;
+      }
+
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => const Center(child: CircularProgressIndicator()),
+      );
+
+      final bytes = await image.readAsBytes();
+      final multipartFile = http.MultipartFile.fromBytes(
+        'file',
+        bytes,
+        filename: image.name,
+      );
+
+      final client = MobileApiClient(
+        apiBaseUrl: session.apiBaseUrl.trim(),
+        apiKey: session.apiKey.trim(),
+        employeeCode: session.employeeCode,
+        requestTimeout: Duration(seconds: session.requestTimeoutSeconds),
+      );
+      final api = MobileApiServices(client: client);
+
+      await api.uploadPurchaseAttachment(
+        target: 'request',
+        targetId: _detail!.id.toString(),
+        idempotencyKey: const Uuid().v4(),
+        file: multipartFile,
+      );
+
+      if (!mounted) return;
+      Navigator.pop(context); // close dialog
+      _load();
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.pop(context); // close dialog
+      final msg = e is MobileApiException ? e.message : e.toString();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erro ao anexar: $msg')),
+      );
+    }
   }
 }

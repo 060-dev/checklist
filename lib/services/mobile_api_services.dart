@@ -632,6 +632,38 @@ class MobileApiServices {
     );
   }
 
+  Future<Map<String, dynamic>> uploadPurchaseAttachment({
+    required String target,
+    required String targetId,
+    required String idempotencyKey,
+    required http.MultipartFile file,
+  }) async {
+    final env = await client.postMultipart<Map<String, dynamic>>(
+      path: '/purchases/attachments/$target/$targetId',
+      idempotencyKey: idempotencyKey,
+      fields: [],
+      files: [file],
+      decodeData: (json) => (json is Map) ? json.cast<String, dynamic>() : <String, dynamic>{},
+    );
+    return env.data ?? const <String, dynamic>{};
+  }
+
+  Future<PurchaseDashboard> getPurchaseDashboard({
+    String? dateFrom,
+    String? dateTo,
+  }) async {
+    final query = <String, String>{};
+    if (dateFrom != null) query['date_from'] = dateFrom;
+    if (dateTo != null) query['date_to'] = dateTo;
+
+    final env = await client.getJson<Map<String, dynamic>>(
+      path: '/purchases/dashboard',
+      query: query,
+      decodeData: (json) => (json is Map) ? json.cast<String, dynamic>() : <String, dynamic>{},
+    );
+    return PurchaseDashboard(env.data ?? const <String, dynamic>{});
+  }
+
   Future<List<PurchaseNotification>> listPurchaseNotifications() async {
     final env = await client.getJson<Map<String, dynamic>>(
       path: '/me/purchase-notifications',

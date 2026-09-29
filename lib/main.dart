@@ -76,16 +76,18 @@ class _MorroDoPeaoAppState extends State<MorroDoPeaoApp> {
                             color: AppColors.warning,
                           ),
                           const SizedBox(width: AppSpacing.sm),
-                          Text(
-                            count == 1
-                                ? '1 ação pendente — será enviada quando houver conexão.'
-                                : '$count ações pendentes — serão enviadas quando houver conexão.',
-                            style: const TextStyle(
-                              color: AppColors.warning,
-                              fontWeight: FontWeight.w700,
-                              fontSize: 13,
+                          Expanded(
+                            child: Text(
+                              count == 1
+                                  ? '1 ação pendente — será enviada quando houver conexão.'
+                                  : '$count ações pendentes — serão enviadas quando houver conexão.',
+                              style: const TextStyle(
+                                color: AppColors.warning,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 13,
+                              ),
+                              textAlign: TextAlign.center,
                             ),
-                            textAlign: TextAlign.center,
                           ),
                         ],
                       ),

@@ -14,6 +14,7 @@ import 'package:morro_do_peo/theme.dart';
 import 'package:morro_do_peo/utils/connectivity.dart';
 
 class _DraftItem {
+  int? id;
   final TextEditingController description = TextEditingController();
   final TextEditingController quantity = TextEditingController();
   final TextEditingController unit = TextEditingController(text: 'un');
@@ -25,6 +26,7 @@ class _DraftItem {
   }
 
   Map<String, dynamic> toJson() => {
+    if (id != null) 'id': id,
     'description': description.text.trim(),
     'quantity': quantity.text.trim(),
     'unit': unit.text.trim(),
@@ -32,7 +34,9 @@ class _DraftItem {
 }
 
 class CreatePurchasePage extends StatefulWidget {
-  const CreatePurchasePage({super.key});
+  final PurchaseRequestDetail? initialDetail;
+
+  const CreatePurchasePage({super.key, this.initialDetail});
 
   @override
   State<CreatePurchasePage> createState() => _CreatePurchasePageState();
@@ -44,12 +48,31 @@ class _CreatePurchasePageState extends State<CreatePurchasePage> {
 
   int? _selectedFarmId;
   int? _selectedSectorId;
-  final TextEditingController _notes = TextEditingController();
   final List<_DraftItem> _items = [_DraftItem()]; // start with 1 empty item
 
   @override
+  void initState() {
+    super.initState();
+    if (widget.initialDetail != null) {
+      _selectedFarmId = widget.initialDetail!.farmId;
+      _selectedSectorId = widget.initialDetail!.sectorId;
+      _items.clear();
+      for (final it in widget.initialDetail!.items) {
+        final draft = _DraftItem();
+        draft.id = it.id;
+        draft.description.text = it.productName.isNotEmpty
+            ? it.productName
+            : (it.description ?? '');
+        draft.quantity.text = it.quantity.toString();
+        draft.unit.text = it.unit;
+        _items.add(draft);
+      }
+      if (_items.isEmpty) _items.add(_DraftItem());
+    }
+  }
+
+  @override
   void dispose() {
-    _notes.dispose();
     for (final it in _items) {
       it.dispose();
     }
@@ -127,7 +150,6 @@ class _CreatePurchasePageState extends State<CreatePurchasePage> {
     final payload = <String, dynamic>{
       'farm_id': farmIdToSubmit,
       'territory_area_id': _selectedSectorId,
-      if (_notes.text.trim().isNotEmpty) 'notes': _notes.text.trim(),
       'submit': submitNow,
       'items': validItems.map((e) => e.toJson()).toList(),
     };
@@ -143,16 +165,33 @@ class _CreatePurchasePageState extends State<CreatePurchasePage> {
       );
       final api = MobileApiServices(client: client);
       try {
-        final created = await api.createPurchase(
-          idempotencyKey: const Uuid().v4(),
-          payload: payload,
-        );
-        if (!mounted) return;
-        final newId =
-            (created['request_id'] as num?)?.toString() ??
-            (created['id'] as num?)?.toString() ??
-            '';
-        context.pop(newId.isNotEmpty ? newId : true);
+        final idempotencyKey = const Uuid().v4();
+        if (widget.initialDetail != null) {
+          await api.updatePurchase(
+            requestId: widget.initialDetail!.id.toString(),
+            idempotencyKey: idempotencyKey,
+            payload: payload,
+          );
+          if (submitNow) {
+            await api.submitPurchase(
+              requestId: widget.initialDetail!.id.toString(),
+              idempotencyKey: const Uuid().v4(),
+            );
+          }
+          if (!mounted) return;
+          context.pop(true);
+        } else {
+          final created = await api.createPurchase(
+            idempotencyKey: idempotencyKey,
+            payload: payload,
+          );
+          if (!mounted) return;
+          final newId =
+              (created['request_id'] as num?)?.toString() ??
+              (created['id'] as num?)?.toString() ??
+              '';
+          context.pop(newId.isNotEmpty ? newId : true);
+        }
       } on MobileApiException catch (e) {
         setState(() {
           _error = e.message;
@@ -167,18 +206,37 @@ class _CreatePurchasePageState extends State<CreatePurchasePage> {
     } else {
       // Offline queue logic
       try {
-        await OfflineQueueService.instance.enqueueApiMutation(
-          method: 'POST',
-          path: '/purchases/requests',
-          jsonBody: payload,
-          employeeId: employeeId,
-          employeeCode: session.employeeCode,
-        );
+        if (widget.initialDetail != null) {
+          await OfflineQueueService.instance.enqueueApiMutation(
+            method: 'PUT',
+            path: '/purchases/requests/${widget.initialDetail!.id}',
+            jsonBody: payload,
+            employeeId: employeeId,
+            employeeCode: session.employeeCode,
+          );
+          if (submitNow) {
+            await OfflineQueueService.instance.enqueueApiMutation(
+              method: 'POST',
+              path: '/purchases/requests/${widget.initialDetail!.id}/submit',
+              jsonBody: const {},
+              employeeId: employeeId,
+              employeeCode: session.employeeCode,
+            );
+          }
+        } else {
+          await OfflineQueueService.instance.enqueueApiMutation(
+            method: 'POST',
+            path: '/purchases/requests',
+            jsonBody: payload,
+            employeeId: employeeId,
+            employeeCode: session.employeeCode,
+          );
+        }
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(
-              'Solicitação salva offline. Será enviada quando houver conexão.',
+              'Solicitação salva offline. Será sincronizada quando houver conexão.',
             ),
           ),
         );
@@ -212,7 +270,11 @@ class _CreatePurchasePageState extends State<CreatePurchasePage> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(title: const Text('Nova Solicitação')),
+      appBar: AppBar(
+        title: Text(
+          widget.initialDetail != null ? 'Editar Rascunho' : 'Nova Solicitação',
+        ),
+      ),
       body: ResponsiveBody(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -272,15 +334,6 @@ class _CreatePurchasePageState extends State<CreatePurchasePage> {
                         });
                       },
                     ),
-                    const SizedBox(height: AppSpacing.md),
-                    TextField(
-                      controller: _notes,
-                      decoration: const InputDecoration(
-                        labelText: 'Observações (Opcional)',
-                        border: OutlineInputBorder(),
-                      ),
-                      maxLines: 3,
-                    ),
                     const SizedBox(height: AppSpacing.lg),
                     Text('Itens', style: context.textStyles.titleLarge?.bold),
                     const SizedBox(height: AppSpacing.sm),
@@ -320,6 +373,10 @@ class _CreatePurchasePageState extends State<CreatePurchasePage> {
                               const SizedBox(height: AppSpacing.sm),
                               TextField(
                                 controller: item.description,
+                                textCapitalization:
+                                    TextCapitalization.sentences,
+                                minLines: 2,
+                                maxLines: 5,
                                 decoration: const InputDecoration(
                                   labelText: 'Descrição (Ex: Cano PVC)',
                                   border: OutlineInputBorder(),

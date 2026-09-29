@@ -9,16 +9,16 @@ class PurchaseUser {
   const PurchaseUser({required this.id, required this.name, this.role});
 
   factory PurchaseUser.fromJson(Map<String, dynamic> json) => PurchaseUser(
-        id: (json['id'] as num?)?.toInt() ?? 0,
-        name: (json['name'] as String?) ?? '',
-        role: json['role'] as String?,
-      );
+    id: (json['id'] as num?)?.toInt() ?? 0,
+    name: (json['name'] as String?) ?? '',
+    role: json['role'] as String?,
+  );
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'name': name,
-        if (role != null) 'role': role,
-      };
+    'id': id,
+    'name': name,
+    if (role != null) 'role': role,
+  };
 }
 
 @immutable
@@ -29,14 +29,11 @@ class PurchaseSector {
   const PurchaseSector({required this.id, required this.name});
 
   factory PurchaseSector.fromJson(Map<String, dynamic> json) => PurchaseSector(
-        id: (json['id'] as num?)?.toInt() ?? 0,
-        name: (json['name'] as String?) ?? '',
-      );
+    id: (json['id'] as num?)?.toInt() ?? 0,
+    name: (json['name'] as String?) ?? '',
+  );
 
-  Map<String, dynamic> toJson() => {
-        'id': id,
-        'name': name,
-      };
+  Map<String, dynamic> toJson() => {'id': id, 'name': name};
 }
 
 @immutable
@@ -71,10 +68,10 @@ class PurchaseFarm {
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'name': name,
-        'sectors': sectors.map((e) => e.toJson()).toList(),
-      };
+    'id': id,
+    'name': name,
+    'sectors': sectors.map((e) => e.toJson()).toList(),
+  };
 }
 
 @immutable
@@ -98,23 +95,25 @@ class PurchaseAccessProfile {
         role: json['role'] as String? ?? '',
         label: json['label'] as String? ?? '',
         description: json['description'] as String? ?? '',
-        permissions: (json['permissions'] as List<dynamic>?)
+        permissions:
+            (json['permissions'] as List<dynamic>?)
                 ?.map((e) => e.toString())
                 .toList() ??
             const [],
-        restrictions: (json['restrictions'] as List<dynamic>?)
+        restrictions:
+            (json['restrictions'] as List<dynamic>?)
                 ?.map((e) => e.toString())
                 .toList() ??
             const [],
       );
 
   Map<String, dynamic> toJson() => {
-        'role': role,
-        'label': label,
-        'description': description,
-        'permissions': permissions,
-        'restrictions': restrictions,
-      };
+    'role': role,
+    'label': label,
+    'description': description,
+    'permissions': permissions,
+    'restrictions': restrictions,
+  };
 }
 
 @immutable
@@ -163,17 +162,17 @@ class PurchaseCapabilities {
       );
 
   Map<String, dynamic> toJson() => {
-        'create_requests': createRequests,
-        'edit_own_requests': editOwnRequests,
-        'manage': manage,
-        'view_all': viewAll,
-        'configure_approvals': configureApprovals,
-        'request_scope': requestScope,
-        'create_for_others': createForOthers,
-        'view_suppliers': viewSuppliers,
-        'manage_catalogs': manageCatalogs,
-        'decide_assigned_approvals': decideAssignedApprovals,
-      };
+    'create_requests': createRequests,
+    'edit_own_requests': editOwnRequests,
+    'manage': manage,
+    'view_all': viewAll,
+    'configure_approvals': configureApprovals,
+    'request_scope': requestScope,
+    'create_for_others': createForOthers,
+    'view_suppliers': viewSuppliers,
+    'manage_catalogs': manageCatalogs,
+    'decide_assigned_approvals': decideAssignedApprovals,
+  };
 }
 
 @immutable
@@ -257,12 +256,12 @@ class PurchaseContext {
   }
 
   Map<String, dynamic> toJson() => {
-        if (currentUser != null) 'current_user': currentUser!.toJson(),
-        'users': users.map((e) => e.toJson()).toList(),
-        'farms': farms.map((e) => e.toJson()).toList(),
-        'capabilities': capabilities.toJson(),
-        if (accessProfile != null) 'access_profile': accessProfile!.toJson(),
-      };
+    if (currentUser != null) 'current_user': currentUser!.toJson(),
+    'users': users.map((e) => e.toJson()).toList(),
+    'farms': farms.map((e) => e.toJson()).toList(),
+    'capabilities': capabilities.toJson(),
+    if (accessProfile != null) 'access_profile': accessProfile!.toJson(),
+  };
 }
 
 @immutable
@@ -271,11 +270,7 @@ class PurchaseProduct {
   final String name;
   final String? sku;
 
-  const PurchaseProduct({
-    required this.id,
-    required this.name,
-    this.sku,
-  });
+  const PurchaseProduct({required this.id, required this.name, this.sku});
 
   factory PurchaseProduct.fromJson(Map<String, dynamic> json) =>
       PurchaseProduct(
@@ -285,10 +280,10 @@ class PurchaseProduct {
       );
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'name': name,
-        if (sku != null) 'sku': sku,
-      };
+    'id': id,
+    'name': name,
+    if (sku != null) 'sku': sku,
+  };
 }
 
 @immutable
@@ -330,7 +325,7 @@ class PurchaseRequestDetail {
   String get sectorName => (raw['sector_name'] as String?) ?? '';
   String? get notes => raw['notes'] as String?;
   int get requesterId => (raw['requester_id'] as num?)?.toInt() ?? 0;
-  
+
   List<PurchaseItem> get items {
     final itRaw = raw['items'];
     if (itRaw is List) {
@@ -364,7 +359,19 @@ class PurchaseItem {
   int get id => (raw['id'] as num?)?.toInt() ?? 0;
   String get productName => (raw['product_name'] as String?) ?? '';
   String? get description => raw['description'] as String?;
-  String get quantity => (raw['quantity'] as String?) ?? '0';
+  String get quantity {
+    final qRaw = raw['quantity'];
+    if (qRaw == null) return '0';
+    final str = qRaw.toString();
+    if (str.contains('.')) {
+      final parts = str.split('.');
+      if (parts.length > 1 && (int.tryParse(parts[1]) ?? 0) == 0) {
+        return parts[0];
+      }
+    }
+    return str;
+  }
+
   String get unit => (raw['unit'] as String?) ?? '';
   String get status => (raw['status'] as String?) ?? '';
 
@@ -383,4 +390,15 @@ class PurchaseAttachmentRef {
   String get url => (raw['url'] as String?) ?? '';
 
   Map<String, dynamic> toJson() => raw;
+}
+
+@immutable
+class PurchaseDashboard {
+  final Map<String, dynamic> raw;
+  const PurchaseDashboard(this.raw);
+
+  int get totalRequests => (raw['total_requests'] as num?)?.toInt() ?? 0;
+  int get pendingApproval => (raw['pending_approval'] as num?)?.toInt() ?? 0;
+  int get approved => (raw['approved'] as num?)?.toInt() ?? 0;
+  int get rejected => (raw['rejected'] as num?)?.toInt() ?? 0;
 }
