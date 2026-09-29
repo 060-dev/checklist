@@ -78,12 +78,57 @@ class PurchaseFarm {
 }
 
 @immutable
+class PurchaseAccessProfile {
+  final String role;
+  final String label;
+  final String description;
+  final List<String> permissions;
+  final List<String> restrictions;
+
+  const PurchaseAccessProfile({
+    required this.role,
+    required this.label,
+    required this.description,
+    this.permissions = const [],
+    this.restrictions = const [],
+  });
+
+  factory PurchaseAccessProfile.fromJson(Map<String, dynamic> json) =>
+      PurchaseAccessProfile(
+        role: json['role'] as String? ?? '',
+        label: json['label'] as String? ?? '',
+        description: json['description'] as String? ?? '',
+        permissions: (json['permissions'] as List<dynamic>?)
+                ?.map((e) => e.toString())
+                .toList() ??
+            const [],
+        restrictions: (json['restrictions'] as List<dynamic>?)
+                ?.map((e) => e.toString())
+                .toList() ??
+            const [],
+      );
+
+  Map<String, dynamic> toJson() => {
+        'role': role,
+        'label': label,
+        'description': description,
+        'permissions': permissions,
+        'restrictions': restrictions,
+      };
+}
+
+@immutable
 class PurchaseCapabilities {
   final bool createRequests;
   final bool editOwnRequests;
   final bool manage;
   final bool viewAll;
   final bool configureApprovals;
+  final String requestScope;
+  final bool createForOthers;
+  final bool viewSuppliers;
+  final bool manageCatalogs;
+  final bool decideAssignedApprovals;
 
   const PurchaseCapabilities({
     required this.createRequests,
@@ -91,7 +136,16 @@ class PurchaseCapabilities {
     required this.manage,
     required this.viewAll,
     required this.configureApprovals,
+    this.requestScope = 'own',
+    this.createForOthers = false,
+    this.viewSuppliers = false,
+    this.manageCatalogs = false,
+    this.decideAssignedApprovals = false,
   });
+
+  bool get isOwnScope => requestScope == 'own';
+  bool get isLinkedTerritoriesScope => requestScope == 'linked_territories';
+  bool get isAllScope => requestScope == 'all';
 
   factory PurchaseCapabilities.fromJson(Map<String, dynamic> json) =>
       PurchaseCapabilities(
@@ -100,6 +154,12 @@ class PurchaseCapabilities {
         manage: (json['manage'] as bool?) ?? false,
         viewAll: (json['view_all'] as bool?) ?? false,
         configureApprovals: (json['configure_approvals'] as bool?) ?? false,
+        requestScope: (json['request_scope'] as String?) ?? 'own',
+        createForOthers: (json['create_for_others'] as bool?) ?? false,
+        viewSuppliers: (json['view_suppliers'] as bool?) ?? false,
+        manageCatalogs: (json['manage_catalogs'] as bool?) ?? false,
+        decideAssignedApprovals:
+            (json['decide_assigned_approvals'] as bool?) ?? false,
       );
 
   Map<String, dynamic> toJson() => {
@@ -108,6 +168,11 @@ class PurchaseCapabilities {
         'manage': manage,
         'view_all': viewAll,
         'configure_approvals': configureApprovals,
+        'request_scope': requestScope,
+        'create_for_others': createForOthers,
+        'view_suppliers': viewSuppliers,
+        'manage_catalogs': manageCatalogs,
+        'decide_assigned_approvals': decideAssignedApprovals,
       };
 }
 
@@ -117,12 +182,14 @@ class PurchaseContext {
   final List<PurchaseUser> users;
   final List<PurchaseFarm> farms;
   final PurchaseCapabilities capabilities;
+  final PurchaseAccessProfile? accessProfile;
 
   const PurchaseContext({
     this.currentUser,
     this.users = const [],
     this.farms = const [],
     required this.capabilities,
+    this.accessProfile,
   });
 
   factory PurchaseContext.fromJson(Map<String, dynamic> json) {
@@ -172,11 +239,20 @@ class PurchaseContext {
       cap = PurchaseCapabilities.fromJson(capRaw.cast<String, dynamic>());
     }
 
+    PurchaseAccessProfile? prof;
+    final profRaw = json['access_profile'];
+    if (profRaw is Map<String, dynamic>) {
+      prof = PurchaseAccessProfile.fromJson(profRaw);
+    } else if (profRaw is Map) {
+      prof = PurchaseAccessProfile.fromJson(profRaw.cast<String, dynamic>());
+    }
+
     return PurchaseContext(
       currentUser: cu,
       users: users,
       farms: farms,
       capabilities: cap,
+      accessProfile: prof,
     );
   }
 
@@ -185,6 +261,7 @@ class PurchaseContext {
         'users': users.map((e) => e.toJson()).toList(),
         'farms': farms.map((e) => e.toJson()).toList(),
         'capabilities': capabilities.toJson(),
+        if (accessProfile != null) 'access_profile': accessProfile!.toJson(),
       };
 }
 
@@ -252,6 +329,7 @@ class PurchaseRequestDetail {
   int get sectorId => (raw['territory_area_id'] as num?)?.toInt() ?? 0;
   String get sectorName => (raw['sector_name'] as String?) ?? '';
   String? get notes => raw['notes'] as String?;
+  int get requesterId => (raw['requester_id'] as num?)?.toInt() ?? 0;
   
   List<PurchaseItem> get items {
     final itRaw = raw['items'];

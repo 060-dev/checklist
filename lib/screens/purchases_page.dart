@@ -101,7 +101,19 @@ class _PurchasesPageState extends State<PurchasesPage> {
         });
       }
     } catch (e) {
-      debugPrint('[PurchasesPage] fetch error: $e');
+      if (e is MobileApiException && e.statusCode == 403) {
+        unawaited(session.refreshPurchaseContext());
+        if (mounted) {
+          setState(() {
+            _error = e.message.isNotEmpty ? e.message : 'Acesso negado.';
+            _items = const [];
+            _loading = false;
+            _fromCache = false;
+            _hasMore = false;
+          });
+        }
+        return;
+      }
       final cached = await LocalCacheService.instance.getPurchases(employeeId);
       if (mounted) {
         setState(() {
@@ -154,7 +166,16 @@ class _PurchasesPageState extends State<PurchasesPage> {
         });
       }
     } catch (e) {
-      debugPrint('[PurchasesPage] loadMore error: $e');
+      if (e is MobileApiException && e.statusCode == 403) {
+        unawaited(session.refreshPurchaseContext());
+        if (mounted) {
+          setState(() {
+            _loadingMore = false;
+            _error = e.message.isNotEmpty ? e.message : 'Acesso negado.';
+          });
+        }
+        return;
+      }
       if (mounted) {
         setState(() {
           _loadingMore = false;
@@ -378,12 +399,33 @@ class _PurchasesPageState extends State<PurchasesPage> {
     );
   }
 
+  String _getScopeLabel(BuildContext context) {
+    final cap = context.watch<AppSession>().purchaseCapabilities;
+    if (cap.isOwnScope) return 'Minhas solicitações';
+    if (cap.isLinkedTerritoriesScope) return 'Dos meus territórios';
+    if (cap.isAllScope) return 'Todas as solicitações';
+    return '';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Compras'),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Compras'),
+            Text(
+              _getScopeLabel(context),
+              style: TextStyle(
+                fontSize: 12,
+                color: AppColors.textSecondary.withValues(alpha: 0.8),
+                fontWeight: FontWeight.normal,
+              ),
+            ),
+          ],
+        ),
         centerTitle: false,
         actions: const [],
         bottom: PreferredSize(
@@ -395,13 +437,15 @@ class _PurchasesPageState extends State<PurchasesPage> {
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          context.push('/compras/nova');
-        },
-        backgroundColor: AppColors.brandRed,
-        child: const Icon(Icons.add, color: AppColors.white),
-      ),
+      floatingActionButton: context.watch<AppSession>().purchaseCapabilities.createRequests
+          ? FloatingActionButton(
+              onPressed: () {
+                context.push('/compras/nova');
+              },
+              backgroundColor: AppColors.brandRed,
+              child: const Icon(Icons.add, color: AppColors.white),
+            )
+          : null,
       body: ResponsiveBody(
         child: RefreshIndicator(
           onRefresh: _load,

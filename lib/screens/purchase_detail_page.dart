@@ -77,6 +77,17 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
       }
     } catch (e) {
       debugPrint('[PurchaseDetailPage] fetch error: $e');
+      if (e is MobileApiException && e.statusCode == 403) {
+        unawaited(session.refreshPurchaseContext());
+        if (mounted) {
+          setState(() {
+            _error = e.message.isNotEmpty ? e.message : 'Acesso negado.';
+            _loading = false;
+            _fromCache = false;
+          });
+        }
+        return;
+      }
       final cached = await LocalCacheService.instance.getPurchaseDetail(
         employeeId,
         widget.requestId,
@@ -145,12 +156,57 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
     );
   }
 
+  bool _canEditOrSubmit(AppSession session) {
+    if (_detail == null || _detail!.status != 'draft') return false;
+    final cap = session.purchaseCapabilities;
+    if (!cap.editOwnRequests) return false;
+    final isOwn = _detail!.requesterId == (session.purchaseCurrentUser?.id ?? 0);
+    return isOwn || cap.createForOthers;
+  }
+
+  bool _canManage(AppSession session) {
+    if (_detail == null) return false;
+    return session.purchaseCapabilities.manage;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final session = context.watch<AppSession>();
+    final canEditSubmit = _canEditOrSubmit(session);
+    final canManage = _canManage(session);
+    final showMenu = canEditSubmit || canManage;
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text('Detalhes do Pedido'),
+        actions: [
+          if (showMenu)
+            PopupMenuButton<String>(
+              onSelected: (val) {
+                // TODO: Implement Phase B / C actions
+              },
+              itemBuilder: (context) => [
+                if (canEditSubmit) ...[
+                  const PopupMenuItem(
+                    value: 'edit',
+                    child: Text('Editar Solicitação'),
+                  ),
+                  const PopupMenuItem(
+                    value: 'submit',
+                    child: Text('Enviar Solicitação'),
+                  ),
+                ],
+                if (canManage) ...[
+                  if (canEditSubmit) const PopupMenuDivider(),
+                  const PopupMenuItem(
+                    value: 'manage',
+                    child: Text('Ações Operacionais'),
+                  ),
+                ],
+              ],
+            ),
+        ],
       ),
       body: ResponsiveBody(
         child: RefreshIndicator(

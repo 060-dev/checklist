@@ -17,16 +17,18 @@ class AppSession extends ChangeNotifier {
   ApiConfig? _apiConfig;
   bool _loaded = false;
 
-  static const String _origin =
-      'https://homolog-morro-peao.yplanejamento.com.br';
+  // static const String _origin =
+  //     'https://homolog-morro-peao.yplanejamento.com.br';
+  // static const String _apiBaseUrl =
+  //     'https://homolog-morro-peao.yplanejamento.com.br/api/mobile/v1';
+
+  static const String _origin = 'https://morropeao.yplanejamento.com.br';
   static const String _apiBaseUrl =
-      'https://homolog-morro-peao.yplanejamento.com.br/api/mobile/v1';
+      'https://morropeao.yplanejamento.com.br/api/mobile/v1';
 
   /// Environment injection (build-time), e.g.:
   /// `--dart-define=MORROPEAO_API_KEY=...`
-  static const String envApiKey = String.fromEnvironment(
-    'MORROPEAO_DEV_API_KEY',
-  );
+  static const String envApiKey = String.fromEnvironment('MORROPEAO_API_KEY');
 
   static const String _kLastEmployeeId = 'last_employee_id_v1';
   static const String _kLastEmployeeName = 'last_employee_name_v1';
@@ -44,6 +46,19 @@ class AppSession extends ChangeNotifier {
 
   Operator? get selectedOperator => _selectedOperator;
   PurchaseContext? get purchaseContext => _purchaseContext;
+  
+  PurchaseCapabilities get purchaseCapabilities =>
+      _purchaseContext?.capabilities ??
+      const PurchaseCapabilities(
+        createRequests: false,
+        editOwnRequests: false,
+        manage: false,
+        viewAll: false,
+        configureApprovals: false,
+      );
+  PurchaseAccessProfile? get purchaseAccessProfile =>
+      _purchaseContext?.accessProfile;
+  PurchaseUser? get purchaseCurrentUser => _purchaseContext?.currentUser;
 
   /// For audio URLs (which are relative to origin, not the API base URL).
   String get origin => _origin;
@@ -113,7 +128,7 @@ class AppSession extends ChangeNotifier {
 
       // Fetch fresh purchase context if online
       if (_employeeCode != null && hasApiConfig) {
-        unawaited(_fetchPurchaseContextInBackground());
+        unawaited(refreshPurchaseContext());
       }
     } catch (e) {
       debugPrint('AppSession ensureLoaded failed: $e');
@@ -123,7 +138,8 @@ class AppSession extends ChangeNotifier {
     }
   }
 
-  Future<void> _fetchPurchaseContextInBackground() async {
+  Future<PurchaseContext?> refreshPurchaseContext() async {
+    if (_employeeCode == null || !hasApiConfig) return _purchaseContext;
     try {
       final tempClient = MobileApiClient(
         apiBaseUrl: apiBaseUrl,
@@ -135,8 +151,10 @@ class AppSession extends ChangeNotifier {
       _purchaseContext = ctx;
       await LocalCacheService.instance.savePurchaseContext(ctx);
       notifyListeners();
+      return ctx;
     } catch (e) {
-      debugPrint('Failed to fetch purchase context: $e');
+      debugPrint('Failed to refresh purchase context: $e');
+      return _purchaseContext;
     }
   }
 
