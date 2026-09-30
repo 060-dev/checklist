@@ -367,6 +367,11 @@ class _PurchasesPageState extends State<PurchasesPage> {
         fg = AppColors.warning;
         label = 'Em Cotação';
         break;
+      case 'in_progress':
+        bg = AppColors.infoLight;
+        fg = AppColors.info;
+        label = 'Em Andamento';
+        break;
       case 'in_approval':
       case 'awaiting_approval':
         bg = AppColors.warningLight;

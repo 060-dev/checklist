@@ -375,6 +375,44 @@ class PurchaseItem {
   String get unit => (raw['unit'] as String?) ?? '';
   String get status => (raw['status'] as String?) ?? '';
 
+  int? get selectedQuoteId => (raw['selected_quote_id'] as num?)?.toInt();
+
+  List<PurchaseItemQuote> get quotes {
+    final list = raw['quotes'] as List?;
+    if (list == null) return const [];
+    return list.map((e) => PurchaseItemQuote(e as Map<String, dynamic>)).toList();
+  }
+
+  Map<String, dynamic> toJson() => raw;
+}
+
+@immutable
+class PurchaseItemQuote {
+  final Map<String, dynamic> raw;
+  const PurchaseItemQuote(this.raw);
+
+  int get id => (raw['id'] as num?)?.toInt() ?? 0;
+  int get supplierId => (raw['supplier_id'] as num?)?.toInt() ?? 0;
+  String get supplierName => (raw['supplier_name'] as String?) ?? '';
+  double get unitPrice => double.tryParse(raw['unit_price']?.toString() ?? '0') ?? 0.0;
+  double get totalPrice => double.tryParse(raw['total_price']?.toString() ?? '0') ?? 0.0;
+  int get deliveryDays => (raw['delivery_days'] as num?)?.toInt() ?? 0;
+  String? get conditions => raw['conditions'] as String?;
+  String? get validUntil => raw['valid_until'] as String?;
+  bool get isLowest => raw['is_lowest'] == true;
+
+  Map<String, dynamic> toJson() => raw;
+}
+
+@immutable
+class Supplier {
+  final Map<String, dynamic> raw;
+  const Supplier(this.raw);
+
+  int get id => (raw['id'] as num?)?.toInt() ?? 0;
+  String get name => (raw['name'] as String?) ?? '';
+  String? get cnpj => raw['cnpj'] as String?;
+
   Map<String, dynamic> toJson() => raw;
 }
 

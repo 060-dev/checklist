@@ -752,4 +752,64 @@ class MobileApiServices {
     }
     return items;
   }
+
+  Future<List<Supplier>> listSuppliers() async {
+    final env = await client.getJson<Map<String, dynamic>>(
+      path: '/purchases/suppliers',
+      query: {'page_size': '1000'},
+      decodeData: (json) =>
+          (json is Map) ? json.cast<String, dynamic>() : <String, dynamic>{},
+    );
+    final data = env.data ?? const <String, dynamic>{};
+    final itemsRaw = data['items'];
+    final items = <Supplier>[];
+    if (itemsRaw is List) {
+      for (final it in itemsRaw) {
+        if (it is Map<String, dynamic>) {
+          items.add(Supplier(it));
+        } else if (it is Map) {
+          items.add(Supplier(it.cast<String, dynamic>()));
+        }
+      }
+    }
+    return items;
+  }
+
+  Future<MobileApiEnvelope<void>> createOrUpdateQuote({
+    required int itemId,
+    required int supplierId,
+    required double unitPrice,
+    int? deliveryDays,
+    String? conditions,
+    String? validUntil,
+    required String idempotencyKey,
+  }) async {
+    final payload = <String, dynamic>{
+      'supplier_id': supplierId,
+      'unit_price': unitPrice,
+    };
+    if (deliveryDays != null) payload['delivery_days'] = deliveryDays;
+    if (conditions != null) payload['conditions'] = conditions;
+    if (validUntil != null) payload['valid_until'] = validUntil;
+
+    return client.postJson<void>(
+      path: '/purchases/items/$itemId/quotes',
+      body: payload,
+      idempotencyKey: idempotencyKey,
+      decodeData: (_) {},
+    );
+  }
+
+  Future<MobileApiEnvelope<void>> selectQuote({
+    required int itemId,
+    required int quoteId,
+    required String idempotencyKey,
+  }) async {
+    return client.postJson<void>(
+      path: '/purchases/items/$itemId/select-quote',
+      body: {'quote_id': quoteId},
+      idempotencyKey: idempotencyKey,
+      decodeData: (_) {},
+    );
+  }
 }

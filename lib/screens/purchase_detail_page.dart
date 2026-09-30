@@ -148,6 +148,11 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
         fg = AppColors.warning;
         label = 'Em Cotação';
         break;
+      case 'in_progress':
+        bg = AppColors.infoLight;
+        fg = AppColors.info;
+        label = 'Em Andamento';
+        break;
       case 'in_approval':
       case 'awaiting_approval':
         bg = AppColors.warningLight;
@@ -202,6 +207,10 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
         return 'Cancelado';
       case 'adjusted':
         return 'Ajustado';
+      case 'quoting':
+        return 'Em Cotação';
+      case 'in_progress':
+        return 'Em Andamento';
       default:
         return status;
     }
@@ -441,75 +450,159 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
                           elevation: 0,
                           child: Padding(
                             padding: AppSpacing.paddingMd,
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        item.productName.isNotEmpty
-                                            ? item.productName
-                                            : (item.description ??
-                                                  'Sem descrição'),
-                                        style: context
-                                            .textStyles
-                                            .titleMedium
-                                            ?.bold,
-                                      ),
-                                      if (item.description != null &&
-                                          item.productName.isNotEmpty) ...[
-                                        const SizedBox(height: AppSpacing.xs),
-                                        Text(
-                                          item.description!,
-                                          style: context.textStyles.bodyMedium
-                                              ?.withColor(
-                                                AppColors.textSecondary,
-                                              ),
-                                        ),
-                                      ],
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(width: AppSpacing.md),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(
-                                      '${item.quantity} ${item.unit}',
-                                      style:
-                                          context.textStyles.titleMedium?.bold,
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            item.productName.isNotEmpty
+                                                ? item.productName
+                                                : (item.description ??
+                                                      'Sem descrição'),
+                                            style: context
+                                                .textStyles
+                                                .titleMedium
+                                                ?.bold,
+                                          ),
+                                          if (item.description != null &&
+                                              item.productName.isNotEmpty) ...[
+                                            const SizedBox(
+                                              height: AppSpacing.xs,
+                                            ),
+                                            Text(
+                                              item.description!,
+                                              style: context
+                                                  .textStyles
+                                                  .bodyMedium
+                                                  ?.withColor(
+                                                    AppColors.textSecondary,
+                                                  ),
+                                            ),
+                                          ],
+                                        ],
+                                      ),
                                     ),
-                                    if (item.status.isNotEmpty) ...[
-                                      const SizedBox(height: AppSpacing.xs),
-                                      Text(
-                                        _getItemStatusLabel(item.status),
-                                        style: context.textStyles.bodySmall
-                                            ?.withColor(AppColors.brandRed),
+                                    const SizedBox(width: AppSpacing.md),
+                                    Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.end,
+                                      children: [
+                                        Text(
+                                          '${item.quantity} ${item.unit}',
+                                          style: context
+                                              .textStyles
+                                              .titleMedium
+                                              ?.bold,
+                                        ),
+                                        if (item.status.isNotEmpty) ...[
+                                          const SizedBox(height: AppSpacing.xs),
+                                          Text(
+                                            _getItemStatusLabel(item.status),
+                                            style: context.textStyles.bodySmall
+                                                ?.withColor(AppColors.brandRed),
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                    if (canManage) ...[
+                                      const SizedBox(width: AppSpacing.sm),
+                                      PopupMenuButton<String>(
+                                        icon: const Icon(
+                                          Icons.more_vert,
+                                          color: AppColors.textSecondary,
+                                        ),
+                                        onSelected: (val) {
+                                          if (val == 'triage') {
+                                            _showTriageDialog(item);
+                                          } else if (val == 'quote') {
+                                            _showQuoteDialog(item);
+                                          }
+                                        },
+                                        itemBuilder: (context) => [
+                                          const PopupMenuItem(
+                                            value: 'triage',
+                                            child: Text('Fazer Triagem'),
+                                          ),
+                                          const PopupMenuItem(
+                                            value: 'quote',
+                                            child: Text('Adicionar Cotação'),
+                                          ),
+                                        ],
                                       ),
                                     ],
                                   ],
                                 ),
-                                if (canManage) ...[
-                                  const SizedBox(width: AppSpacing.sm),
-                                  PopupMenuButton<String>(
-                                    icon: const Icon(
-                                      Icons.more_vert,
-                                      color: AppColors.textSecondary,
-                                    ),
-                                    onSelected: (val) {
-                                      if (val == 'triage') {
-                                        _showTriageDialog(item);
-                                      }
-                                    },
-                                    itemBuilder: (context) => [
-                                      const PopupMenuItem(
-                                        value: 'triage',
-                                        child: Text('Fazer Triagem'),
+                                if (item.quotes.isNotEmpty) ...[
+                                  const Divider(height: 32),
+                                  Text(
+                                    'Cotações',
+                                    style: context.textStyles.titleSmall?.bold,
+                                  ),
+                                  const SizedBox(height: AppSpacing.sm),
+                                  ...item.quotes.map(
+                                    (q) => Container(
+                                      margin: const EdgeInsets.only(bottom: 8),
+                                      padding: const EdgeInsets.all(12),
+                                      decoration: BoxDecoration(
+                                        color: q.id == item.selectedQuoteId
+                                            ? AppColors.successLight.withValues(
+                                                alpha: 0.3,
+                                              )
+                                            : AppColors.background,
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(
+                                          color: q.id == item.selectedQuoteId
+                                              ? AppColors.success
+                                              : AppColors.brandBorder,
+                                        ),
                                       ),
-                                    ],
+                                      child: Row(
+                                        children: [
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  q.supplierName,
+                                                  style: const TextStyle(
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 4),
+                                                Text(
+                                                  'Valor un: R\$ ${q.unitPrice.toStringAsFixed(2)}',
+                                                ),
+                                                if (q.conditions != null &&
+                                                    q.conditions!.isNotEmpty)
+                                                  Text(
+                                                    'Condições: ${q.conditions}',
+                                                  ),
+                                              ],
+                                            ),
+                                          ),
+                                          if (canManage &&
+                                              item.selectedQuoteId == null)
+                                            TextButton(
+                                              onPressed: () =>
+                                                  _selectQuote(item, q),
+                                              child: const Text('Selecionar'),
+                                            )
+                                          else if (q.id == item.selectedQuoteId)
+                                            const Icon(
+                                              Icons.check_circle,
+                                              color: AppColors.success,
+                                            ),
+                                        ],
+                                      ),
+                                    ),
                                   ),
                                 ],
                               ],
@@ -772,6 +865,195 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Erro na triagem: $msg')));
+    }
+  }
+
+  Future<void> _showQuoteDialog(PurchaseItem item) async {
+    final session = context.read<AppSession>();
+    final client = MobileApiClient(
+      apiBaseUrl: session.apiBaseUrl,
+      apiKey: session.apiKey,
+      employeeCode: session.employeeCode ?? '',
+    );
+    final api = MobileApiServices(client: client);
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+
+    List<Supplier> suppliers;
+    try {
+      suppliers = await api.listSuppliers();
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.pop(context); // close loading
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erro ao carregar fornecedores: $e')),
+      );
+      return;
+    }
+    if (!mounted) return;
+    Navigator.pop(context); // close loading
+
+    if (suppliers.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Nenhum fornecedor cadastrado.')),
+      );
+      return;
+    }
+
+    int? supplierId = suppliers.first.id;
+    final priceCtrl = TextEditingController();
+    final conditionsCtrl = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('Adicionar Cotação'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    DropdownButtonFormField<int>(
+                      initialValue: supplierId,
+                      decoration: const InputDecoration(
+                        labelText: 'Fornecedor',
+                      ),
+                      items: suppliers.map((s) {
+                        return DropdownMenuItem(
+                          value: s.id,
+                          child: Text(s.name),
+                        );
+                      }).toList(),
+                      onChanged: (val) {
+                        if (val != null) setDialogState(() => supplierId = val);
+                      },
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    TextFormField(
+                      controller: priceCtrl,
+                      decoration: const InputDecoration(
+                        labelText: 'Valor Unitário',
+                      ),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    TextFormField(
+                      controller: conditionsCtrl,
+                      decoration: const InputDecoration(
+                        labelText: 'Condições de Pagamento (opcional)',
+                      ),
+                      maxLines: 2,
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancelar'),
+                ),
+                FilledButton(
+                  onPressed: () async {
+                    final priceStr = priceCtrl.text.trim().replaceAll(',', '.');
+                    final price = double.tryParse(priceStr);
+                    if (price == null || price <= 0) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Valor inválido.')),
+                      );
+                      return;
+                    }
+                    Navigator.pop(context);
+
+                    showDialog(
+                      context: context,
+                      barrierDismissible: false,
+                      builder: (_) =>
+                          const Center(child: CircularProgressIndicator()),
+                    );
+
+                    try {
+                      final res = await api.createOrUpdateQuote(
+                        itemId: item.id,
+                        supplierId: supplierId!,
+                        unitPrice: price,
+                        conditions: conditionsCtrl.text.trim(),
+                        idempotencyKey: const Uuid().v4(),
+                      );
+                      if (!mounted) return;
+                      Navigator.pop(context); // close loading
+                      if (res.success) {
+                        _load();
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              res.message ?? 'Erro ao salvar cotação',
+                            ),
+                          ),
+                        );
+                      }
+                    } catch (e) {
+                      if (!mounted) return;
+                      Navigator.pop(context); // close loading
+                      ScaffoldMessenger.of(
+                        context,
+                      ).showSnackBar(SnackBar(content: Text('Erro: $e')));
+                    }
+                  },
+                  child: const Text('Salvar'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _selectQuote(PurchaseItem item, PurchaseItemQuote quote) async {
+    final session = context.read<AppSession>();
+    final client = MobileApiClient(
+      apiBaseUrl: session.apiBaseUrl,
+      apiKey: session.apiKey,
+      employeeCode: session.employeeCode ?? '',
+    );
+    final api = MobileApiServices(client: client);
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      final res = await api.selectQuote(
+        itemId: item.id,
+        quoteId: quote.id,
+        idempotencyKey: const Uuid().v4(),
+      );
+      if (!mounted) return;
+      Navigator.pop(context); // close loading
+      if (res.success) {
+        _load();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(res.message ?? 'Erro ao selecionar cotação')),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.pop(context); // close loading
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Erro: $e')));
     }
   }
 }
