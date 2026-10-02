@@ -48,6 +48,7 @@ class _CreatePurchasePageState extends State<CreatePurchasePage> {
 
   int? _selectedFarmId;
   int? _selectedSectorId;
+  int? _selectedRequesterId;
   final List<_DraftItem> _items = [_DraftItem()]; // start with 1 empty item
 
   @override
@@ -56,6 +57,7 @@ class _CreatePurchasePageState extends State<CreatePurchasePage> {
     if (widget.initialDetail != null) {
       _selectedFarmId = widget.initialDetail!.farmId;
       _selectedSectorId = widget.initialDetail!.sectorId;
+      _selectedRequesterId = widget.initialDetail!.requesterId != 0 ? widget.initialDetail!.requesterId : null;
       _items.clear();
       for (final it in widget.initialDetail!.items) {
         final draft = _DraftItem();
@@ -152,6 +154,7 @@ class _CreatePurchasePageState extends State<CreatePurchasePage> {
       'territory_area_id': _selectedSectorId,
       'submit': submitNow,
       'items': validItems.map((e) => e.toJson()).toList(),
+      if (_selectedRequesterId != null) 'requester_id': _selectedRequesterId,
     };
 
     final isOnline = Connectivity.instance.isOnline;
@@ -286,6 +289,37 @@ class _CreatePurchasePageState extends State<CreatePurchasePage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    if (ctx?.capabilities.createForOthers == true && (ctx?.users.isNotEmpty ?? false)) ...[
+                      DropdownButtonFormField<int>(
+                        isExpanded: true,
+                        decoration: const InputDecoration(
+                          labelText: 'Solicitante (Opcional)',
+                          border: OutlineInputBorder(),
+                        ),
+                        value: _selectedRequesterId,
+                        items: [
+                          const DropdownMenuItem<int>(
+                            value: null,
+                            child: Text('Eu mesmo'),
+                          ),
+                          ...ctx!.users.map((u) {
+                            return DropdownMenuItem<int>(
+                              value: u.id,
+                              child: Text(
+                                u.name,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            );
+                          }),
+                        ],
+                        onChanged: (val) {
+                          setState(() {
+                            _selectedRequesterId = val;
+                          });
+                        },
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                    ],
                     if (farms.length > 1) ...[
                       DropdownButtonFormField<int>(
                         isExpanded: true,

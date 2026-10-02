@@ -383,6 +383,26 @@ class PurchaseItem {
     return list.map((e) => PurchaseItemQuote(e as Map<String, dynamic>)).toList();
   }
 
+  List<PurchaseItemApproval> get approvals {
+    final list = raw['approvals'] as List?;
+    if (list == null) return const [];
+    return list.map((e) => PurchaseItemApproval(e as Map<String, dynamic>)).toList();
+  }
+
+  Map<String, dynamic> toJson() => raw;
+}
+
+@immutable
+class PurchaseItemApproval {
+  final Map<String, dynamic> raw;
+  const PurchaseItemApproval(this.raw);
+
+  int get id => (raw['id'] as num?)?.toInt() ?? 0;
+  String get status => (raw['status'] as String?) ?? '';
+  String? get role => raw['role'] as String?;
+  int? get approverId => (raw['approver_id'] as num?)?.toInt();
+  String? get approverName => raw['approver_name'] as String?;
+  
   Map<String, dynamic> toJson() => raw;
 }
 

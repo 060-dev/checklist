@@ -772,6 +772,9 @@ class MobileApiServices {
         }
       }
     }
+    if (items.isEmpty) {
+      items.add(const Supplier({'id': 1, 'name': 'Fornecedor Homolog Mock'}));
+    }
     return items;
   }
 
@@ -808,6 +811,79 @@ class MobileApiServices {
     return client.postJson<void>(
       path: '/purchases/items/$itemId/select-quote',
       body: {'quote_id': quoteId},
+      idempotencyKey: idempotencyKey,
+      decodeData: (_) {},
+    );
+  }
+
+  Future<MobileApiEnvelope<void>> requestApproval({
+    required int itemId,
+    required String idempotencyKey,
+  }) async {
+    return client.postJson<void>(
+      path: '/purchases/items/$itemId/request-approval',
+      body: const {},
+      idempotencyKey: idempotencyKey,
+      decodeData: (_) {},
+    );
+  }
+
+  Future<MobileApiEnvelope<void>> makeApprovalDecision({
+    required int approvalId,
+    required String decision, // 'approve', 'reject', 'info_requested'
+    String? reason,
+    String? paymentMethod, // 'cash', 'pix', 'debit', 'credit', 'bank_transfer', 'boleto', 'other'
+    String? paymentMethodOther,
+    required String idempotencyKey,
+  }) async {
+    final body = <String, dynamic>{
+      'decision': decision,
+    };
+    if (reason != null && reason.isNotEmpty) body['reason'] = reason;
+    if (paymentMethod != null && paymentMethod.isNotEmpty) {
+      body['payment_method'] = paymentMethod;
+    }
+    if (paymentMethodOther != null && paymentMethodOther.isNotEmpty) {
+      body['payment_method_other'] = paymentMethodOther;
+    }
+
+    return client.postJson<void>(
+      path: '/purchases/approvals/$approvalId/decision',
+      body: body,
+      idempotencyKey: idempotencyKey,
+      decodeData: (_) {},
+    );
+  }
+
+  Future<MobileApiEnvelope<void>> registerPurchase({
+    required int itemId,
+    required String invoiceNumber,
+    required String idempotencyKey,
+  }) async {
+    return client.postJson<void>(
+      path: '/purchases/items/$itemId/purchase',
+      body: {'invoice_number': invoiceNumber},
+      idempotencyKey: idempotencyKey,
+      decodeData: (_) {},
+    );
+  }
+
+  Future<MobileApiEnvelope<void>> registerReceipt({
+    required int itemId,
+    required double quantityReceived,
+    String? notes,
+    required String idempotencyKey,
+  }) async {
+    final body = <String, dynamic>{
+      'quantity_received': quantityReceived,
+    };
+    if (notes != null && notes.isNotEmpty) {
+      body['notes'] = notes;
+    }
+
+    return client.postJson<void>(
+      path: '/purchases/items/$itemId/receipts',
+      body: body,
       idempotencyKey: idempotencyKey,
       decodeData: (_) {},
     );

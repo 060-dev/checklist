@@ -523,17 +523,47 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
                                             _showTriageDialog(item);
                                           } else if (val == 'quote') {
                                             _showQuoteDialog(item);
+                                          } else if (val == 'request_approval') {
+                                            _requestApproval(item);
+                                          } else if (val == 'decision') {
+                                            _showApprovalDecisionDialog(item);
+                                          } else if (val == 'purchase') {
+                                            _showPurchaseDialog(item);
+                                          } else if (val == 'receipt') {
+                                            _showReceiptDialog(item);
                                           }
                                         },
                                         itemBuilder: (context) => [
-                                          const PopupMenuItem(
-                                            value: 'triage',
-                                            child: Text('Fazer Triagem'),
-                                          ),
-                                          const PopupMenuItem(
-                                            value: 'quote',
-                                            child: Text('Adicionar Cotação'),
-                                          ),
+                                          if (item.status == 'awaiting_validation' || item.status == 'draft')
+                                            const PopupMenuItem(
+                                              value: 'triage',
+                                              child: Text('Fazer Triagem'),
+                                            ),
+                                          if (item.status == 'quoting')
+                                            const PopupMenuItem(
+                                              value: 'quote',
+                                              child: Text('Adicionar Cotação'),
+                                            ),
+                                          if (item.status == 'quoting' && item.selectedQuoteId != null)
+                                            const PopupMenuItem(
+                                              value: 'request_approval',
+                                              child: Text('Enviar p/ Aprovação'),
+                                            ),
+                                          if (item.status == 'approving')
+                                            const PopupMenuItem(
+                                              value: 'decision',
+                                              child: Text('Decidir Aprovação'),
+                                            ),
+                                          if (item.status == 'approved' || item.status == 'partially_received')
+                                            const PopupMenuItem(
+                                              value: 'purchase',
+                                              child: Text('Registrar Compra (NF)'),
+                                            ),
+                                          if (item.status == 'purchased' || item.status == 'partially_received')
+                                            const PopupMenuItem(
+                                              value: 'receipt',
+                                              child: Text('Registrar Recebimento'),
+                                            ),
                                         ],
                                       ),
                                     ],
@@ -920,6 +950,7 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     DropdownButtonFormField<int>(
+                      isExpanded: true,
                       initialValue: supplierId,
                       decoration: const InputDecoration(
                         labelText: 'Fornecedor',
@@ -927,7 +958,7 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
                       items: suppliers.map((s) {
                         return DropdownMenuItem(
                           value: s.id,
-                          child: Text(s.name),
+                          child: Text(s.name, overflow: TextOverflow.ellipsis),
                         );
                       }).toList(),
                       onChanged: (val) {
@@ -1055,5 +1086,319 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
         context,
       ).showSnackBar(SnackBar(content: Text('Erro: $e')));
     }
+  }
+
+  Future<void> _requestApproval(PurchaseItem item) async {
+    final session = context.read<AppSession>();
+    final client = MobileApiClient(
+      apiBaseUrl: session.apiBaseUrl,
+      apiKey: session.apiKey,
+      employeeCode: session.employeeCode ?? '',
+    );
+    final api = MobileApiServices(client: client);
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      final res = await api.requestApproval(
+        itemId: item.id,
+        idempotencyKey: const Uuid().v4(),
+      );
+      if (!mounted) return;
+      Navigator.pop(context);
+      if (res.success) {
+        _load();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(res.message ?? 'Erro ao enviar para aprovação')),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erro: $e')));
+    }
+  }
+
+  Future<void> _showApprovalDecisionDialog(PurchaseItem item) async {
+    final activeApproval = item.approvals.cast<PurchaseItemApproval?>().firstWhere(
+      (a) => a?.status == 'pending',
+      orElse: () => null,
+    );
+    if (activeApproval == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Aprovação não encontrada')),
+      );
+      return;
+    }
+
+    String decision = 'approve';
+    String reason = '';
+    String paymentMethod = 'boleto';
+    String paymentMethodOther = '';
+
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('Decisão de Aprovação'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    DropdownButtonFormField<String>(
+                      initialValue: decision,
+                      decoration: const InputDecoration(labelText: 'Decisão'),
+                      items: const [
+                        DropdownMenuItem(value: 'approve', child: Text('Aprovar')),
+                        DropdownMenuItem(value: 'reject', child: Text('Rejeitar')),
+                        DropdownMenuItem(value: 'info_requested', child: Text('Pedir Informação')),
+                      ],
+                      onChanged: (val) {
+                        if (val != null) {
+                          setState(() => decision = val);
+                        }
+                      },
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    if (decision != 'approve')
+                      TextFormField(
+                        decoration: const InputDecoration(labelText: 'Motivo'),
+                        onChanged: (val) => reason = val,
+                      ),
+                    if (decision == 'approve') ...[
+                      DropdownButtonFormField<String>(
+                        initialValue: paymentMethod,
+                        decoration: const InputDecoration(labelText: 'Forma de Pagamento'),
+                        items: const [
+                          DropdownMenuItem(value: 'boleto', child: Text('Boleto')),
+                          DropdownMenuItem(value: 'pix', child: Text('Pix')),
+                          DropdownMenuItem(value: 'cash', child: Text('Dinheiro')),
+                          DropdownMenuItem(value: 'debit', child: Text('Débito')),
+                          DropdownMenuItem(value: 'credit', child: Text('Crédito')),
+                          DropdownMenuItem(value: 'bank_transfer', child: Text('Transferência')),
+                          DropdownMenuItem(value: 'other', child: Text('Outro')),
+                        ],
+                        onChanged: (val) {
+                          if (val != null) {
+                            setState(() => paymentMethod = val);
+                          }
+                        },
+                      ),
+                      if (paymentMethod == 'other') ...[
+                        const SizedBox(height: AppSpacing.md),
+                        TextFormField(
+                          decoration: const InputDecoration(labelText: 'Qual forma de pagamento?'),
+                          onChanged: (val) => paymentMethodOther = val,
+                        ),
+                      ],
+                    ],
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancelar'),
+                ),
+                FilledButton(
+                  onPressed: () async {
+                    Navigator.pop(context);
+                    final session = context.read<AppSession>();
+                    final client = MobileApiClient(
+                      apiBaseUrl: session.apiBaseUrl,
+                      apiKey: session.apiKey,
+                      employeeCode: session.employeeCode ?? '',
+                    );
+                    final api = MobileApiServices(client: client);
+
+                    showDialog(
+                      context: context,
+                      barrierDismissible: false,
+                      builder: (_) => const Center(child: CircularProgressIndicator()),
+                    );
+
+                    try {
+                      final res = await api.makeApprovalDecision(
+                        approvalId: activeApproval.id,
+                        decision: decision,
+                        reason: reason,
+                        paymentMethod: decision == 'approve' ? paymentMethod : null,
+                        paymentMethodOther: paymentMethod == 'other' ? paymentMethodOther : null,
+                        idempotencyKey: const Uuid().v4(),
+                      );
+                      if (!mounted) return;
+                      Navigator.pop(context);
+                      if (res.success) {
+                        _load();
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(res.message ?? 'Erro ao salvar decisão')),
+                        );
+                      }
+                    } catch (e) {
+                      if (!mounted) return;
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erro: $e')));
+                    }
+                  },
+                  child: const Text('Salvar'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _showPurchaseDialog(PurchaseItem item) async {
+    String invoiceNumber = '';
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Registrar Compra'),
+          content: TextFormField(
+            decoration: const InputDecoration(labelText: 'Número da Nota Fiscal (opcional)'),
+            onChanged: (val) => invoiceNumber = val,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () async {
+                Navigator.pop(context);
+                final session = context.read<AppSession>();
+                final client = MobileApiClient(
+                  apiBaseUrl: session.apiBaseUrl,
+                  apiKey: session.apiKey,
+                  employeeCode: session.employeeCode ?? '',
+                );
+                final api = MobileApiServices(client: client);
+
+                showDialog(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (_) => const Center(child: CircularProgressIndicator()),
+                );
+
+                try {
+                  final res = await api.registerPurchase(
+                    itemId: item.id,
+                    invoiceNumber: invoiceNumber,
+                    idempotencyKey: const Uuid().v4(),
+                  );
+                  if (!mounted) return;
+                  Navigator.pop(context);
+                  if (res.success) {
+                    _load();
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(res.message ?? 'Erro ao registrar compra')),
+                    );
+                  }
+                } catch (e) {
+                  if (!mounted) return;
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erro: $e')));
+                }
+              },
+              child: const Text('Salvar'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _showReceiptDialog(PurchaseItem item) async {
+    String qtyStr = '';
+    String notes = '';
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Registrar Recebimento'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                decoration: const InputDecoration(labelText: 'Quantidade Recebida'),
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                onChanged: (val) => qtyStr = val,
+              ),
+              const SizedBox(height: AppSpacing.md),
+              TextFormField(
+                decoration: const InputDecoration(labelText: 'Observações'),
+                onChanged: (val) => notes = val,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () async {
+                final qty = double.tryParse(qtyStr.replaceAll(',', '.'));
+                if (qty == null || qty <= 0) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Quantidade inválida')),
+                  );
+                  return;
+                }
+                Navigator.pop(context);
+                final session = context.read<AppSession>();
+                final client = MobileApiClient(
+                  apiBaseUrl: session.apiBaseUrl,
+                  apiKey: session.apiKey,
+                  employeeCode: session.employeeCode ?? '',
+                );
+                final api = MobileApiServices(client: client);
+
+                showDialog(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (_) => const Center(child: CircularProgressIndicator()),
+                );
+
+                try {
+                  final res = await api.registerReceipt(
+                    itemId: item.id,
+                    quantityReceived: qty,
+                    notes: notes,
+                    idempotencyKey: const Uuid().v4(),
+                  );
+                  if (!mounted) return;
+                  Navigator.pop(context);
+                  if (res.success) {
+                    _load();
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(res.message ?? 'Erro ao registrar recebimento')),
+                    );
+                  }
+                } catch (e) {
+                  if (!mounted) return;
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erro: $e')));
+                }
+              },
+              child: const Text('Salvar'),
+            ),
+          ],
+        );
+      },
+    );
   }
 }
